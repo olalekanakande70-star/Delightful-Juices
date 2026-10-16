@@ -32,7 +32,27 @@ function MainApp() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
-  // Sync state with storage updates
+  const checkIsAdminRoute = () => {
+    const path = window.location.pathname.toLowerCase();
+    const hash = window.location.hash.toLowerCase();
+    return path === '/admin' || path.startsWith('/admin') || hash === '#admin';
+  };
+
+  const openAdmin = () => {
+    if (!checkIsAdminRoute()) {
+      window.history.pushState(null, '', '/admin');
+    }
+    setIsAdminOpen(true);
+  };
+
+  const closeAdmin = () => {
+    if (checkIsAdminRoute()) {
+      window.history.pushState(null, '', '/');
+    }
+    setIsAdminOpen(false);
+  };
+
+  // Sync state with storage updates & browser navigation
   useEffect(() => {
     const handleUpdate = () => {
       setContent(dataRepo.getContent());
@@ -41,10 +61,16 @@ function MainApp() {
     };
     const unsubscribe = dataRepo.subscribe(handleUpdate);
 
-    // Check if initial URL or hash contains admin
-    if (window.location.hash === '#admin' || window.location.pathname === '/admin') {
+    // Initial route check for /admin
+    if (checkIsAdminRoute()) {
       setIsAdminOpen(true);
     }
+
+    // Handle browser back and forward navigation
+    const handlePopState = () => {
+      setIsAdminOpen(checkIsAdminRoute());
+    };
+    window.addEventListener('popstate', handlePopState);
 
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 400);
@@ -53,6 +79,7 @@ function MainApp() {
 
     return () => {
       unsubscribe();
+      window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
@@ -77,7 +104,7 @@ function MainApp() {
       <Header
         content={content}
         navItems={navItems}
-        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenAdmin={openAdmin}
         isAdminLoggedIn={dataRepo.isAdminLoggedIn()}
       />
 
@@ -115,7 +142,7 @@ function MainApp() {
       <Footer
         content={content}
         navItems={navItems}
-        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenAdmin={openAdmin}
         isAdminLoggedIn={dataRepo.isAdminLoggedIn()}
       />
 
@@ -165,7 +192,7 @@ function MainApp() {
 
       {/* Admin Dashboard Overlay */}
       {isAdminOpen && (
-        <AdminDashboard onClose={() => setIsAdminOpen(false)} />
+        <AdminDashboard onClose={closeAdmin} />
       )}
 
     </div>
