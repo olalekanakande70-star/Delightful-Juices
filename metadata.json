@@ -1,0 +1,6 @@
+{
+  "name": "Delightful Juice | Savor the Pure Goodness",
+  "description": "Naturally made, cold-pressed healthy sips. Featuring signature Zobo (Hibiscus), Organic Ginger blends, and Tigernut Milk in Quakertown, PA. Order online for home refreshment, events, corporate gatherings, and wholesale.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
