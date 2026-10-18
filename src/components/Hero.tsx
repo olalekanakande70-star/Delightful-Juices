@@ -140,7 +140,7 @@ export const Hero: React.FC<HeroProps> = ({ content, onExploreClick, onEventClic
                     onClick={() => addToCart(zoboProduct, zoboProduct.sizes[1])}
                     className="flex-1 bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm text-center shadow-xs transition-colors cursor-pointer"
                   >
-                    Add 50cl to Bag ($7.50)
+                    Add 50cl to Cart ($7.50)
                   </button>
                   <button
                     onClick={onExploreClick}

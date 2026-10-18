@@ -209,6 +209,41 @@ export const INITIAL_SITE_CONTENT: SiteContent = {
   standardDeliveryFee: 4.99,
   pickupAddress: '500 W Broad St, Quakertown, PA 18951',
   operatingHours: 'Mon - Sat: 9:00 AM - 6:30 PM | Sun: 11:00 AM - 4:00 PM',
+  chatButtonLabel: 'Chat with us',
+  branding: {
+    logoUrl: '',
+    mobileLogoUrl: '',
+    logoText: 'Delightful Juice',
+    showLogoIcon: true,
+  },
+  colors: {
+    primaryColor: '#1B4D2E',
+    secondaryColor: '#E1AD01',
+    accentColor: '#E1AD01',
+    pageBgColor: '#FFFFFF',
+    cardBgColor: '#FFFFFF',
+    headerBgColor: '#FFFFFF',
+    footerBgColor: '#12351F',
+    textColor: '#1B4D2E',
+    buttonBgColor: '#1B4D2E',
+    buttonTextColor: '#FFF8E7',
+    borderColor: '#1B4D2E26',
+  },
+  typography: {
+    headingFont: "'Playfair Display', Georgia, serif",
+    bodyFont: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
+    baseFontSize: '16px',
+    headingWeight: '700',
+    bodyWeight: '400',
+  },
+  stripe: {
+    enabled: true,
+    mode: 'test',
+    publishableKey: '',
+    currency: 'USD',
+    customerFacingName: 'Credit / Debit Card (Stripe)',
+    description: 'Instant secure payment via Stripe with Visa, Mastercard, Amex, Apple Pay & Google Pay',
+  },
 };
 
 export const INITIAL_NAV_ITEMS: NavItem[] = [
@@ -354,6 +389,7 @@ export const INITIAL_INQUIRIES: EventInquiry[] = [
 ];
 
 import { supabaseService } from './supabaseClient';
+import { applyTheme } from './theme';
 
 // In-Memory & LocalStorage Data Layer with Reactive Event Dispatch and Supabase Sync
 class DataRepository {
@@ -361,6 +397,7 @@ class DataRepository {
   private hasInitiallySyncedWithSupabase = false;
 
   constructor() {
+    applyTheme(this.getContent());
     this.syncFromSupabase();
   }
 
@@ -377,6 +414,7 @@ class DataRepository {
       const remoteContent = await supabaseService.fetchSiteContent();
       if (remoteContent) {
         localStorage.setItem(STORAGE_KEYS.CONTENT, JSON.stringify(remoteContent));
+        applyTheme(remoteContent);
       }
 
       // 3. Fetch remote navigation
@@ -467,7 +505,15 @@ class DataRepository {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.CONTENT);
       if (stored) {
-        return { ...INITIAL_SITE_CONTENT, ...JSON.parse(stored) };
+        const parsed = JSON.parse(stored);
+        return {
+          ...INITIAL_SITE_CONTENT,
+          ...parsed,
+          branding: { ...INITIAL_SITE_CONTENT.branding, ...(parsed.branding || {}) },
+          colors: { ...INITIAL_SITE_CONTENT.colors, ...(parsed.colors || {}) },
+          typography: { ...INITIAL_SITE_CONTENT.typography, ...(parsed.typography || {}) },
+          stripe: { ...INITIAL_SITE_CONTENT.stripe, ...(parsed.stripe || {}) },
+        };
       }
     } catch (e) {
       console.warn('Error reading content from storage:', e);
@@ -478,6 +524,7 @@ class DataRepository {
 
   public saveContent(content: SiteContent): void {
     localStorage.setItem(STORAGE_KEYS.CONTENT, JSON.stringify(content));
+    applyTheme(content);
     this.notify();
     supabaseService.upsertSiteContent(content);
   }
@@ -678,6 +725,7 @@ CREATE TABLE IF NOT EXISTS public.products (
   health_benefits JSONB DEFAULT '[]'::jsonb,
   sizes JSONB NOT NULL DEFAULT '[]'::jsonb,
   image_url TEXT,
+  gallery_images JSONB DEFAULT '[]'::jsonb,
   in_stock BOOLEAN DEFAULT true,
   featured BOOLEAN DEFAULT false,
   badge TEXT,
@@ -687,6 +735,8 @@ CREATE TABLE IF NOT EXISTS public.products (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS gallery_images JSONB DEFAULT '[]'::jsonb;
 
 -- 2. Create Orders Table
 CREATE TABLE IF NOT EXISTS public.orders (
@@ -730,9 +780,35 @@ CREATE TABLE IF NOT EXISTS public.event_inquiries (
 );
 
 -- 4. Create Site Content CMS Table
+-- 4. Create Site Content CMS Table
 CREATE TABLE IF NOT EXISTS public.site_content (
-  key TEXT PRIMARY KEY,
-  content JSONB NOT NULL,
+  key TEXT PRIMARY KEY DEFAULT 'main',
+  business_name TEXT NOT NULL,
+  ceo_name TEXT NOT NULL,
+  motto TEXT NOT NULL,
+  tagline TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  whatsapp_number TEXT NOT NULL,
+  email TEXT NOT NULL,
+  address TEXT NOT NULL,
+  city_state_zip TEXT NOT NULL,
+  instagram TEXT NOT NULL,
+  tiktok TEXT NOT NULL,
+  website_domain TEXT NOT NULL,
+  hero_headline TEXT NOT NULL,
+  hero_subheadline TEXT NOT NULL,
+  announcement_ticker TEXT NOT NULL,
+  about_story TEXT NOT NULL,
+  signature_promise TEXT NOT NULL,
+  free_delivery_threshold NUMERIC(10,2) NOT NULL DEFAULT 40.00,
+  standard_delivery_fee NUMERIC(10,2) NOT NULL DEFAULT 4.99,
+  pickup_address TEXT NOT NULL,
+  operating_hours TEXT NOT NULL,
+  chat_button_label TEXT DEFAULT 'Chat with us',
+  branding JSONB DEFAULT '{"logoText":"Delightful Juice","showLogoIcon":true}'::jsonb,
+  colors JSONB DEFAULT '{"pageBgColor":"#FFFFFF","primaryColor":"#1B4D2E","secondaryColor":"#E1AD01","accentColor":"#E1AD01","footerBgColor":"#12351F","cardBgColor":"#FFFFFF","buttonBgColor":"#1B4D2E","buttonTextColor":"#FFF8E7"}'::jsonb,
+  typography JSONB DEFAULT '{"headingFont":"Playfair Display, Georgia, serif","bodyFont":"Plus Jakarta Sans, sans-serif"}'::jsonb,
+  stripe JSONB DEFAULT '{"enabled":true,"mode":"test","currency":"USD","customerFacingName":"Credit / Debit Card (Stripe)"}'::jsonb,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -743,39 +819,76 @@ ALTER TABLE public.event_inquiries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.site_content ENABLE ROW LEVEL SECURITY;
 
 -- Public can read all in-stock products
+DROP POLICY IF EXISTS "Public read products" ON public.products;
 CREATE POLICY "Public read products" 
   ON public.products FOR SELECT 
   USING (true);
 
 -- Public can insert new orders
+DROP POLICY IF EXISTS "Public insert orders" ON public.orders;
+DROP POLICY IF EXISTS "Public create orders" ON public.orders;
 CREATE POLICY "Public insert orders" 
   ON public.orders FOR INSERT 
   WITH CHECK (true);
 
 -- Public can insert catering inquiries
+DROP POLICY IF EXISTS "Public insert inquiries" ON public.event_inquiries;
+DROP POLICY IF EXISTS "Public submit inquiries" ON public.event_inquiries;
 CREATE POLICY "Public insert inquiries" 
   ON public.event_inquiries FOR INSERT 
   WITH CHECK (true);
 
 -- Public can read published site content
+DROP POLICY IF EXISTS "Public read content" ON public.site_content;
+DROP POLICY IF EXISTS "Public read site content" ON public.site_content;
 CREATE POLICY "Public read content" 
   ON public.site_content FOR SELECT 
   USING (true);
 
 -- Admin full access policies (Authenticated users)
+DROP POLICY IF EXISTS "Admin full products access" ON public.products;
+DROP POLICY IF EXISTS "Admin write products" ON public.products;
 CREATE POLICY "Admin full products access" 
   ON public.products FOR ALL 
   USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Admin full orders access" ON public.orders;
+DROP POLICY IF EXISTS "Admin manage orders" ON public.orders;
 CREATE POLICY "Admin full orders access" 
   ON public.orders FOR ALL 
   USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Admin full inquiries access" ON public.event_inquiries;
+DROP POLICY IF EXISTS "Admin manage inquiries" ON public.event_inquiries;
 CREATE POLICY "Admin full inquiries access" 
   ON public.event_inquiries FOR ALL 
   USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Admin full content access" ON public.site_content;
+DROP POLICY IF EXISTS "Admin manage site content" ON public.site_content;
 CREATE POLICY "Admin full content access" 
   ON public.site_content FOR ALL 
   USING (auth.role() = 'authenticated');
+
+-- 6. Storage Bucket for Logos and Product Photos
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('delightful_assets', 'delightful_assets', true)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Public Read Assets" ON storage.objects;
+CREATE POLICY "Public Read Assets" 
+  ON storage.objects FOR SELECT 
+  USING (bucket_id = 'delightful_assets');
+
+DROP POLICY IF EXISTS "Authenticated Upload Assets" ON storage.objects;
+DROP POLICY IF EXISTS "Public Upload Assets" ON storage.objects;
+DROP POLICY IF EXISTS "Allow Assets Upload" ON storage.objects;
+CREATE POLICY "Authenticated Upload Assets" 
+  ON storage.objects FOR INSERT 
+  WITH CHECK (bucket_id = 'delightful_assets');
+
+DROP POLICY IF EXISTS "Allow Assets Update" ON storage.objects;
+CREATE POLICY "Allow Assets Update" 
+  ON storage.objects FOR UPDATE 
+  USING (bucket_id = 'delightful_assets');
 `;

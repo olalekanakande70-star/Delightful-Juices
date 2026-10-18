@@ -21,7 +21,7 @@ import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { AdminDashboard } from './admin/AdminDashboard';
-import { MessageCircle, ShoppingBag, ArrowUp } from 'lucide-react';
+import { MessageCircle, ShoppingCart, ArrowUp } from 'lucide-react';
 
 function MainApp() {
   const { isCartOpen, setIsCartOpen, totalCount, toastMessage } = useCart();
@@ -77,6 +77,19 @@ function MainApp() {
     };
     window.addEventListener('scroll', handleScroll);
 
+    // Handle Stripe redirect params
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('order_success') === 'true') {
+      const orderNum = params.get('order_number') || 'DJ-Order';
+      const orders = dataRepo.getOrders();
+      const target = orders.find((o) => o.orderNumber === orderNum);
+      if (target) {
+        dataRepo.updateOrderStatus(target.id, 'preparing');
+      }
+      // Clean query string from browser bar without reloading
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     return () => {
       unsubscribe();
       window.removeEventListener('popstate', handlePopState);
@@ -90,7 +103,7 @@ function MainApp() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF8E7] flex flex-col selection:bg-[#E1AD01] selection:text-[#1B4D2E]">
+    <div className="min-h-screen bg-white text-[var(--text-color)] flex flex-col selection:bg-[#E1AD01] selection:text-[#1B4D2E]">
       
       {/* Toast Notification */}
       {toastMessage && (
@@ -168,16 +181,16 @@ function MainApp() {
           title="Chat with Kitchen on WhatsApp"
         >
           <MessageCircle className="w-5 h-5 text-white" />
-          <span className="hidden sm:inline text-xs font-bold">Chat with Kitchen</span>
+          <span className="hidden sm:inline text-xs font-bold">{content.chatButtonLabel || 'Chat with Kitchen'}</span>
         </a>
 
-        {/* Floating Bag Pill on Mobile */}
+        {/* Floating Cart Pill on Mobile */}
         <button
           onClick={() => setIsCartOpen(true)}
           className="lg:hidden flex items-center space-x-2 bg-[#1B4D2E] text-[#FFF8E7] px-4 py-2.5 rounded-full shadow-xl border border-[#E1AD01]/40 font-bold text-xs cursor-pointer"
         >
-          <ShoppingBag className="w-4 h-4 text-[#E1AD01]" />
-          <span>Bag ({totalCount})</span>
+          <ShoppingCart className="w-4 h-4 text-[#E1AD01]" />
+          <span>Cart ({totalCount})</span>
         </button>
       </div>
 

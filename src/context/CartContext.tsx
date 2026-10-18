@@ -73,7 +73,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return [...prev, { id: itemId, product, selectedSize: size, quantity }];
     });
-    showToast(`Added ${quantity}x ${product.name} (${size.size}) to your bag`);
+    showToast(`Added ${quantity}x ${product.name} (${size.size}) to your cart`);
   };
 
   const removeFromCart = (itemId: string) => {

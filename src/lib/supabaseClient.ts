@@ -237,6 +237,7 @@ class SupabaseService {
         healthBenefits: Array.isArray(row.health_benefits) ? row.health_benefits : [],
         sizes: Array.isArray(row.sizes) ? row.sizes : [],
         imageUrl: row.image_url,
+        galleryImages: Array.isArray(row.gallery_images) ? row.gallery_images : [],
         inStock: row.in_stock,
         featured: row.featured,
         badge: row.badge,
@@ -268,6 +269,7 @@ class SupabaseService {
         health_benefits: product.healthBenefits,
         sizes: product.sizes,
         image_url: product.imageUrl,
+        gallery_images: product.galleryImages || [],
         in_stock: product.inStock,
         featured: product.featured,
         badge: product.badge,
@@ -282,6 +284,31 @@ class SupabaseService {
     } catch (err) {
       console.warn('upsertProduct error:', err);
       return false;
+    }
+  }
+
+  // --- STORAGE & ASSET UPLOAD ---
+  public async uploadAsset(
+    bucket: string,
+    filePath: string,
+    file: File | Blob
+  ): Promise<{ url: string | null; error?: string }> {
+    const client = this.getClient();
+    if (!client) {
+      return { url: null, error: 'Supabase client is not connected.' };
+    }
+    try {
+      const { data, error } = await client.storage.from(bucket).upload(filePath, file, {
+        upsert: true,
+        cacheControl: '3600',
+      });
+      if (error) {
+        return { url: null, error: error.message };
+      }
+      const { data: publicData } = client.storage.from(bucket).getPublicUrl(data.path);
+      return { url: publicData.publicUrl };
+    } catch (err: any) {
+      return { url: null, error: err.message || 'Failed to upload asset' };
     }
   }
 
@@ -498,6 +525,11 @@ class SupabaseService {
         standardDeliveryFee: Number(data.standard_delivery_fee) || 4.99,
         pickupAddress: data.pickup_address,
         operatingHours: data.operating_hours,
+        chatButtonLabel: data.chat_button_label || 'Chat with us',
+        branding: data.branding || undefined,
+        colors: data.colors || undefined,
+        typography: data.typography || undefined,
+        stripe: data.stripe || undefined,
       };
     } catch (err) {
       console.warn('fetchSiteContent Supabase error:', err);
@@ -509,7 +541,7 @@ class SupabaseService {
     const client = this.getClient();
     if (!client) return false;
     try {
-      const payload = {
+      const payload: any = {
         key: 'main',
         business_name: content.businessName,
         ceo_name: content.ceoName,
@@ -532,6 +564,11 @@ class SupabaseService {
         standard_delivery_fee: content.standardDeliveryFee,
         pickup_address: content.pickupAddress,
         operating_hours: content.operatingHours,
+        chat_button_label: content.chatButtonLabel,
+        branding: content.branding,
+        colors: content.colors,
+        typography: content.typography,
+        stripe: content.stripe,
         updated_at: new Date().toISOString(),
       };
       const { error } = await client.from('site_content').upsert(payload);

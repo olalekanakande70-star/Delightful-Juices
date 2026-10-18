@@ -39,51 +39,102 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryTimeSlot, setDeliveryTimeSlot] = useState('Afternoon (1:00 PM - 5:00 PM)');
   const [notes, setNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'zelle' | 'cash_on_delivery' | 'card_at_pickup' | 'whatsapp_order'>('zelle');
+  const [paymentMethod, setPaymentMethod] = useState<
+    'stripe_card' | 'zelle' | 'cash_on_delivery' | 'card_at_pickup' | 'whatsapp_order'
+  >(content.stripe?.enabled !== false ? 'stripe_card' : 'zelle');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
+  const [stripeNotice, setStripeNotice] = useState<string | null>(null);
 
   if (!isCheckoutOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName || !customerPhone) return;
     if (deliveryMethod === 'local_delivery' && !deliveryAddress) return;
 
     setIsSubmitting(true);
+    setStripeNotice(null);
 
+    const orderItems = cart.map((item) => ({
+      productId: item.product.id,
+      productName: item.product.name,
+      size: item.selectedSize.size,
+      sizeLabel: item.selectedSize.label,
+      unitPrice: item.selectedSize.price,
+      quantity: item.quantity,
+      totalPrice: item.selectedSize.price * item.quantity,
+      imageUrl: item.product.imageUrl,
+    }));
+
+    const newOrder = dataRepo.addOrder({
+      customerName,
+      customerEmail: customerEmail || 'customer@example.com',
+      customerPhone,
+      deliveryMethod,
+      deliveryAddress:
+        deliveryMethod === 'pickup'
+          ? 'Pickup at 500 W Broad St, Quakertown, PA 18951'
+          : deliveryAddress,
+      deliveryDate: 'Today / Next Morning',
+      deliveryTimeSlot,
+      notes,
+      items: orderItems,
+      subtotal,
+      deliveryFee,
+      total,
+      paymentMethod,
+      paymentStatus: 'pending',
+      status: 'pending',
+    });
+
+    // If Stripe Card is chosen, call Stripe server checkout session
+    if (paymentMethod === 'stripe_card') {
+      try {
+        const response = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: newOrder.id,
+            orderNumber: newOrder.orderNumber,
+            items: orderItems,
+            customerName,
+            customerEmail,
+            deliveryFee,
+            currency: content.stripe?.currency || 'usd',
+            successUrl: `${window.location.origin}/?order_success=true&order_number=${newOrder.orderNumber}`,
+            cancelUrl: `${window.location.origin}/?order_cancelled=true&order_number=${newOrder.orderNumber}`,
+          }),
+        });
+
+        const data = await response.json();
+        if (response.ok && data.url) {
+          clearCart();
+          window.location.href = data.url;
+          return;
+        } else {
+          // If server reports STRIPE_NOT_CONFIGURED or error
+          setStripeNotice(
+            data.message ||
+              'Stripe payments require STRIPE_SECRET_KEY in server environment. Your order has been placed in pending state! You can complete payment via Zelle or WhatsApp.'
+          );
+          setIsSubmitting(false);
+          setCompletedOrder(newOrder);
+          clearCart();
+        }
+      } catch (err: any) {
+        setStripeNotice(
+          'Stripe server function is currently offline. Your order has been recorded! Please notify us via WhatsApp to complete payment.'
+        );
+        setIsSubmitting(false);
+        setCompletedOrder(newOrder);
+        clearCart();
+      }
+      return;
+    }
+
+    // Standard manual payment methods
     setTimeout(() => {
-      const orderItems = cart.map((item) => ({
-        productId: item.product.id,
-        productName: item.product.name,
-        size: item.selectedSize.size,
-        sizeLabel: item.selectedSize.label,
-        unitPrice: item.selectedSize.price,
-        quantity: item.quantity,
-        totalPrice: item.selectedSize.price * item.quantity,
-        imageUrl: item.product.imageUrl,
-      }));
-
-      const newOrder = dataRepo.addOrder({
-        customerName,
-        customerEmail: customerEmail || 'customer@example.com',
-        customerPhone,
-        deliveryMethod,
-        deliveryAddress:
-          deliveryMethod === 'pickup'
-            ? 'Pickup at 500 W Broad St, Quakertown, PA 18951'
-            : deliveryAddress,
-        deliveryDate: 'Today / Next Morning',
-        deliveryTimeSlot,
-        notes,
-        items: orderItems,
-        subtotal,
-        deliveryFee,
-        total,
-        paymentMethod,
-        status: 'pending',
-      });
-
       setIsSubmitting(false);
       setCompletedOrder(newOrder);
       clearCart();
@@ -98,7 +149,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
       } catch (err) {
         console.warn(err);
       }
-    }, 700);
+    }, 500);
   };
 
   const handleNotifyWhatsApp = () => {
@@ -179,6 +230,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                 </div>
               </div>
 
+              {stripeNotice && (
+                <div className="p-3.5 bg-amber-50 text-amber-900 border border-amber-300 rounded-2xl text-xs text-left leading-relaxed">
+                  <strong className="block font-bold mb-0.5 text-amber-950">Payment Note:</strong>
+                  {stripeNotice}
+                </div>
+              )}
+
               <p className="text-xs text-[#1B4D2E]/80 max-w-sm mx-auto leading-relaxed">
                 Your order has been logged into our kitchen system. We will cold-pack your fresh bottles and notify you when ready for dispatch or pickup.
               </p>
@@ -209,7 +267,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
               {/* Order Summary Snapshot */}
               <div className="bg-[#FFF8E7] p-3.5 rounded-2xl border border-[#1B4D2E]/15 flex items-center justify-between text-xs">
                 <div>
-                  <span className="font-bold text-[#1B4D2E]">Bag Subtotal: </span>
+                  <span className="font-bold text-[#1B4D2E]">Cart Subtotal: </span>
                   <span>${subtotal.toFixed(2)}</span>
                 </div>
                 <div>
@@ -346,7 +404,38 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                   Select Payment Preference
                 </label>
                 <div className="space-y-2">
-                  <label className="flex items-center space-x-3 p-3 bg-[#FFF8E7] border border-[#1B4D2E]/15 rounded-xl cursor-pointer">
+                  {content.stripe?.enabled !== false && (
+                    <label className={`flex items-center space-x-3 p-3.5 rounded-2xl border-2 transition-all cursor-pointer ${
+                      paymentMethod === 'stripe_card'
+                        ? 'bg-emerald-50/60 border-emerald-600 shadow-xs'
+                        : 'bg-white border-gray-200 hover:border-gray-300'
+                    }`}>
+                      <input
+                        type="radio"
+                        name="payment"
+                        checked={paymentMethod === 'stripe_card'}
+                        onChange={() => setPaymentMethod('stripe_card')}
+                        className="w-4 h-4 accent-emerald-700"
+                      />
+                      <div className="text-xs flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-[#1B4D2E] text-sm">
+                            {content.stripe?.customerFacingName || 'Credit / Debit Card (Stripe)'}
+                          </span>
+                          <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full uppercase">
+                            Instant Checkout
+                          </span>
+                        </div>
+                        <span className="text-[#1B4D2E]/70 block mt-0.5">
+                          {content.stripe?.description || 'Visa, Mastercard, Amex, Apple Pay & Google Pay'}
+                        </span>
+                      </div>
+                    </label>
+                  )}
+
+                  <label className={`flex items-center space-x-3 p-3 rounded-2xl border transition-all cursor-pointer ${
+                    paymentMethod === 'zelle' ? 'bg-[#FFF8E7] border-[#1B4D2E]' : 'bg-white border-gray-200 hover:border-gray-300'
+                  }`}>
                     <input
                       type="radio"
                       name="payment"
@@ -360,7 +449,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                     </div>
                   </label>
 
-                  <label className="flex items-center space-x-3 p-3 bg-[#FFF8E7] border border-[#1B4D2E]/15 rounded-xl cursor-pointer">
+                  <label className={`flex items-center space-x-3 p-3 rounded-2xl border transition-all cursor-pointer ${
+                    paymentMethod === 'cash_on_delivery' ? 'bg-[#FFF8E7] border-[#1B4D2E]' : 'bg-white border-gray-200 hover:border-gray-300'
+                  }`}>
                     <input
                       type="radio"
                       name="payment"
@@ -374,7 +465,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                     </div>
                   </label>
 
-                  <label className="flex items-center space-x-3 p-3 bg-[#FFF8E7] border border-[#1B4D2E]/15 rounded-xl cursor-pointer">
+                  <label className={`flex items-center space-x-3 p-3 rounded-2xl border transition-all cursor-pointer ${
+                    paymentMethod === 'whatsapp_order' ? 'bg-[#FFF8E7] border-[#1B4D2E]' : 'bg-white border-gray-200 hover:border-gray-300'
+                  }`}>
                     <input
                       type="radio"
                       name="payment"

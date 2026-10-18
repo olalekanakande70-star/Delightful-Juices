@@ -19,12 +19,13 @@ This guide details the complete configuration, database migration, seeding, and 
    `supabase/migrations/20261016000000_init_delightful_juice.sql`
 4. Paste it into the SQL editor and click **Run**.
 5. This creates:
-   - `public.products` (Flavors, prices for 35cl / 50cl / 1L, ingredients, photos, stock)
-   - `public.orders` (Customer delivery details, order items, totals, status)
+   - `public.products` (Flavors, prices for 35cl / 50cl / 1L, ingredients, photos, gallery images, stock)
+   - `public.orders` (Customer delivery details, order items, totals, status, Stripe session references)
    - `public.event_inquiries` (Wedding, birthday, corporate quotes, guest counts, bottle sizes)
-   - `public.site_content` (Hero copy, announcement ticker, CEO info, operating hours)
+   - `public.site_content` (Hero copy, announcement ticker, CEO info, operating hours, branding, colors, typography, Stripe settings)
    - `public.navigation_items` (Header & mobile navigation links)
    - `public.admin_profiles` (Protected administrator roles)
+   - `storage.buckets`: `delightful_assets` (Public bucket for website logos and high-res drink photography)
    - Row Level Security (RLS) policies allowing public browsing/ordering and restricted admin access.
 
 ---

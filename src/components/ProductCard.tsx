@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Product, SizeOption } from '../types';
 import { useCart } from '../context/CartContext';
 import { 
-  ShoppingBag, 
+  ShoppingCart, 
   MessageCircle, 
   Info, 
   Check, 
@@ -178,7 +178,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               </button>
             </div>
 
-            {/* Add to Bag Button */}
+            {/* Add to Cart Button */}
             <button
               onClick={handleAddToCart}
               disabled={!product.inStock}
@@ -197,8 +197,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 </>
               ) : (
                 <>
-                  <ShoppingBag className="w-3.5 h-3.5 text-[#E1AD01]" />
-                  <span>{product.inStock ? `Add to Bag • $${(selectedSize.price * quantity).toFixed(2)}` : 'Sold Out'}</span>
+                  <ShoppingCart className="w-3.5 h-3.5 text-[#E1AD01]" />
+                  <span>{product.inStock ? `Add to Cart • $${(selectedSize.price * quantity).toFixed(2)}` : 'Sold Out'}</span>
                 </>
               )}
             </button>

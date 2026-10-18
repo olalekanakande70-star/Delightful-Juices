@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { SiteContent, NavItem } from '../types';
 import { 
-  ShoppingBag, 
+  ShoppingCart, 
   Menu as MenuIcon, 
   X, 
   Phone, 
@@ -69,18 +69,32 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Main Navigation Header */}
-      <header className="sticky top-0 z-40 bg-[#FFF8E7]/95 backdrop-blur-md border-b border-[#1B4D2E]/10 transition-all shadow-xs">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#1B4D2E]/10 transition-all shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             
             {/* Logo Brand */}
             <a href="#" className="flex items-center space-x-3 group">
-              <div className="w-12 h-12 rounded-full bg-[#1B4D2E] border-2 border-[#E1AD01] flex items-center justify-center text-[#E1AD01] shadow-md group-hover:scale-105 transition-transform">
-                <span className="font-display font-black text-xl italic tracking-tight">DJ</span>
-              </div>
+              {content.branding?.showLogoIcon !== false && (
+                content.branding?.logoUrl ? (
+                  <img
+                    src={content.branding.logoUrl}
+                    alt={content.branding.logoText || content.businessName}
+                    className="h-11 sm:h-12 w-auto max-w-[160px] sm:max-w-[200px] object-contain group-hover:scale-105 transition-transform"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-[#1B4D2E] border-2 border-[#E1AD01] flex items-center justify-center text-[#E1AD01] shadow-md group-hover:scale-105 transition-transform shrink-0">
+                    <span className="font-display font-black text-xl italic tracking-tight">DJ</span>
+                  </div>
+                )
+              )}
               <div className="flex flex-col">
                 <span className="font-display font-extrabold text-xl sm:text-2xl text-[#1B4D2E] leading-tight tracking-tight">
-                  Delightful<span className="text-[#E1AD01]">Juice</span>
+                  {content.branding?.logoText ? (
+                    content.branding.logoText
+                  ) : (
+                    <>Delightful<span className="text-[#E1AD01]">Juice</span></>
+                  )}
                 </span>
                 <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-[#1B4D2E]/70">
                   {content.motto}
@@ -114,14 +128,14 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>{isAdminLoggedIn ? 'Admin Active' : 'Admin'}</span>
               </button>
 
-              {/* Shopping Bag Button */}
+              {/* Shopping Cart Button */}
               <button
                 onClick={() => setIsCartOpen(true)}
                 className="relative flex items-center space-x-2 bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] px-4 py-2.5 rounded-xl font-semibold text-sm shadow-sm hover:shadow transition-all group cursor-pointer"
-                aria-label="View Shopping Bag"
+                aria-label="View Shopping Cart"
               >
-                <ShoppingBag className="w-4 h-4 text-[#E1AD01] group-hover:scale-110 transition-transform" />
-                <span className="hidden sm:inline">Bag</span>
+                <ShoppingCart className="w-4 h-4 text-[#E1AD01] group-hover:scale-110 transition-transform" />
+                <span className="hidden sm:inline">Cart</span>
                 {totalCount > 0 && (
                   <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-bold bg-[#E1AD01] text-[#1B4D2E] rounded-full shadow-xs animate-bounce">
                     {totalCount}

@@ -2,7 +2,7 @@ import React from 'react';
 import { useCart } from '../context/CartContext';
 import { 
   X, 
-  ShoppingBag, 
+  ShoppingCart, 
   Plus, 
   Minus, 
   Trash2, 
@@ -74,10 +74,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content }) => {
         <div className="p-5 bg-white border-b border-[#1B4D2E]/10 flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
             <div className="w-9 h-9 rounded-xl bg-[#1B4D2E] text-[#E1AD01] flex items-center justify-center font-bold">
-              <ShoppingBag className="w-5 h-5" />
+              <ShoppingCart className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-lg text-[#1B4D2E]">Your Refreshment Bag</h3>
+              <h3 className="font-display font-bold text-lg text-[#1B4D2E]">Your Refreshment Cart</h3>
               <p className="text-xs text-[#1B4D2E]/70">{totalCount} item{totalCount === 1 ? '' : 's'} selected</p>
             </div>
           </div>
@@ -85,7 +85,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content }) => {
           <button
             onClick={() => setIsCartOpen(false)}
             className="p-2 text-[#1B4D2E]/70 hover:text-[#1B4D2E] rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-            aria-label="Close Shopping Bag"
+            aria-label="Close Shopping Cart"
           >
             <X className="w-5 h-5" />
           </button>
@@ -124,9 +124,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content }) => {
           {cart.length === 0 ? (
             <div className="text-center py-16 space-y-3">
               <div className="w-16 h-16 rounded-full bg-[#1B4D2E]/10 text-[#1B4D2E] flex items-center justify-center mx-auto">
-                <ShoppingBag className="w-8 h-8 opacity-60" />
+                <ShoppingCart className="w-8 h-8 opacity-60" />
               </div>
-              <div className="font-display font-bold text-lg text-[#1B4D2E]">Your Bag is Empty</div>
+              <div className="font-display font-bold text-lg text-[#1B4D2E]">Your Cart is Empty</div>
               <p className="text-xs text-[#1B4D2E]/70 max-w-xs mx-auto">
                 Explore our signature Zobo, Organic Ginger, and Tigernut Milk to start refreshing.
               </p>

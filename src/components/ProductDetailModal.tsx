@@ -3,7 +3,7 @@ import { Product, SizeOption } from '../types';
 import { useCart } from '../context/CartContext';
 import { 
   X, 
-  ShoppingBag, 
+  ShoppingCart, 
   Sparkles, 
   CheckCircle2, 
   Heart, 
@@ -32,6 +32,15 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   );
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
+  const [activeImage, setActiveImage] = useState<string>(product.imageUrl);
+
+  // Sync activeImage if product changes
+  React.useEffect(() => {
+    setActiveImage(product.imageUrl);
+    setSelectedSize(product.sizes[1] || product.sizes[0]);
+  }, [product]);
+
+  const allImages = [product.imageUrl, ...(product.galleryImages || [])];
 
   const handleAdd = () => {
     addToCart(product, selectedSize, quantity);
@@ -59,19 +68,37 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         {/* Modal Header */}
         <div className="relative aspect-16/9 sm:aspect-21/9 bg-[#FFF8E7] overflow-hidden shrink-0">
           <img
-            src={product.imageUrl}
+            src={activeImage}
             alt={product.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-all duration-300"
           />
           <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent" />
           
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 bg-white/80 hover:bg-white text-[#1B4D2E] p-2 rounded-full shadow-md transition-transform hover:scale-105 cursor-pointer"
+            className="absolute top-4 right-4 bg-white/80 hover:bg-white text-[#1B4D2E] p-2 rounded-full shadow-md transition-transform hover:scale-105 cursor-pointer z-10"
             aria-label="Close Modal"
           >
             <X className="w-5 h-5" />
           </button>
+
+          {/* Gallery Thumbnails if multiple images */}
+          {allImages.length > 1 && (
+            <div className="absolute top-4 left-4 flex items-center space-x-1.5 z-10 bg-black/40 backdrop-blur-md p-1 rounded-xl">
+              {allImages.map((img, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setActiveImage(img)}
+                  className={`w-9 h-9 rounded-lg overflow-hidden border-2 transition-transform cursor-pointer ${
+                    activeImage === img ? 'border-[#E1AD01] scale-105' : 'border-transparent opacity-70 hover:opacity-100'
+                  }`}
+                >
+                  <img src={img} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="absolute bottom-4 left-4 right-4 text-white">
             <span className="bg-[#E1AD01] text-[#1B4D2E] text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full inline-block mb-1">
@@ -200,17 +227,17 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             </button>
           </div>
 
-          {/* Add to Bag */}
+          {/* Add to Cart */}
           <div className="flex items-center space-x-2 flex-1">
             <button
               onClick={handleAdd}
               className="flex-1 bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-3 px-4 rounded-xl text-xs sm:text-sm shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer"
             >
-              <ShoppingBag className="w-4 h-4 text-[#E1AD01]" />
+              <ShoppingCart className="w-4 h-4 text-[#E1AD01]" />
               <span>
                 {justAdded
-                  ? 'Added to Bag!'
-                  : `Add to Bag • $${(selectedSize.price * quantity).toFixed(2)}`}
+                  ? 'Added to Cart!'
+                  : `Add to Cart • $${(selectedSize.price * quantity).toFixed(2)}`}
               </span>
             </button>
 

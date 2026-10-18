@@ -31,12 +31,26 @@ export const Footer: React.FC<FooterProps> = ({
           {/* Brand Info (Cols 1-5) */}
           <div className="lg:col-span-5 space-y-4">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 rounded-full bg-[#1B4D2E] border-2 border-[#E1AD01] flex items-center justify-center text-[#E1AD01] shadow-md">
-                <span className="font-display font-black text-xl italic">DJ</span>
-              </div>
+              {content.branding?.showLogoIcon !== false && (
+                content.branding?.logoUrl ? (
+                  <img
+                    src={content.branding.logoUrl}
+                    alt={content.branding.logoText || content.businessName}
+                    className="h-11 sm:h-12 w-auto max-w-[160px] sm:max-w-[200px] object-contain shrink-0"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-[#1B4D2E] border-2 border-[#E1AD01] flex items-center justify-center text-[#E1AD01] shadow-md shrink-0">
+                    <span className="font-display font-black text-xl italic">DJ</span>
+                  </div>
+                )
+              )}
               <div>
                 <span className="font-display font-extrabold text-2xl text-white">
-                  Delightful<span className="text-[#E1AD01]">Juice</span>
+                  {content.branding?.logoText ? (
+                    content.branding.logoText
+                  ) : (
+                    <>Delightful<span className="text-[#E1AD01]">Juice</span></>
+                  )}
                 </span>
                 <span className="text-xs font-semibold uppercase tracking-wider text-[#E1AD01] block">
                   {content.motto}

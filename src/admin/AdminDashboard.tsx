@@ -6,10 +6,14 @@ import {
   SiteContent, 
   NavItem, 
   BottleSize, 
-  SupabaseConfig 
+  SupabaseConfig,
+  ColorThemeSettings,
+  BrandSettings,
+  StripePaymentSettings
 } from '../types';
 import { dataRepo, SUPABASE_SQL_MIGRATION } from '../lib/storage';
 import { supabaseService } from '../lib/supabaseClient';
+import { applyTheme, DEFAULT_COLORS, DEFAULT_TYPOGRAPHY } from '../lib/theme';
 import { 
   ShieldCheck, 
   LogOut, 
@@ -33,12 +37,33 @@ import {
   RotateCcw,
   Sparkles,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Palette,
+  Image as ImageIcon,
+  CreditCard,
+  Upload,
+  CheckCircle2,
+  Eye,
+  RefreshCw,
+  Sliders,
+  DollarSign,
+  HelpCircle
 } from 'lucide-react';
 
 interface AdminDashboardProps {
   onClose: () => void;
 }
+
+export const CURATED_PRODUCT_PHOTOS = [
+  { label: 'Zobo Ruby Hibiscus', url: 'https://images.unsplash.com/photo-1556881286-fc6915169721?w=800&auto=format&fit=crop&q=80' },
+  { label: 'Fresh Ginger Root Press', url: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80' },
+  { label: 'Golden Mango Ginger', url: 'https://images.unsplash.com/photo-1546173159-315724a31696?w=800&auto=format&fit=crop&q=80' },
+  { label: 'Pineapple Citrus Splash', url: 'https://images.unsplash.com/photo-1525385133512-2f3bdd039054?w=800&auto=format&fit=crop&q=80' },
+  { label: 'Floral Lychee Nectar', url: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=800&auto=format&fit=crop&q=80' },
+  { label: 'Tigernut Plant Milk', url: 'https://images.unsplash.com/photo-1563227812-0ea4c22e6cc8?w=800&auto=format&fit=crop&q=80' },
+  { label: 'Artisanal 6-Pack Carrier', url: 'https://images.unsplash.com/photo-1622484216853-4dc9b8e8f804?w=800&auto=format&fit=crop&q=80' },
+  { label: 'Cold-Pressed Green Herbs', url: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?w=800&auto=format&fit=crop&q=80' },
+];
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => dataRepo.isAdminLoggedIn());
@@ -46,7 +71,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   const [loginError, setLoginError] = useState('');
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'orders' | 'inquiries' | 'content' | 'nav' | 'supabase'
+    'overview' | 'branding' | 'appearance' | 'products' | 'orders' | 'inquiries' | 'stripe' | 'content' | 'nav' | 'supabase'
   >('overview');
 
   // Repositories state
@@ -64,6 +89,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   const [copiedSql, setCopiedSql] = useState(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState<{ text: string; success: boolean } | null>(null);
   const [isTestingSupabase, setIsTestingSupabase] = useState(false);
+  const [saveSuccessNotice, setSaveSuccessNotice] = useState<string | null>(null);
+
+  // Stripe test endpoint state
+  const [isTestingStripe, setIsTestingStripe] = useState(false);
+  const [stripeTestResult, setStripeTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Subscribe to storage changes
   useEffect(() => {
@@ -80,14 +110,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     return () => unsubscribe();
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (dataRepo.adminLogin(loginPass)) {
-      setIsAuthenticated(true);
-      setLoginError('');
-    } else {
-      setLoginError('Invalid Administrator Key. Please enter "admin123" or "delightful2026"');
-    }
+  const showToast = (msg: string) => {
+    setSaveSuccessNotice(msg);
+    setTimeout(() => setSaveSuccessNotice(null), 3000);
   };
 
   const handleLogout = () => {
@@ -107,6 +132,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     dataRepo.updateProduct(editingProduct);
     setEditingProduct(null);
     setIsAddingProduct(false);
+    showToast(`Drink "${editingProduct.name}" saved successfully!`);
   };
 
   const handleNewProductInit = () => {
@@ -128,6 +154,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
         { size: '1L', label: '1 Litre Family Jug', price: 14.00 },
       ],
       imageUrl: 'https://images.unsplash.com/photo-1556881286-fc6915169721?w=800&auto=format&fit=crop&q=80',
+      galleryImages: [],
       inStock: true,
       featured: false,
       badge: 'New Arrival',
@@ -138,6 +165,90 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     };
     setEditingProduct(newP);
     setIsAddingProduct(true);
+  };
+
+  // Upload Logo file handler
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>, isMobile = false) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Logo file exceeds 5MB limit. Please upload an image under 5MB.');
+      return;
+    }
+
+    // Attempt Supabase storage upload if connected
+    if (supabaseCfg.connected) {
+      const ext = file.name.split('.').pop() || 'png';
+      const path = `logos/${Date.now()}-${isMobile ? 'mobile' : 'desktop'}.${ext}`;
+      const res = await supabaseService.uploadAsset('delightful_assets', path, file);
+      if (res.url) {
+        const updatedBranding: BrandSettings = {
+          ...(content.branding || { logoText: 'Delightful Juice', showLogoIcon: true }),
+          [isMobile ? 'mobileLogoUrl' : 'logoUrl']: res.url,
+        };
+        const updatedContent = { ...content, branding: updatedBranding };
+        setContent(updatedContent);
+        dataRepo.saveContent(updatedContent);
+        showToast('Logo uploaded to Supabase Storage and saved!');
+        return;
+      }
+    }
+
+    // High fidelity data URL fallback for instant client persistence
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const updatedBranding: BrandSettings = {
+        ...(content.branding || { logoText: 'Delightful Juice', showLogoIcon: true }),
+        [isMobile ? 'mobileLogoUrl' : 'logoUrl']: dataUrl,
+      };
+      const updatedContent = { ...content, branding: updatedBranding };
+      setContent(updatedContent);
+      dataRepo.saveContent(updatedContent);
+      showToast('Logo updated and saved persistently!');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Upload Product Image file handler
+  const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isGallery = false) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingProduct) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image file exceeds 5MB limit.');
+      return;
+    }
+
+    if (supabaseCfg.connected) {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `products/${editingProduct.slug || 'drink'}-${Date.now()}.${ext}`;
+      const res = await supabaseService.uploadAsset('delightful_assets', path, file);
+      if (res.url) {
+        if (isGallery) {
+          const current = editingProduct.galleryImages || [];
+          setEditingProduct({ ...editingProduct, galleryImages: [...current, res.url] });
+        } else {
+          setEditingProduct({ ...editingProduct, imageUrl: res.url });
+        }
+        showToast('Product image uploaded to Supabase Storage!');
+        return;
+      }
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      if (isGallery) {
+        const current = editingProduct.galleryImages || [];
+        setEditingProduct({ ...editingProduct, galleryImages: [...current, dataUrl] });
+      } else {
+        setEditingProduct({ ...editingProduct, imageUrl: dataUrl });
+      }
+      showToast('Image updated!');
+    };
+    reader.readAsDataURL(file);
   };
 
   // Test Supabase Connection
@@ -195,22 +306,61 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     setIsSeeding(true);
     setSeedResult(null);
     try {
-      // 1. Seed products
       for (const p of products) {
         await supabaseService.upsertProduct(p);
       }
-      // 2. Seed site content
       await supabaseService.upsertSiteContent(content);
-      // 3. Seed navigation
       await supabaseService.saveNavigation(navItems);
 
       setIsSeeding(false);
-      setSeedResult('Successfully seeded all 6 official drinks, site copy, and navigation items into your Supabase project!');
-      // Re-test connection to update table counters
+      setSeedResult('Successfully seeded all official drinks, site copy, and navigation items into your Supabase project!');
       await handleTestSupabase();
     } catch (err: any) {
       setIsSeeding(false);
       setSeedResult(`Seeding notice: ${err.message || 'Check table schema'}`);
+    }
+  };
+
+  // Test Stripe Endpoint
+  const handleTestStripeEndpoint = async () => {
+    setIsTestingStripe(true);
+    setStripeTestResult(null);
+    try {
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: 'test-' + Date.now(),
+          orderNumber: 'DJ-TEST',
+          items: [{ productName: 'Zobo Test Sip', size: '35cl', unitPrice: 5.50, quantity: 1 }],
+          customerEmail: 'test@delightfuljuices.com',
+          customerName: 'Test Customer',
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setStripeTestResult({
+          success: true,
+          message: `Stripe integration verified! Successfully created live checkout session (ID: ${data.sessionId}).`,
+        });
+      } else if (data.error === 'STRIPE_NOT_CONFIGURED') {
+        setStripeTestResult({
+          success: false,
+          message: 'Server endpoint reached, but STRIPE_SECRET_KEY is not yet added in your Vercel Project Environment Variables.',
+        });
+      } else {
+        setStripeTestResult({
+          success: false,
+          message: data.message || data.error || 'Server responded with an error.',
+        });
+      }
+    } catch (err: any) {
+      setStripeTestResult({
+        success: false,
+        message: 'Endpoint /api/create-checkout-session could not be reached. Ensure Vercel or local API server is active.',
+      });
+    } finally {
+      setIsTestingStripe(false);
     }
   };
 
@@ -376,17 +526,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   return (
     <div className="fixed inset-0 z-50 bg-[#F4E8CB] flex flex-col overflow-hidden text-[#1B4D2E]">
       
+      {/* Toast Notification */}
+      {saveSuccessNotice && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-70 bg-[#1B4D2E] text-[#FFF8E7] px-6 py-3 rounded-2xl shadow-2xl border-2 border-[#E1AD01] text-xs sm:text-sm font-bold flex items-center space-x-2 animate-in fade-in slide-in-from-top duration-200">
+          <CheckCircle2 className="w-5 h-5 text-[#E1AD01]" />
+          <span>{saveSuccessNotice}</span>
+        </div>
+      )}
+
       {/* Top Admin Header Bar */}
       <div className="bg-[#1B4D2E] text-white px-4 sm:px-6 py-3 flex items-center justify-between border-b border-[#E1AD01]/40 shrink-0 shadow-md">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-lg bg-[#E1AD01] text-[#1B4D2E] flex items-center justify-center font-black text-sm">
+          <div className="w-9 h-9 rounded-xl bg-[#E1AD01] text-[#1B4D2E] flex items-center justify-center font-black text-sm shadow-xs">
             DJ
           </div>
           <div>
             <div className="font-display font-extrabold text-base text-[#FFF8E7] flex items-center space-x-2">
               <span>Delightful Juice Admin</span>
               <span className="text-[10px] bg-[#E1AD01] text-[#1B4D2E] font-black px-2 py-0.5 rounded-full uppercase">
-                CMS v2.0
+                CMS v2.2
               </span>
             </div>
             <div className="text-[10px] text-[#FFF8E7]/70">
@@ -429,8 +587,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       <div className="flex-1 flex overflow-hidden">
         
         {/* Navigation Sidebar */}
-        <aside className="w-20 md:w-64 bg-white border-r border-[#1B4D2E]/10 flex flex-col justify-between shrink-0">
-          <nav className="p-3 md:p-4 space-y-1.5">
+        <aside className="w-20 md:w-64 bg-white border-r border-[#1B4D2E]/10 flex flex-col justify-between shrink-0 overflow-y-auto">
+          <nav className="p-3 md:p-4 space-y-1">
             <button
               onClick={() => setActiveTab('overview')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
@@ -439,8 +597,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   : 'text-[#1B4D2E]/75 hover:bg-[#FFF8E7]'
               }`}
             >
-              <LayoutDashboard className="w-5 h-5 shrink-0 text-[#E1AD01]" />
+              <LayoutDashboard className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
               <span className="hidden md:inline">Dashboard</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('branding')}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                activeTab === 'branding'
+                  ? 'bg-[#1B4D2E] text-[#FFF8E7] shadow-xs'
+                  : 'text-[#1B4D2E]/75 hover:bg-[#FFF8E7]'
+              }`}
+            >
+              <ImageIcon className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
+              <span className="hidden md:inline">Branding & Logo</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('appearance')}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                activeTab === 'appearance'
+                  ? 'bg-[#1B4D2E] text-[#FFF8E7] shadow-xs'
+                  : 'text-[#1B4D2E]/75 hover:bg-[#FFF8E7]'
+              }`}
+            >
+              <Palette className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
+              <span className="hidden md:inline">Colours & Theme</span>
             </button>
 
             <button
@@ -452,7 +634,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
               }`}
             >
               <div className="flex items-center space-x-3">
-                <Package className="w-5 h-5 shrink-0 text-[#E1AD01]" />
+                <Package className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
                 <span className="hidden md:inline">Juice Drinks</span>
               </div>
               <span className="hidden md:inline text-[11px] bg-gray-100 text-[#1B4D2E] font-bold px-2 py-0.5 rounded-full">
@@ -469,7 +651,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
               }`}
             >
               <div className="flex items-center space-x-3">
-                <ShoppingBag className="w-5 h-5 shrink-0 text-[#E1AD01]" />
+                <ShoppingBag className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
                 <span className="hidden md:inline">Customer Orders</span>
               </div>
               {pendingOrdersCount > 0 && (
@@ -488,7 +670,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
               }`}
             >
               <div className="flex items-center space-x-3">
-                <Calendar className="w-5 h-5 shrink-0 text-[#E1AD01]" />
+                <Calendar className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
                 <span className="hidden md:inline">Event Catering</span>
               </div>
               {newInquiriesCount > 0 && (
@@ -499,6 +681,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
             </button>
 
             <button
+              onClick={() => setActiveTab('stripe')}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                activeTab === 'stripe'
+                  ? 'bg-[#1B4D2E] text-[#FFF8E7] shadow-xs'
+                  : 'text-[#1B4D2E]/75 hover:bg-[#FFF8E7]'
+              }`}
+            >
+              <CreditCard className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
+              <span className="hidden md:inline">Stripe Payment</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('content')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
                 activeTab === 'content'
@@ -506,7 +700,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   : 'text-[#1B4D2E]/75 hover:bg-[#FFF8E7]'
               }`}
             >
-              <FileText className="w-5 h-5 shrink-0 text-[#E1AD01]" />
+              <FileText className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
               <span className="hidden md:inline">Website Content</span>
             </button>
 
@@ -518,7 +712,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   : 'text-[#1B4D2E]/75 hover:bg-[#FFF8E7]'
               }`}
             >
-              <Navigation className="w-5 h-5 shrink-0 text-[#E1AD01]" />
+              <Navigation className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
               <span className="hidden md:inline">Menu Navigation</span>
             </button>
 
@@ -530,7 +724,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   : 'text-[#1B4D2E]/75 hover:bg-[#FFF8E7]'
               }`}
             >
-              <Database className="w-5 h-5 shrink-0 text-[#E1AD01]" />
+              <Database className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
               <span className="hidden md:inline">Supabase Database</span>
             </button>
           </nav>
@@ -540,7 +734,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
               onClick={() => {
                 if (confirm('Reset all demo data back to default factory seed?')) {
                   dataRepo.resetToDefaultSeed();
-                  alert('Data restored to initial official factory state!');
+                  showToast('Data restored to initial factory seed!');
                 }
               }}
               className="w-full flex items-center justify-center space-x-1.5 py-2 px-2 text-[11px] font-semibold text-[#1B4D2E]/70 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
@@ -685,9 +879,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 <div className="lg:col-span-4 space-y-4">
                   <div className="bg-[#1B4D2E] text-white p-6 rounded-3xl shadow-sm border border-[#E1AD01]/30 space-y-4">
                     <h3 className="font-display font-bold text-lg text-[#E1AD01]">
-                      Quick Kitchen Actions
+                      Quick Management Hub
                     </h3>
                     <div className="space-y-2">
+                      <button
+                        onClick={() => setActiveTab('branding')}
+                        className="w-full flex items-center justify-between p-3 rounded-xl bg-[#143822] hover:bg-[#0e2717] border border-[#E1AD01]/20 text-xs font-bold text-white transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <ImageIcon className="w-4 h-4 text-[#E1AD01]" />
+                          <span>Customize Website Logo</span>
+                        </div>
+                        <span>→</span>
+                      </button>
+
+                      <button
+                        onClick={() => setActiveTab('appearance')}
+                        className="w-full flex items-center justify-between p-3 rounded-xl bg-[#143822] hover:bg-[#0e2717] border border-[#E1AD01]/20 text-xs font-bold text-white transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <Palette className="w-4 h-4 text-[#E1AD01]" />
+                          <span>Customize Brand Palette</span>
+                        </div>
+                        <span>→</span>
+                      </button>
+
+                      <button
+                        onClick={() => setActiveTab('stripe')}
+                        className="w-full flex items-center justify-between p-3 rounded-xl bg-[#143822] hover:bg-[#0e2717] border border-[#E1AD01]/20 text-xs font-bold text-white transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <CreditCard className="w-4 h-4 text-[#E1AD01]" />
+                          <span>Stripe Card Payment Settings</span>
+                        </div>
+                        <span>→</span>
+                      </button>
+
                       <button
                         onClick={handleNewProductInit}
                         className="w-full flex items-center justify-between p-3 rounded-xl bg-[#143822] hover:bg-[#0e2717] border border-[#E1AD01]/20 text-xs font-bold text-white transition-colors cursor-pointer"
@@ -698,34 +925,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                         </div>
                         <span>→</span>
                       </button>
-
-                      <button
-                        onClick={() => setActiveTab('inquiries')}
-                        className="w-full flex items-center justify-between p-3 rounded-xl bg-[#143822] hover:bg-[#0e2717] border border-[#E1AD01]/20 text-xs font-bold text-white transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="w-4 h-4 text-[#E1AD01]" />
-                          <span>Review Event Proposals</span>
-                        </div>
-                        <span>→</span>
-                      </button>
-
-                      <button
-                        onClick={() => setActiveTab('supabase')}
-                        className="w-full flex items-center justify-between p-3 rounded-xl bg-[#143822] hover:bg-[#0e2717] border border-[#E1AD01]/20 text-xs font-bold text-white transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <Database className="w-4 h-4 text-[#E1AD01]" />
-                          <span>Supabase Connection & SQL</span>
-                        </div>
-                        <span>→</span>
-                      </button>
                     </div>
                   </div>
 
                   {/* Supabase Status Tile */}
                   <div className="bg-white p-5 rounded-3xl border border-[#1B4D2E]/10 shadow-xs text-xs space-y-2">
-                    <div className="font-bold text-[#1B4D2E]">Storage Engine Status</div>
+                    <div className="font-bold text-[#1B4D2E]">Storage & Cloud Sync</div>
                     <p className="text-gray-600 text-[11px]">
                       {supabaseCfg.connected
                         ? 'Connected to live Supabase Postgres database. Public writes and orders sync automatically.'
@@ -733,12 +938,974 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     </p>
                     <button
                       onClick={() => setActiveTab('supabase')}
-                      className="text-xs font-bold text-[#1B4D2E] underline"
+                      className="text-xs font-bold text-[#1B4D2E] underline cursor-pointer"
                     >
-                      Configure Supabase
+                      Configure Supabase Database
                     </button>
                   </div>
                 </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* TAB: BRANDING & LOGO */}
+          {activeTab === 'branding' && (
+            <div className="space-y-6 max-w-4xl">
+              <div>
+                <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-[#1B4D2E]">
+                  Branding & Logo Management
+                </h2>
+                <p className="text-xs sm:text-sm text-[#1B4D2E]/70">
+                  Upload your business logo, manage transparent PNGs/SVGs, and configure header & footer presentation
+                </p>
+              </div>
+
+              {/* Logo Preview Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Desktop Header Preview */}
+                <div className="bg-white p-5 rounded-3xl border border-[#1B4D2E]/10 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70">
+                      Header Logo Preview (Light Background)
+                    </span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                      Live Preview
+                    </span>
+                  </div>
+
+                  <div className="h-24 bg-white border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center p-3 relative overflow-hidden">
+                    {content.branding?.showLogoIcon !== false && (
+                      content.branding?.logoUrl ? (
+                        <img
+                          src={content.branding.logoUrl}
+                          alt="Logo Preview"
+                          className="max-h-16 max-w-[200px] object-contain"
+                        />
+                      ) : (
+                        <div className="flex items-center space-x-3">
+                          <div className="w-12 h-12 rounded-full bg-[#1B4D2E] border-2 border-[#E1AD01] flex items-center justify-center text-[#E1AD01] shadow-md font-display font-black text-xl italic">
+                            DJ
+                          </div>
+                          <div>
+                            <div className="font-display font-extrabold text-lg text-[#1B4D2E]">
+                              Delightful<span className="text-[#E1AD01]">Juice</span>
+                            </div>
+                            <div className="text-[10px] text-[#1B4D2E]/60 uppercase font-semibold">
+                              {content.motto}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                  <div className="text-[11px] text-gray-500 text-center">
+                    {content.branding?.logoUrl ? 'Using custom uploaded logo file' : 'Using default stylized DJ gold & green emblem'}
+                  </div>
+                </div>
+
+                {/* Dark Footer Preview */}
+                <div className="bg-white p-5 rounded-3xl border border-[#1B4D2E]/10 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70">
+                      Footer Logo Preview (Dark Background)
+                    </span>
+                    <span className="text-[10px] bg-gray-100 text-gray-700 font-bold px-2 py-0.5 rounded-full">
+                      Transparent Check
+                    </span>
+                  </div>
+
+                  <div className="h-24 bg-[#12351F] rounded-2xl flex items-center justify-center p-3 relative overflow-hidden border border-[#E1AD01]/30">
+                    {content.branding?.showLogoIcon !== false && (
+                      content.branding?.logoUrl ? (
+                        <img
+                          src={content.branding.logoUrl}
+                          alt="Dark Footer Preview"
+                          className="max-h-16 max-w-[200px] object-contain drop-shadow-md"
+                        />
+                      ) : (
+                        <div className="flex items-center space-x-3">
+                          <div className="w-12 h-12 rounded-full bg-[#1B4D2E] border-2 border-[#E1AD01] flex items-center justify-center text-[#E1AD01] shadow-md font-display font-black text-xl italic">
+                            DJ
+                          </div>
+                          <div>
+                            <div className="font-display font-extrabold text-lg text-white">
+                              Delightful<span className="text-[#E1AD01]">Juice</span>
+                            </div>
+                            <div className="text-[10px] text-[#E1AD01] uppercase font-semibold">
+                              {content.motto}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                  <div className="text-[11px] text-gray-500 text-center">
+                    Transparent PNGs or SVGs render cleanly across dark backgrounds
+                  </div>
+                </div>
+              </div>
+
+              {/* Logo Controls Form */}
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#1B4D2E]/10 shadow-sm space-y-5">
+                <h3 className="font-display font-bold text-lg text-[#1B4D2E]">
+                  Logo Settings & Upload
+                </h3>
+
+                {/* Upload Primary Logo */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-2">
+                    Upload Website Logo (PNG, SVG, WebP, JPG)
+                  </label>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <label className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold text-xs py-2.5 px-4 rounded-xl flex items-center space-x-2 shadow-xs cursor-pointer">
+                      <Upload className="w-4 h-4 text-[#E1AD01]" />
+                      <span>Choose Logo File...</span>
+                      <input
+                        type="file"
+                        accept="image/png, image/svg+xml, image/webp, image/jpeg"
+                        onChange={(e) => handleLogoUpload(e, false)}
+                        className="hidden"
+                      />
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updatedBranding: BrandSettings = {
+                          ...(content.branding || { logoText: 'Delightful Juice', showLogoIcon: true }),
+                          logoUrl: '',
+                          mobileLogoUrl: '',
+                        };
+                        const updated = { ...content, branding: updatedBranding };
+                        setContent(updated);
+                        dataRepo.saveContent(updated);
+                        showToast('Default stylized logo restored!');
+                      }}
+                      className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold py-2.5 px-3.5 rounded-xl flex items-center space-x-1.5 transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Restore Default Logo</span>
+                    </button>
+                  </div>
+                  <span className="text-[11px] text-gray-500 mt-1.5 block">
+                    Supported formats: PNG (recommended with transparent background), SVG, WebP, JPG (max 5MB).
+                  </span>
+                </div>
+
+                {/* Or Direct Logo URL */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
+                    Or Enter Hosted Logo Image URL
+                  </label>
+                  <input
+                    type="url"
+                    value={content.branding?.logoUrl || ''}
+                    onChange={(e) => {
+                      const updatedBranding: BrandSettings = {
+                        ...(content.branding || { logoText: 'Delightful Juice', showLogoIcon: true }),
+                        logoUrl: e.target.value,
+                      };
+                      setContent({ ...content, branding: updatedBranding });
+                    }}
+                    placeholder="https://example.com/assets/logo.png"
+                    className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E]"
+                  />
+                </div>
+
+                {/* Optional Mobile Logo */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
+                    Optional Dedicated Mobile Logo URL (Leave blank to use primary logo)
+                  </label>
+                  <input
+                    type="url"
+                    value={content.branding?.mobileLogoUrl || ''}
+                    onChange={(e) => {
+                      const updatedBranding: BrandSettings = {
+                        ...(content.branding || { logoText: 'Delightful Juice', showLogoIcon: true }),
+                        mobileLogoUrl: e.target.value,
+                      };
+                      setContent({ ...content, branding: updatedBranding });
+                    }}
+                    placeholder="https://example.com/assets/mobile-logo-icon.png"
+                    className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E]"
+                  />
+                </div>
+
+                {/* Logo Text / Alt */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
+                      Brand / Logo Text (Heading Text)
+                    </label>
+                    <input
+                      type="text"
+                      value={content.branding?.logoText || ''}
+                      onChange={(e) => {
+                        const updatedBranding: BrandSettings = {
+                          ...(content.branding || { showLogoIcon: true }),
+                          logoText: e.target.value,
+                        };
+                        setContent({ ...content, branding: updatedBranding });
+                      }}
+                      placeholder="Delightful Juice"
+                      className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E]"
+                    />
+                  </div>
+
+                  <div className="flex items-center pt-5">
+                    <label className="flex items-center space-x-2.5 cursor-pointer font-bold text-xs text-[#1B4D2E]">
+                      <input
+                        type="checkbox"
+                        checked={content.branding?.showLogoIcon !== false}
+                        onChange={(e) => {
+                          const updatedBranding: BrandSettings = {
+                            ...(content.branding || { logoText: 'Delightful Juice' }),
+                            showLogoIcon: e.target.checked,
+                          };
+                          setContent({ ...content, branding: updatedBranding });
+                        }}
+                        className="w-4 h-4 accent-[#1B4D2E]"
+                      />
+                      <span>Show Logo Icon / Graphic in Header & Footer</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-gray-100 flex justify-end">
+                  <button
+                    onClick={() => {
+                      dataRepo.saveContent(content);
+                      showToast('Branding settings saved persistently!');
+                    }}
+                    className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-3 px-6 rounded-xl text-xs flex items-center space-x-2 shadow-md cursor-pointer"
+                  >
+                    <Save className="w-4 h-4 text-[#E1AD01]" />
+                    <span>Save Branding Settings</span>
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* TAB: COLOURS & THEME */}
+          {activeTab === 'appearance' && (
+            <div className="space-y-6 max-w-4xl">
+              <div>
+                <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-[#1B4D2E]">
+                  Branding and Appearance (Colours & Theme)
+                </h2>
+                <p className="text-xs sm:text-sm text-[#1B4D2E]/70">
+                  Customize your brand palette, header/footer tones, and button styles. Default page background is strictly <strong>white (#FFFFFF)</strong>.
+                </p>
+              </div>
+
+              {/* Live Mini Preview Card */}
+              <div 
+                className="p-6 rounded-3xl shadow-sm border transition-all space-y-4"
+                style={{
+                  backgroundColor: content.colors?.pageBgColor || '#FFFFFF',
+                  borderColor: content.colors?.borderColor || '#1B4D2E26',
+                }}
+              >
+                <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: content.colors?.borderColor || '#1B4D2E26' }}>
+                  <div className="flex items-center space-x-2.5">
+                    <span 
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: content.colors?.secondaryColor || '#E1AD01' }}
+                    />
+                    <span 
+                      className="font-display font-bold text-base"
+                      style={{ color: content.colors?.primaryColor || '#1B4D2E' }}
+                    >
+                      Theme Live Preview Card
+                    </span>
+                  </div>
+                  <span 
+                    className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full"
+                    style={{
+                      backgroundColor: content.colors?.secondaryColor || '#E1AD01',
+                      color: content.colors?.primaryColor || '#1B4D2E',
+                    }}
+                  >
+                    Accent Badge
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div 
+                    className="p-4 rounded-2xl border text-center space-y-2 shadow-xs"
+                    style={{
+                      backgroundColor: content.colors?.cardBgColor || '#FFFFFF',
+                      borderColor: content.colors?.borderColor || '#1B4D2E26',
+                    }}
+                  >
+                    <div 
+                      className="text-xs font-bold"
+                      style={{ color: content.colors?.textColor || '#1B4D2E' }}
+                    >
+                      Primary Button Preview
+                    </div>
+                    <button
+                      className="py-2 px-4 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer w-full"
+                      style={{
+                        backgroundColor: content.colors?.buttonBgColor || '#1B4D2E',
+                        color: content.colors?.buttonTextColor || '#FFF8E7',
+                      }}
+                    >
+                      Order Juice
+                    </button>
+                  </div>
+
+                  <div 
+                    className="p-4 rounded-2xl border text-center space-y-2 shadow-xs"
+                    style={{
+                      backgroundColor: content.colors?.cardBgColor || '#FFFFFF',
+                      borderColor: content.colors?.borderColor || '#1B4D2E26',
+                    }}
+                  >
+                    <div 
+                      className="text-xs font-bold"
+                      style={{ color: content.colors?.textColor || '#1B4D2E' }}
+                    >
+                      Secondary Highlight
+                    </div>
+                    <button
+                      className="py-2 px-4 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer w-full"
+                      style={{
+                        backgroundColor: content.colors?.secondaryColor || '#E1AD01',
+                        color: content.colors?.primaryColor || '#1B4D2E',
+                      }}
+                    >
+                      View Catering
+                    </button>
+                  </div>
+
+                  <div 
+                    className="p-4 rounded-2xl text-center space-y-1 shadow-xs"
+                    style={{
+                      backgroundColor: content.colors?.footerBgColor || '#12351F',
+                      color: '#FFF8E7',
+                    }}
+                  >
+                    <div className="text-xs font-bold text-[#E1AD01]">Footer Style</div>
+                    <div className="text-[11px] opacity-80">Quakertown, PA 18951</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Palette Form */}
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#1B4D2E]/10 shadow-sm space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display font-bold text-lg text-[#1B4D2E]">
+                    Colour Swatches & Values
+                  </h3>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = {
+                        ...content,
+                        colors: { ...DEFAULT_COLORS },
+                        typography: { ...DEFAULT_TYPOGRAPHY },
+                      };
+                      setContent(updated);
+                      applyTheme(updated);
+                      dataRepo.saveContent(updated);
+                      showToast('Palette restored to default brand colors!');
+                    }}
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold py-2 px-3 rounded-xl flex items-center space-x-1.5 transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reset to Default Palette</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Page Background */}
+                  <div className="p-3.5 bg-[#FFF8E7] rounded-2xl border border-gray-200 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-[#1B4D2E]">
+                        Default Page Background
+                      </label>
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                        Strictly White
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="color"
+                        value={content.colors?.pageBgColor || '#FFFFFF'}
+                        onChange={(e) => {
+                          const updated = {
+                            ...content,
+                            colors: { ...(content.colors || DEFAULT_COLORS), pageBgColor: e.target.value },
+                          };
+                          setContent(updated);
+                          applyTheme(updated);
+                        }}
+                        className="w-10 h-10 rounded-lg border cursor-pointer shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={content.colors?.pageBgColor || '#FFFFFF'}
+                        onChange={(e) => {
+                          const updated = {
+                            ...content,
+                            colors: { ...(content.colors || DEFAULT_COLORS), pageBgColor: e.target.value },
+                          };
+                          setContent(updated);
+                          applyTheme(updated);
+                        }}
+                        className="w-full bg-white border rounded-xl px-3 py-2 text-xs font-mono font-bold text-[#1B4D2E]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Primary Brand Colour */}
+                  <div className="p-3.5 bg-[#FFF8E7] rounded-2xl border border-gray-200 space-y-1.5">
+                    <label className="block text-xs font-bold text-[#1B4D2E]">
+                      Primary Brand Colour (Dark Green)
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="color"
+                        value={content.colors?.primaryColor || '#1B4D2E'}
+                        onChange={(e) => {
+                          const updated = {
+                            ...content,
+                            colors: { ...(content.colors || DEFAULT_COLORS), primaryColor: e.target.value },
+                          };
+                          setContent(updated);
+                          applyTheme(updated);
+                        }}
+                        className="w-10 h-10 rounded-lg border cursor-pointer shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={content.colors?.primaryColor || '#1B4D2E'}
+                        onChange={(e) => {
+                          const updated = {
+                            ...content,
+                            colors: { ...(content.colors || DEFAULT_COLORS), primaryColor: e.target.value },
+                          };
+                          setContent(updated);
+                          applyTheme(updated);
+                        }}
+                        className="w-full bg-white border rounded-xl px-3 py-2 text-xs font-mono font-bold text-[#1B4D2E]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Secondary Brand Colour */}
+                  <div className="p-3.5 bg-[#FFF8E7] rounded-2xl border border-gray-200 space-y-1.5">
+                    <label className="block text-xs font-bold text-[#1B4D2E]">
+                      Secondary Brand Colour (Mustard Yellow)
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="color"
+                        value={content.colors?.secondaryColor || '#E1AD01'}
+                        onChange={(e) => {
+                          const updated = {
+                            ...content,
+                            colors: { ...(content.colors || DEFAULT_COLORS), secondaryColor: e.target.value },
+                          };
+                          setContent(updated);
+                          applyTheme(updated);
+                        }}
+                        className="w-10 h-10 rounded-lg border cursor-pointer shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={content.colors?.secondaryColor || '#E1AD01'}
+                        onChange={(e) => {
+                          const updated = {
+                            ...content,
+                            colors: { ...(content.colors || DEFAULT_COLORS), secondaryColor: e.target.value },
+                          };
+                          setContent(updated);
+                          applyTheme(updated);
+                        }}
+                        className="w-full bg-white border rounded-xl px-3 py-2 text-xs font-mono font-bold text-[#1B4D2E]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Accent Colour */}
+                  <div className="p-3.5 bg-[#FFF8E7] rounded-2xl border border-gray-200 space-y-1.5">
+                    <label className="block text-xs font-bold text-[#1B4D2E]">
+                      Accent Colour (Highlights & Badges)
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="color"
+                        value={content.colors?.accentColor || '#E1AD01'}
+                        onChange={(e) => {
+                          const updated = {
+                            ...content,
+                            colors: { ...(content.colors || DEFAULT_COLORS), accentColor: e.target.value },
+                          };
+                          setContent(updated);
+                          applyTheme(updated);
+                        }}
+                        className="w-10 h-10 rounded-lg border cursor-pointer shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={content.colors?.accentColor || '#E1AD01'}
+                        onChange={(e) => {
+                          const updated = {
+                            ...content,
+                            colors: { ...(content.colors || DEFAULT_COLORS), accentColor: e.target.value },
+                          };
+                          setContent(updated);
+                          applyTheme(updated);
+                        }}
+                        className="w-full bg-white border rounded-xl px-3 py-2 text-xs font-mono font-bold text-[#1B4D2E]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Button Background */}
+                  <div className="p-3.5 bg-[#FFF8E7] rounded-2xl border border-gray-200 space-y-1.5">
+                    <label className="block text-xs font-bold text-[#1B4D2E]">
+                      Button Background Colour
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="color"
+                        value={content.colors?.buttonBgColor || '#1B4D2E'}
+                        onChange={(e) => {
+                          const updated = {
+                            ...content,
+                            colors: { ...(content.colors || DEFAULT_COLORS), buttonBgColor: e.target.value },
+                          };
+                          setContent(updated);
+                          applyTheme(updated);
+                        }}
+                        className="w-10 h-10 rounded-lg border cursor-pointer shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={content.colors?.buttonBgColor || '#1B4D2E'}
+                        onChange={(e) => {
+                          const updated = {
+                            ...content,
+                            colors: { ...(content.colors || DEFAULT_COLORS), buttonBgColor: e.target.value },
+                          };
+                          setContent(updated);
+                          applyTheme(updated);
+                        }}
+                        className="w-full bg-white border rounded-xl px-3 py-2 text-xs font-mono font-bold text-[#1B4D2E]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Button Text Colour */}
+                  <div className="p-3.5 bg-[#FFF8E7] rounded-2xl border border-gray-200 space-y-1.5">
+                    <label className="block text-xs font-bold text-[#1B4D2E]">
+                      Button Text Colour
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="color"
+                        value={content.colors?.buttonTextColor || '#FFF8E7'}
+                        onChange={(e) => {
+                          const updated = {
+                            ...content,
+                            colors: { ...(content.colors || DEFAULT_COLORS), buttonTextColor: e.target.value },
+                          };
+                          setContent(updated);
+                          applyTheme(updated);
+                        }}
+                        className="w-10 h-10 rounded-lg border cursor-pointer shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={content.colors?.buttonTextColor || '#FFF8E7'}
+                        onChange={(e) => {
+                          const updated = {
+                            ...content,
+                            colors: { ...(content.colors || DEFAULT_COLORS), buttonTextColor: e.target.value },
+                          };
+                          setContent(updated);
+                          applyTheme(updated);
+                        }}
+                        className="w-full bg-white border rounded-xl px-3 py-2 text-xs font-mono font-bold text-[#1B4D2E]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Header Background */}
+                  <div className="p-3.5 bg-[#FFF8E7] rounded-2xl border border-gray-200 space-y-1.5">
+                    <label className="block text-xs font-bold text-[#1B4D2E]">
+                      Header Background Colour
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="color"
+                        value={content.colors?.headerBgColor || '#FFFFFF'}
+                        onChange={(e) => {
+                          const updated = {
+                            ...content,
+                            colors: { ...(content.colors || DEFAULT_COLORS), headerBgColor: e.target.value },
+                          };
+                          setContent(updated);
+                          applyTheme(updated);
+                        }}
+                        className="w-10 h-10 rounded-lg border cursor-pointer shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={content.colors?.headerBgColor || '#FFFFFF'}
+                        onChange={(e) => {
+                          const updated = {
+                            ...content,
+                            colors: { ...(content.colors || DEFAULT_COLORS), headerBgColor: e.target.value },
+                          };
+                          setContent(updated);
+                          applyTheme(updated);
+                        }}
+                        className="w-full bg-white border rounded-xl px-3 py-2 text-xs font-mono font-bold text-[#1B4D2E]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Footer Background */}
+                  <div className="p-3.5 bg-[#FFF8E7] rounded-2xl border border-gray-200 space-y-1.5">
+                    <label className="block text-xs font-bold text-[#1B4D2E]">
+                      Footer Background Colour
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="color"
+                        value={content.colors?.footerBgColor || '#12351F'}
+                        onChange={(e) => {
+                          const updated = {
+                            ...content,
+                            colors: { ...(content.colors || DEFAULT_COLORS), footerBgColor: e.target.value },
+                          };
+                          setContent(updated);
+                          applyTheme(updated);
+                        }}
+                        className="w-10 h-10 rounded-lg border cursor-pointer shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={content.colors?.footerBgColor || '#12351F'}
+                        onChange={(e) => {
+                          const updated = {
+                            ...content,
+                            colors: { ...(content.colors || DEFAULT_COLORS), footerBgColor: e.target.value },
+                          };
+                          setContent(updated);
+                          applyTheme(updated);
+                        }}
+                        className="w-full bg-white border rounded-xl px-3 py-2 text-xs font-mono font-bold text-[#1B4D2E]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-gray-100 flex justify-end">
+                  <button
+                    onClick={() => {
+                      dataRepo.saveContent(content);
+                      applyTheme(content);
+                      showToast('Appearance palette applied and saved persistently!');
+                    }}
+                    className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-3 px-6 rounded-xl text-xs flex items-center space-x-2 shadow-md cursor-pointer"
+                  >
+                    <Save className="w-4 h-4 text-[#E1AD01]" />
+                    <span>Save Brand Colours</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: STRIPE PAYMENTS */}
+          {activeTab === 'stripe' && (
+            <div className="space-y-6 max-w-4xl">
+              <div>
+                <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-[#1B4D2E]">
+                  Stripe Payment Integration
+                </h2>
+                <p className="text-xs sm:text-sm text-[#1B4D2E]/70">
+                  Allow customers to pay instantly with credit cards, Apple Pay, and Google Pay via Stripe
+                </p>
+              </div>
+
+              {/* Status Banner & Submit Later Notice */}
+              <div className="space-y-3">
+                <div 
+                  className={`p-5 rounded-3xl border flex items-start space-x-4 ${
+                    content.stripe?.enabled
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                      : 'bg-gray-50 border-gray-300 text-gray-800'
+                  }`}
+                >
+                  <CreditCard className="w-6 h-6 shrink-0 mt-0.5 text-[#1B4D2E]" />
+                  <div className="space-y-1 text-xs">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-extrabold text-sm">
+                        {content.stripe?.enabled ? 'Stripe Checkout is Active' : 'Stripe Checkout is Disabled'}
+                      </span>
+                      {(!content.stripe?.publishableKey || content.stripe.publishableKey.trim() === '') && (
+                        <span className="bg-amber-100 text-amber-900 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-amber-300">
+                          Keys Pending Submission
+                        </span>
+                      )}
+                    </div>
+                    <p>
+                      {content.stripe?.enabled
+                        ? `Customers can choose "${content.stripe.customerFacingName || 'Credit / Debit Card (Stripe)'}" at checkout in ${content.stripe.mode || 'test'} mode.`
+                        : 'Card checkout is currently hidden from customers. Enable the toggle below whenever you wish to activate.'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Submitting Keys Later Callout */}
+                <div className="p-4 bg-sky-50 rounded-2xl border border-sky-200 text-sky-950 text-xs flex items-start space-x-3">
+                  <HelpCircle className="w-5 h-5 text-sky-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <div className="font-bold text-sky-900">
+                      Submitting Keys Later? Everything Works Seamlessly!
+                    </div>
+                    <p className="text-[11px] text-sky-800 leading-relaxed">
+                      You can submit your Stripe keys at any time after generating them in your Stripe dashboard. In the meantime, your store safely takes orders via <strong>Zelle Transfer</strong>, <strong>Kitchen Pickup</strong>, and <strong>Direct WhatsApp</strong> without losing a single customer. Whenever your Stripe keys are ready, simply paste your Publishable Key below and set your <code className="bg-sky-100 px-1 py-0.5 rounded font-mono text-[10px]">STRIPE_SECRET_KEY</code> in Vercel.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stripe Settings Form */}
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#1B4D2E]/10 shadow-sm space-y-5">
+                <div className="flex items-center justify-between pb-3 border-b">
+                  <div>
+                    <h3 className="font-display font-bold text-lg text-[#1B4D2E]">
+                      Card Processing Settings
+                    </h3>
+                    <p className="text-xs text-gray-500">Configure Stripe checkout credentials and modes</p>
+                  </div>
+
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={content.stripe?.enabled !== false}
+                      onChange={(e) => {
+                        const updated: StripePaymentSettings = {
+                          ...(content.stripe || {
+                            mode: 'test',
+                            publishableKey: '',
+                            currency: 'USD',
+                            customerFacingName: 'Credit / Debit Card (Stripe)',
+                            description: 'Instant secure checkout with Visa, Mastercard, Amex, Apple Pay & Google Pay',
+                          }),
+                          enabled: e.target.checked,
+                        };
+                        setContent({ ...content, stripe: updated });
+                      }}
+                      className="w-5 h-5 accent-[#1B4D2E]"
+                    />
+                    <span className="text-xs font-bold text-[#1B4D2E]">Enable Stripe</span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Mode */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
+                      Processing Mode
+                    </label>
+                    <select
+                      value={content.stripe?.mode || 'test'}
+                      onChange={(e) => {
+                        const updated: StripePaymentSettings = {
+                          ...(content.stripe || {
+                            enabled: true,
+                            publishableKey: '',
+                            currency: 'USD',
+                            customerFacingName: 'Credit / Debit Card (Stripe)',
+                            description: '',
+                          }),
+                          mode: e.target.value as 'test' | 'live',
+                        };
+                        setContent({ ...content, stripe: updated });
+                      }}
+                      className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E] font-bold"
+                    >
+                      <option value="test">Test Mode (pk_test_...)</option>
+                      <option value="live">Live Production (pk_live_...)</option>
+                    </select>
+                  </div>
+
+                  {/* Currency */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
+                      Currency
+                    </label>
+                    <select
+                      value={content.stripe?.currency || 'USD'}
+                      onChange={(e) => {
+                        const updated: StripePaymentSettings = {
+                          ...(content.stripe || {
+                            enabled: true,
+                            mode: 'test',
+                            publishableKey: '',
+                            customerFacingName: 'Credit / Debit Card (Stripe)',
+                            description: '',
+                          }),
+                          currency: e.target.value,
+                        };
+                        setContent({ ...content, stripe: updated });
+                      }}
+                      className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E] font-bold"
+                    >
+                      <option value="USD">USD ($ - United States Dollar)</option>
+                      <option value="CAD">CAD ($ - Canadian Dollar)</option>
+                      <option value="GBP">GBP (£ - British Pound)</option>
+                      <option value="EUR">EUR (€ - Euro)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Publishable Key */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
+                    Stripe Publishable Key
+                  </label>
+                  <input
+                    type="text"
+                    value={content.stripe?.publishableKey || ''}
+                    onChange={(e) => {
+                      const updated: StripePaymentSettings = {
+                        ...(content.stripe || {
+                          enabled: true,
+                          mode: 'test',
+                          currency: 'USD',
+                          customerFacingName: 'Credit / Debit Card (Stripe)',
+                          description: '',
+                        }),
+                        publishableKey: e.target.value,
+                      };
+                      setContent({ ...content, stripe: updated });
+                    }}
+                    placeholder="pk_test_... or pk_live_..."
+                    className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E] font-mono"
+                  />
+                  <span className="text-[10px] text-gray-500 mt-1 block">
+                    Available in your Stripe Dashboard &gt; Developers &gt; API Keys.
+                  </span>
+                </div>
+
+                {/* Customer-Facing Label */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
+                    Customer Facing Method Name
+                  </label>
+                  <input
+                    type="text"
+                    value={content.stripe?.customerFacingName || 'Credit / Debit Card (Stripe)'}
+                    onChange={(e) => {
+                      const updated: StripePaymentSettings = {
+                        ...(content.stripe || {
+                          enabled: true,
+                          mode: 'test',
+                          publishableKey: '',
+                          currency: 'USD',
+                          description: '',
+                        }),
+                        customerFacingName: e.target.value,
+                      };
+                      setContent({ ...content, stripe: updated });
+                    }}
+                    className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E]"
+                  />
+                </div>
+
+                {/* Customer-Facing Description */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
+                    Customer Facing Description
+                  </label>
+                  <input
+                    type="text"
+                    value={content.stripe?.description || 'Instant secure payment via Visa, Mastercard, Amex, Apple Pay & Google Pay'}
+                    onChange={(e) => {
+                      const updated: StripePaymentSettings = {
+                        ...(content.stripe || {
+                          enabled: true,
+                          mode: 'test',
+                          publishableKey: '',
+                          currency: 'USD',
+                          customerFacingName: 'Credit / Debit Card (Stripe)',
+                        }),
+                        description: e.target.value,
+                      };
+                      setContent({ ...content, stripe: updated });
+                    }}
+                    className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E]"
+                  />
+                </div>
+
+                {/* Server Secret Key Instructions */}
+                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-xs space-y-2 text-amber-900">
+                  <div className="font-bold flex items-center space-x-1.5">
+                    <ShieldCheck className="w-4 h-4 text-amber-700" />
+                    <span>Important: Setting STRIPE_SECRET_KEY on Vercel</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    Stripe secret keys (<span className="font-mono font-bold">sk_test_...</span> or <span className="font-mono font-bold">sk_live_...</span>) must never be placed in frontend code. 
+                    In your Vercel Project Dashboard, navigate to <strong>Settings &gt; Environment Variables</strong> and add:
+                  </p>
+                  <div className="bg-white/80 p-2.5 rounded-xl font-mono text-[11px] border border-amber-300">
+                    <div><strong>STRIPE_SECRET_KEY</strong> = sk_test_51... or sk_live_...</div>
+                    <div className="text-gray-500 mt-1"><strong>STRIPE_WEBHOOK_SECRET</strong> = whsec_... (optional for webhooks)</div>
+                  </div>
+                </div>
+
+                {/* Test Stripe API Endpoint Button */}
+                <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={handleTestStripeEndpoint}
+                    disabled={isTestingStripe}
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center space-x-2 transition-colors cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isTestingStripe ? 'animate-spin' : ''}`} />
+                    <span>{isTestingStripe ? 'Pinging /api/create-checkout-session...' : 'Test Stripe Server API Endpoint'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      dataRepo.saveContent(content);
+                      showToast('Stripe settings saved persistently!');
+                    }}
+                    className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-3 px-6 rounded-xl text-xs flex items-center space-x-2 shadow-md cursor-pointer"
+                  >
+                    <Save className="w-4 h-4 text-[#E1AD01]" />
+                    <span>Save Stripe Settings</span>
+                  </button>
+                </div>
+
+                {stripeTestResult && (
+                  <div
+                    className={`p-3.5 rounded-xl text-xs flex items-start space-x-2 ${
+                      stripeTestResult.success ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'
+                    }`}
+                  >
+                    {stripeTestResult.success ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                    )}
+                    <span>{stripeTestResult.message}</span>
+                  </div>
+                )}
 
               </div>
             </div>
@@ -753,7 +1920,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     Juice & Drink Catalog
                   </h2>
                   <p className="text-xs sm:text-sm text-[#1B4D2E]/70">
-                    Manage flavors, bottle sizes (35cl, 50cl, 1L), prices, and inventory
+                    Manage drink photography, flavors, bottle sizes (35cl, 50cl, 1L), prices, and inventory
                   </p>
                 </div>
 
@@ -772,7 +1939,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   <table className="w-full text-left text-xs">
                     <thead className="bg-[#FFF8E7] text-[#1B4D2E] uppercase font-bold text-[10px]">
                       <tr>
-                        <th className="p-4">Drink</th>
+                        <th className="p-4">Drink Photo</th>
                         <th className="p-4">Category</th>
                         <th className="p-4">Bottle Sizes & Prices</th>
                         <th className="p-4">Stock</th>
@@ -788,16 +1955,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                               <img
                                 src={p.imageUrl}
                                 alt={p.name}
-                                className="w-12 h-12 rounded-xl object-cover bg-gray-100 shrink-0"
+                                className="w-14 h-14 rounded-2xl object-cover bg-gray-100 shadow-xs shrink-0"
                               />
                               <div>
                                 <div className="font-bold text-sm text-[#1B4D2E]">{p.name}</div>
                                 <div className="text-[11px] text-gray-500 line-clamp-1">{p.tagline}</div>
-                                {p.badge && (
-                                  <span className="inline-block mt-1 bg-[#E1AD01]/25 text-[#1B4D2E] text-[9px] font-bold px-2 py-0.5 rounded-sm">
-                                    {p.badge}
-                                  </span>
-                                )}
+                                <div className="flex items-center space-x-2 mt-1">
+                                  {p.badge && (
+                                    <span className="bg-[#E1AD01]/25 text-[#1B4D2E] text-[9px] font-bold px-2 py-0.5 rounded-sm">
+                                      {p.badge}
+                                    </span>
+                                  )}
+                                  {p.galleryImages && p.galleryImages.length > 0 && (
+                                    <span className="text-[9px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-md font-semibold">
+                                      +{p.galleryImages.length} extra photos
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </td>
@@ -845,7 +2019,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                                   setIsAddingProduct(false);
                                 }}
                                 className="p-2 text-[#1B4D2E] hover:bg-[#FFF8E7] rounded-lg transition-colors cursor-pointer"
-                                title="Edit Drink"
+                                title="Edit Drink & Images"
                               >
                                 <Edit3 className="w-4 h-4" />
                               </button>
@@ -853,6 +2027,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                                 onClick={() => {
                                   if (confirm(`Delete ${p.name}?`)) {
                                     dataRepo.deleteProduct(p.id);
+                                    showToast(`Deleted ${p.name}`);
                                   }
                                 }}
                                 className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
@@ -906,115 +2081,136 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
               <div className="space-y-4">
                 {orders
                   .filter((o) => orderFilter === 'all' || o.status === orderFilter)
-                  .map((order) => (
+                  .map((ord) => (
                     <div
-                      key={order.id}
-                      className="bg-white rounded-3xl p-6 border border-[#1B4D2E]/10 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6"
+                      key={ord.id}
+                      className="bg-white p-5 rounded-3xl border border-[#1B4D2E]/10 shadow-sm space-y-4"
                     >
-                      <div className="space-y-2 flex-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
                         <div className="flex items-center space-x-3">
-                          <span className="font-mono font-black text-sm text-[#1B4D2E] bg-[#FFF8E7] px-2.5 py-1 rounded-lg border border-[#1B4D2E]/15">
-                            {order.orderNumber}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {new Date(order.createdAt).toLocaleString()}
+                          <span className="font-mono font-extrabold text-base text-[#1B4D2E]">
+                            {ord.orderNumber}
                           </span>
                           <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                              order.status === 'completed'
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                              ord.status === 'completed'
                                 ? 'bg-emerald-100 text-emerald-800'
-                                : order.status === 'preparing'
+                                : ord.status === 'preparing'
                                 ? 'bg-blue-100 text-blue-800'
                                 : 'bg-amber-100 text-amber-800'
                             }`}
                           >
-                            {order.status.replace('_', ' ')}
+                            {ord.status.replace('_', ' ')}
                           </span>
+                          {ord.paymentMethod === 'stripe_card' && (
+                            <span className="bg-purple-100 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center space-x-1">
+                              <CreditCard className="w-3 h-3" />
+                              <span>Stripe Paid</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="text-xs text-gray-500">
+                          {new Date(ord.createdAt).toLocaleString()}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                        <div>
+                          <span className="font-bold text-[#1B4D2E]/70 block uppercase text-[10px]">
+                            Customer Information
+                          </span>
+                          <div className="font-bold text-sm text-[#1B4D2E]">{ord.customerName}</div>
+                          <div className="text-gray-600">{ord.customerPhone}</div>
+                          <div className="text-gray-600">{ord.customerEmail}</div>
                         </div>
 
                         <div>
-                          <div className="font-bold text-base text-[#1B4D2E]">{order.customerName}</div>
-                          <div className="text-xs text-gray-600 flex items-center space-x-2">
-                            <span>Phone: {order.customerPhone}</span>
-                            <span>•</span>
-                            <span>Email: {order.customerEmail}</span>
+                          <span className="font-bold text-[#1B4D2E]/70 block uppercase text-[10px]">
+                            Delivery Method & Destination
+                          </span>
+                          <div className="font-semibold text-gray-800 capitalize">
+                            {ord.deliveryMethod.replace('_', ' ')}
                           </div>
-                          <div className="text-xs text-gray-700 mt-1">
-                            <strong>Delivery:</strong> {order.deliveryAddress} ({order.deliveryMethod})
-                          </div>
-                          {order.notes && (
-                            <div className="text-xs text-amber-800 italic mt-0.5">
-                              Note: {order.notes}
+                          <div className="text-gray-600">{ord.deliveryAddress}</div>
+                          {ord.deliveryTimeSlot && (
+                            <div className="text-[11px] text-emerald-700 font-semibold mt-0.5">
+                              Window: {ord.deliveryTimeSlot}
                             </div>
                           )}
                         </div>
 
-                        {/* Order Items */}
-                        <div className="pt-2 flex flex-wrap gap-2">
-                          {order.items.map((it, idx) => (
-                            <span
-                              key={idx}
-                              className="text-[11px] font-semibold bg-[#FFF8E7] text-[#1B4D2E] px-2.5 py-1 rounded-lg border border-[#1B4D2E]/10"
-                            >
-                              {it.quantity}x {it.productName} ({it.size}) - ${(it.unitPrice * it.quantity).toFixed(2)}
-                            </span>
+                        <div>
+                          <span className="font-bold text-[#1B4D2E]/70 block uppercase text-[10px]">
+                            Payment & Total
+                          </span>
+                          <div className="font-extrabold text-base text-[#1B4D2E]">
+                            ${ord.total.toFixed(2)}
+                          </div>
+                          <div className="text-gray-600 capitalize">
+                            Method: {ord.paymentMethod.replace('_', ' ')}
+                          </div>
+                          {ord.deliveryFee > 0 && (
+                            <div className="text-[10px] text-gray-500">
+                              (Includes ${ord.deliveryFee.toFixed(2)} delivery fee)
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Items */}
+                      <div className="bg-[#FFF8E7] p-3 rounded-2xl border border-[#1B4D2E]/10 space-y-1 text-xs">
+                        <span className="font-bold text-[#1B4D2E] block text-[11px]">Items Ordered:</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {ord.items.map((it, idx) => (
+                            <div key={idx} className="flex items-center space-x-2 text-gray-700">
+                              <span className="w-5 h-5 rounded-full bg-[#1B4D2E] text-[#FFF8E7] text-[10px] font-bold flex items-center justify-center shrink-0">
+                                {it.quantity}
+                              </span>
+                              <span>{it.productName} ({it.size})</span>
+                              <span className="font-bold text-[#1B4D2E] ml-auto">
+                                ${(it.unitPrice * it.quantity).toFixed(2)}
+                              </span>
+                            </div>
                           ))}
                         </div>
                       </div>
 
-                      {/* Right: Status Switcher & WhatsApp Notification */}
-                      <div className="shrink-0 space-y-3 lg:text-right border-t lg:border-t-0 pt-4 lg:pt-0">
-                        <div>
-                          <div className="text-xs text-gray-500">Total Order Amount</div>
-                          <div className="font-display font-extrabold text-2xl text-[#1B4D2E]">
-                            ${order.total.toFixed(2)}
-                          </div>
-                          <div className="text-[10px] text-gray-500 uppercase">
-                            Paid via: {order.paymentMethod}
-                          </div>
+                      {/* Status Update & Actions */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs font-bold text-gray-700">Set Status:</span>
+                          {(['pending', 'preparing', 'out_for_delivery', 'completed', 'cancelled'] as Order['status'][]).map(
+                            (st) => (
+                              <button
+                                key={st}
+                                onClick={() => {
+                                  dataRepo.updateOrderStatus(ord.id, st);
+                                  showToast(`Order ${ord.orderNumber} status set to ${st}`);
+                                }}
+                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-colors cursor-pointer ${
+                                  ord.status === st
+                                    ? 'bg-[#1B4D2E] text-[#FFF8E7]'
+                                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                }`}
+                              >
+                                {st.replace('_', ' ')}
+                              </button>
+                            )
+                          )}
                         </div>
 
-                        <div className="flex flex-wrap lg:justify-end gap-2">
-                          <select
-                            value={order.status}
-                            onChange={(e) =>
-                              dataRepo.updateOrderStatus(order.id, e.target.value as Order['status'])
-                            }
-                            className="bg-[#FFF8E7] border border-[#1B4D2E]/20 text-xs font-bold rounded-xl px-3 py-1.5 text-[#1B4D2E]"
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="preparing">Preparing</option>
-                            <option value="out_for_delivery">Out for Delivery</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
-                          </select>
-
-                          <a
-                            href={`https://wa.me/${order.customerPhone.replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(
-                              order.customerName
-                            )}%2C%20your%20Delightful%20Juice%20order%20(${order.orderNumber})%20status%20is%20now%3A%20${encodeURIComponent(
-                              order.status
-                            )}.%20Thank%20you%20for%20choosing%20Delightful%20Juice!`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl flex items-center space-x-1"
-                          >
-                            <MessageCircle className="w-3.5 h-3.5" />
-                            <span>WhatsApp Customer</span>
-                          </a>
-
-                          <button
-                            onClick={() => {
-                              if (confirm('Delete this order record?')) {
-                                dataRepo.deleteOrder(order.id);
-                              }
-                            }}
-                            className="text-red-500 hover:text-red-700 p-1.5"
-                            title="Delete Order"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                        <a
+                          href={`https://wa.me/${ord.customerPhone.replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(
+                            ord.customerName
+                          )}%2C%20this%20is%20Delightful%20Juice%20regarding%20your%20order%20${ord.orderNumber}.`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-3.5 rounded-xl flex items-center space-x-1.5 cursor-pointer shadow-xs"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          <span>WhatsApp Customer</span>
+                        </a>
                       </div>
                     </div>
                   ))}
@@ -1022,15 +2218,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
             </div>
           )}
 
-          {/* TAB: EVENT CATERING INQUIRIES */}
+          {/* TAB: INQUIRIES */}
           {activeTab === 'inquiries' && (
             <div className="space-y-6 max-w-6xl">
               <div>
                 <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-[#1B4D2E]">
-                  Event & Catering Proposals
+                  Event & Catering Inquiries
                 </h2>
                 <p className="text-xs sm:text-sm text-[#1B4D2E]/70">
-                  Review custom bottle requests for weddings, birthdays, reunions, and corporate symposiums
+                  Manage requests for weddings, birthdays, corporate symposiums, and bulk orders
                 </p>
               </div>
 
@@ -1038,84 +2234,88 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 {inquiries.map((inq) => (
                   <div
                     key={inq.id}
-                    className="bg-white rounded-3xl p-6 border border-[#1B4D2E]/10 shadow-sm space-y-4"
+                    className="bg-white p-5 rounded-3xl border border-[#1B4D2E]/10 shadow-sm space-y-3 text-xs"
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
                       <div>
-                        <div className="flex items-center space-x-2">
-                          <span className="font-bold text-base text-[#1B4D2E]">{inq.fullName}</span>
-                          <span className="text-xs bg-[#E1AD01]/25 text-[#1B4D2E] font-bold px-2 py-0.5 rounded-md">
-                            {inq.eventType}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-0.5">
-                          Phone: {inq.phone} • Email: {inq.email} • Venue: {inq.eventLocation}
-                        </div>
+                        <div className="font-bold text-sm text-[#1B4D2E]">{inq.fullName}</div>
+                        <div className="text-gray-500">{inq.phone} • {inq.email}</div>
                       </div>
-
                       <div className="flex items-center space-x-2">
-                        <select
-                          value={inq.status}
-                          onChange={(e) =>
-                            dataRepo.updateInquiryStatus(inq.id, e.target.value as EventInquiry['status'])
-                          }
-                          className="bg-[#FFF8E7] border border-[#1B4D2E]/20 text-xs font-bold rounded-xl px-3 py-1.5 text-[#1B4D2E]"
+                        <span className="text-[11px] font-bold bg-[#E1AD01]/25 text-[#1B4D2E] px-2.5 py-1 rounded-full">
+                          {inq.eventType}
+                        </span>
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
+                            inq.status === 'booked'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : inq.status === 'quoted'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
                         >
-                          <option value="new">New</option>
-                          <option value="reviewed">Reviewed</option>
-                          <option value="quoted">Quoted</option>
-                          <option value="booked">Booked</option>
-                          <option value="declined">Declined</option>
-                        </select>
-
-                        <a
-                          href={`https://wa.me/${inq.phone.replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(
-                            inq.fullName
-                          )}%2C%20this%20is%20Oluyemi%20from%20Delightful%20Juice.%20I%20reviewed%20your%20${encodeURIComponent(
-                            inq.eventType
-                          )}%20catering%20inquiry%20for%20${inq.guestCount}%20guests.%20Here%20is%20our%20official%20quote...`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl flex items-center space-x-1"
-                        >
-                          <MessageCircle className="w-3.5 h-3.5" />
-                          <span>Reply on WhatsApp</span>
-                        </a>
+                          {inq.status}
+                        </span>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#FFF8E7] p-3.5 rounded-2xl text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
-                        <span className="text-gray-500 block">Event Date:</span>
-                        <strong className="text-[#1B4D2E]">{inq.eventDate}</strong>
+                        <strong className="block text-[#1B4D2E]">Event Date & Guest Count:</strong>
+                        <span>{inq.eventDate || 'TBD'} • {inq.guestCount} Guests</span>
                       </div>
                       <div>
-                        <span className="text-gray-500 block">Guests:</span>
-                        <strong className="text-[#1B4D2E]">{inq.guestCount} People</strong>
+                        <strong className="block text-[#1B4D2E]">Location:</strong>
+                        <span>{inq.eventLocation}</span>
                       </div>
                       <div>
-                        <span className="text-gray-500 block">Bottle Sizes:</span>
-                        <strong className="text-[#1B4D2E]">{inq.bottleSizesNeeded.join(', ')}</strong>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 block">Custom Labeling:</span>
-                        <strong className={inq.customLabelingNeeded ? 'text-emerald-700' : 'text-gray-500'}>
-                          {inq.customLabelingNeeded ? 'Yes (Requested)' : 'No'}
-                        </strong>
+                        <strong className="block text-[#1B4D2E]">Custom Labeling:</strong>
+                        <span>{inq.customLabelingNeeded ? 'Yes, custom monograms needed' : 'Standard labels'}</span>
                       </div>
                     </div>
 
-                    <div className="text-xs text-gray-700">
-                      <strong>Requested Flavors: </strong>
-                      {inq.selectedFlavors.join(', ')}
+                    <div className="bg-[#FFF8E7] p-3 rounded-2xl border border-[#1B4D2E]/10 space-y-1">
+                      <strong className="block text-[#1B4D2E]">Client Message:</strong>
+                      <p className="text-gray-700 leading-relaxed">{inq.message}</p>
                     </div>
 
-                    {inq.message && (
-                      <div className="text-xs bg-gray-50 p-3 rounded-xl border border-gray-200 text-gray-800">
-                        <strong>Client Note: </strong>
-                        {inq.message}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                      <div className="flex items-center space-x-1.5">
+                        <span className="font-bold text-gray-700">Status:</span>
+                        {(['new', 'reviewed', 'quoted', 'booked', 'declined'] as EventInquiry['status'][]).map(
+                          (st) => (
+                            <button
+                              key={st}
+                              onClick={() => {
+                                dataRepo.updateInquiryStatus(inq.id, st);
+                                showToast(`Inquiry status updated to ${st}`);
+                              }}
+                              className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase transition-colors cursor-pointer ${
+                                inq.status === st
+                                  ? 'bg-[#1B4D2E] text-white'
+                                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                              }`}
+                            >
+                              {st}
+                            </button>
+                          )
+                        )}
                       </div>
-                    )}
+
+                      <a
+                        href={`https://wa.me/${inq.phone.replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(
+                          inq.fullName
+                        )}%2C%20thank%20you%20for%20contacting%20Delightful%20Juice%20regarding%20your%20${encodeURIComponent(
+                          inq.eventType
+                        )}.`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-1.5 px-3 rounded-xl flex items-center space-x-1 cursor-pointer"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>Send Quote via WhatsApp</span>
+                      </a>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1127,15 +2327,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
             <div className="space-y-6 max-w-4xl">
               <div>
                 <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-[#1B4D2E]">
-                  Website Copy & Brand CMS
+                  Website Copy & Information CMS
                 </h2>
                 <p className="text-xs sm:text-sm text-[#1B4D2E]/70">
-                  Update headlines, announcements, and contact information without editing code
+                  Update headlines, operating hours, announcement ticker, delivery pricing, and brand text
                 </p>
               </div>
 
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#1B4D2E]/10 shadow-sm space-y-5">
-                
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#1B4D2E]/10 shadow-sm space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
@@ -1145,19 +2344,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                       type="text"
                       value={content.businessName}
                       onChange={(e) => setContent({ ...content, businessName: e.target.value })}
-                      className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs font-bold text-[#1B4D2E]"
+                      className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs text-[#1B4D2E]"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
-                      C.E.O. Name
+                      C.E.O. Name (From PDF)
                     </label>
                     <input
                       type="text"
                       value={content.ceoName}
                       onChange={(e) => setContent({ ...content, ceoName: e.target.value })}
-                      className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs font-bold text-[#1B4D2E]"
+                      className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs text-[#1B4D2E]"
                     />
                   </div>
                 </div>
@@ -1190,7 +2389,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
-                    Top Announcement Ticker
+                    Announcement Ticker (Top Bar)
                   </label>
                   <input
                     type="text"
@@ -1262,11 +2461,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
+                      Free Delivery Threshold ($)
+                    </label>
+                    <input
+                      type="number"
+                      step="1"
+                      value={content.freeDeliveryThreshold}
+                      onChange={(e) => setContent({ ...content, freeDeliveryThreshold: parseFloat(e.target.value) || 40 })}
+                      className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs text-[#1B4D2E] font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
+                      Standard Delivery Fee ($)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={content.standardDeliveryFee}
+                      onChange={(e) => setContent({ ...content, standardDeliveryFee: parseFloat(e.target.value) || 4.99 })}
+                      className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs text-[#1B4D2E] font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
+                      Floating Chat Button Text
+                    </label>
+                    <input
+                      type="text"
+                      value={content.chatButtonLabel || 'Chat with Kitchen'}
+                      onChange={(e) => setContent({ ...content, chatButtonLabel: e.target.value })}
+                      className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs text-[#1B4D2E]"
+                    />
+                  </div>
+                </div>
+
                 <div className="pt-4 flex justify-end">
                   <button
                     onClick={() => {
                       dataRepo.saveContent(content);
-                      alert('Website Content changes saved persistently!');
+                      showToast('Website Content changes saved persistently!');
                     }}
                     className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-3 px-6 rounded-xl text-xs flex items-center space-x-2 shadow-md cursor-pointer"
                   >
@@ -1315,6 +2554,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                           );
                           setNavItems(updated);
                           dataRepo.saveNavItems(updated);
+                          showToast(`Navigation item "${item.label}" visibility updated`);
                         }}
                         className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase cursor-pointer ${
                           item.visible ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-600'
@@ -1356,7 +2596,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   </div>
                   <p>
                     {supabaseCfg.connected
-                      ? `Active client connected. Orders, inquiries, and drinks sync with your project tables.`
+                      ? `Active client connected to ${supabaseCfg.url}. Orders, inquiries, branding, and drinks sync with your project tables.`
                       : `The website currently uses browser-local persistent storage. Enter your Supabase Project URL and Anon Public Key below to link your database.`}
                   </p>
                 </div>
@@ -1376,7 +2616,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     type="url"
                     value={supabaseCfg.url}
                     onChange={(e) => setSupabaseCfg({ ...supabaseCfg, url: e.target.value })}
-                    placeholder="https://xyzcompany.supabase.co"
+                    placeholder="https://abrgqtrobgorsaggooxv.supabase.co"
                     className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E] font-mono"
                   />
                 </div>
@@ -1399,13 +2639,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
 
                 {syncStatusMsg && (
                   <div
-                    className={`p-3 rounded-xl text-xs font-semibold ${
-                      syncStatusMsg.success
-                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                        : 'bg-red-50 text-red-800 border border-red-200'
+                    className={`p-4 rounded-2xl text-xs flex items-start space-x-2 ${
+                      syncStatusMsg.success ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'
                     }`}
                   >
-                    {syncStatusMsg.text}
+                    {syncStatusMsg.success ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> : <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />}
+                    <span>{syncStatusMsg.text}</span>
                   </div>
                 )}
 
@@ -1413,40 +2652,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   <button
                     onClick={handleTestSupabase}
                     disabled={isTestingSupabase}
-                    className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold text-xs py-3 px-5 rounded-xl shadow-md cursor-pointer flex items-center space-x-2"
+                    className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold text-xs py-3 px-5 rounded-xl shadow-xs transition-colors flex items-center space-x-2 cursor-pointer"
                   >
                     <Database className="w-4 h-4 text-[#E1AD01]" />
-                    <span>{isTestingSupabase ? 'Testing Connection...' : 'Save & Test Connection'}</span>
+                    <span>{isTestingSupabase ? 'Testing Connection...' : 'Test Connection & Inspect Tables'}</span>
                   </button>
 
                   <button
                     onClick={handleSeedSupabase}
                     disabled={isSeeding || !supabaseCfg.connected}
-                    className={`font-bold text-xs py-3 px-5 rounded-xl shadow-xs cursor-pointer flex items-center space-x-2 transition-all ${
-                      supabaseCfg.connected
-                        ? 'bg-[#E1AD01] hover:bg-[#c99a00] text-[#1B4D2E]'
-                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    }`}
-                    title={supabaseCfg.connected ? 'Seed all 6 official drinks and site copy to Supabase' : 'Connect to Supabase first'}
+                    className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs py-3 px-5 rounded-xl shadow-xs transition-colors flex items-center space-x-2 cursor-pointer"
                   >
-                    <Sparkles className="w-4 h-4 text-[#1B4D2E]" />
-                    <span>{isSeeding ? 'Seeding Database...' : 'Seed Supabase Tables (1-Click)'}</span>
+                    <Sparkles className="w-4 h-4" />
+                    <span>{isSeeding ? 'Seeding Tables...' : '1-Click Seed Supabase Tables'}</span>
                   </button>
-
-                  <a
-                    href="https://supabase.com/dashboard/project/abrgqtrobgorsaggooxv/sql"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-gray-100 hover:bg-gray-200 text-[#1B4D2E] font-bold text-xs py-3 px-4 rounded-xl flex items-center space-x-1.5 transition-colors"
-                  >
-                    <span>Open Supabase SQL Editor</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
                 </div>
 
                 {seedResult && (
-                  <div className="p-3.5 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200 text-xs font-semibold flex items-center space-x-2">
-                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div className="p-3 bg-emerald-50 text-emerald-800 rounded-xl text-xs font-semibold flex items-center space-x-2 border border-emerald-200">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                     <span>{seedResult}</span>
                   </div>
                 )}
@@ -1457,10 +2681,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <h3 className="font-display font-bold text-lg text-[#1B4D2E]">
-                      1. Schema Migration SQL (supabase/migrations/)
+                      Schema Migration SQL (supabase/migrations/)
                     </h3>
                     <p className="text-xs text-gray-600">
-                      Creates the 6 tables: products, orders, event_inquiries, site_content, navigation_items, and admin_profiles with RLS security policies.
+                      Creates tables for products, orders, event_inquiries, site_content, navigation_items, and storage buckets.
                     </p>
                   </div>
 
@@ -1479,31 +2703,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                   </pre>
                 </div>
               </div>
-
-              {/* Seed SQL Script Box */}
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#1B4D2E]/10 shadow-sm space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <h3 className="font-display font-bold text-lg text-[#1B4D2E]">
-                      2. Idempotent Seed SQL (supabase/seed.sql)
-                    </h3>
-                    <p className="text-xs text-gray-600">
-                      Seeds the official Zobo, Organic Ginger, Ginger Mango, Pineapple, Lychee, Tigernut Milk, Celebration Sampler, and Quakertown business info.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(SUPABASE_SQL_MIGRATION); // or seed script
-                      alert('You can also find the full seed script in supabase/seed.sql!');
-                    }}
-                    className="bg-[#1B4D2E] text-[#FFF8E7] hover:bg-[#143822] text-xs font-bold py-2 px-3.5 rounded-xl flex items-center space-x-1.5 cursor-pointer shadow-xs shrink-0"
-                  >
-                    <FileText className="w-4 h-4 text-[#E1AD01]" />
-                    <span>Viewed in supabase/seed.sql</span>
-                  </button>
-                </div>
-              </div>
             </div>
           )}
 
@@ -1513,29 +2712,58 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       {/* Product Edit / Add Modal */}
       {editingProduct && (
         <div className="fixed inset-0 z-60 bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 max-h-[92vh] overflow-y-auto space-y-5 shadow-2xl">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-display font-bold text-xl text-[#1B4D2E]">
                 {isAddingProduct ? 'Add New Drink Recipe' : `Edit ${editingProduct.name}`}
               </h3>
               <button
                 onClick={() => setEditingProduct(null)}
-                className="text-gray-400 hover:text-black p-1"
+                className="text-gray-400 hover:text-black p-1 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleSaveProduct} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-bold mb-1">Drink Name</label>
-                <input
-                  type="text"
-                  required
-                  value={editingProduct.name}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                  className="w-full bg-[#FFF8E7] border rounded-xl p-2.5 font-bold text-[#1B4D2E]"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold mb-1">Drink Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingProduct.name}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                    className="w-full bg-[#FFF8E7] border rounded-xl p-2.5 font-bold text-[#1B4D2E]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1">Category</label>
+                  <select
+                    value={editingProduct.category}
+                    onChange={(e) => {
+                      const cat = e.target.value as Product['category'];
+                      const labels: Record<Product['category'], string> = {
+                        zobo: 'Signature Zobo',
+                        ginger: 'Ginger Elixirs',
+                        other: 'Artisanal Milks',
+                        bundles: 'Party & Event Packs',
+                      };
+                      setEditingProduct({
+                        ...editingProduct,
+                        category: cat,
+                        categoryLabel: labels[cat] || 'Fresh Drinks',
+                      });
+                    }}
+                    className="w-full bg-[#FFF8E7] border rounded-xl p-2.5 font-bold text-[#1B4D2E]"
+                  >
+                    <option value="zobo">Signature Zobo (Hibiscus)</option>
+                    <option value="ginger">Ginger Elixirs</option>
+                    <option value="other">Artisanal Milks (Tigernut)</option>
+                    <option value="bundles">Party & Event Packs</option>
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -1551,11 +2779,116 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
               <div>
                 <label className="block font-bold mb-1">Detailed Description</label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={editingProduct.description}
                   onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
                   className="w-full bg-[#FFF8E7] border rounded-xl p-2.5 text-[#1B4D2E]"
                 />
+              </div>
+
+              {/* Product Images Management Section */}
+              <div className="p-4 bg-[#FFF8E7] rounded-2xl border border-gray-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-[#1B4D2E] text-xs uppercase tracking-wider">
+                    Product Photography & Media
+                  </label>
+                  <span className="text-[10px] text-gray-500">Aspect Ratio: 4:3 or 1:1</span>
+                </div>
+
+                {/* Main Product Image */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <img
+                    src={editingProduct.imageUrl}
+                    alt={editingProduct.name}
+                    className="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-xs shrink-0"
+                  />
+                  <div className="flex-1 space-y-1 w-full">
+                    <input
+                      type="url"
+                      value={editingProduct.imageUrl}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, imageUrl: e.target.value })}
+                      placeholder="Primary image URL (e.g. Unsplash or Supabase)"
+                      className="w-full bg-white border rounded-xl px-3 py-2 text-xs text-[#1B4D2E]"
+                    />
+                    <div className="flex items-center space-x-2">
+                      <label className="bg-white hover:bg-gray-100 text-gray-800 border font-bold text-[11px] py-1.5 px-3 rounded-lg flex items-center space-x-1.5 cursor-pointer">
+                        <Upload className="w-3 h-3 text-[#1B4D2E]" />
+                        <span>Upload File</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleProductImageUpload(e, false)}
+                          className="hidden"
+                        />
+                      </label>
+                      <span className="text-[10px] text-gray-500">PNG, JPG, WebP supported</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Curated Beverage Photo Library Presets */}
+                <div>
+                  <span className="text-[10px] font-bold text-[#1B4D2E]/80 block mb-1">
+                    Quick Pick From Curated High-Res Beverage Library:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {CURATED_PRODUCT_PHOTOS.map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => {
+                          setEditingProduct({ ...editingProduct, imageUrl: preset.url });
+                        }}
+                        className="text-[10px] bg-white hover:bg-emerald-50 text-[#1B4D2E] border border-gray-200 px-2 py-1 rounded-md font-medium transition-colors cursor-pointer"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Gallery Images (Multiple Photos) */}
+                <div className="pt-2 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-bold text-[11px] text-[#1B4D2E]">
+                      Additional Gallery Images ({editingProduct.galleryImages?.length || 0})
+                    </span>
+                    <label className="text-[10px] bg-[#1B4D2E] text-white font-bold px-2.5 py-1 rounded-md cursor-pointer flex items-center space-x-1">
+                      <Plus className="w-3 h-3 text-[#E1AD01]" />
+                      <span>Add Extra Photo</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleProductImageUpload(e, true)}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  {editingProduct.galleryImages && editingProduct.galleryImages.length > 0 ? (
+                    <div className="grid grid-cols-4 gap-2">
+                      {editingProduct.galleryImages.map((imgUrl, gIdx) => (
+                        <div key={gIdx} className="relative group rounded-xl overflow-hidden aspect-square border">
+                          <img src={imgUrl} alt="Gallery" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const filtered = (editingProduct.galleryImages || []).filter((_, i) => i !== gIdx);
+                              setEditingProduct({ ...editingProduct, galleryImages: filtered });
+                            }}
+                            className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-80 hover:opacity-100 cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-gray-500 italic">
+                      No extra gallery images added yet. Click &quot;Add Extra Photo&quot; to show multiple angles.
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Bottle Sizes Prices */}
@@ -1564,7 +2897,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 <div className="grid grid-cols-3 gap-2">
                   {editingProduct.sizes.map((s, idx) => (
                     <div key={s.size} className="bg-[#FFF8E7] p-2.5 rounded-xl border border-gray-200">
-                      <span className="font-bold block text-[11px] mb-1">{s.size}</span>
+                      <span className="font-bold block text-[11px] mb-1">{s.size} ({s.label})</span>
                       <input
                         type="number"
                         step="0.25"
@@ -1581,25 +2914,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 </div>
               </div>
 
-              <div>
-                <label className="block font-bold mb-1">Image URL</label>
-                <input
-                  type="url"
-                  value={editingProduct.imageUrl}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, imageUrl: e.target.value })}
-                  className="w-full bg-[#FFF8E7] border rounded-xl p-2.5 text-gray-700"
-                />
-              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold mb-1">Taste Profile</label>
+                  <input
+                    type="text"
+                    value={editingProduct.tasteProfile}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, tasteProfile: e.target.value })}
+                    className="w-full bg-[#FFF8E7] border rounded-xl p-2 text-[#1B4D2E]"
+                  />
+                </div>
 
-              <div>
-                <label className="block font-bold mb-1">Badge Callout (Optional)</label>
-                <input
-                  type="text"
-                  value={editingProduct.badge || ''}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, badge: e.target.value })}
-                  placeholder="e.g. Customer #1 Favorite"
-                  className="w-full bg-[#FFF8E7] border rounded-xl p-2.5 text-[#1B4D2E]"
-                />
+                <div>
+                  <label className="block font-bold mb-1">Badge Callout (Optional)</label>
+                  <input
+                    type="text"
+                    value={editingProduct.badge || ''}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, badge: e.target.value })}
+                    placeholder="e.g. Customer #1 Favorite"
+                    className="w-full bg-[#FFF8E7] border rounded-xl p-2 text-[#1B4D2E]"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center space-x-6 pt-2">
@@ -1628,15 +2963,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 <button
                   type="button"
                   onClick={() => setEditingProduct(null)}
-                  className="px-4 py-2.5 text-gray-600 font-bold"
+                  className="px-4 py-2.5 text-gray-600 font-bold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-[#1B4D2E] hover:bg-[#143822] text-white font-bold px-6 py-2.5 rounded-xl shadow-xs"
+                  className="bg-[#1B4D2E] hover:bg-[#143822] text-white font-bold px-6 py-2.5 rounded-xl shadow-xs cursor-pointer"
                 >
-                  Save Drink
+                  Save Drink & Photos
                 </button>
               </div>
             </form>

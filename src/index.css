@@ -4,17 +4,32 @@
   :root {
     --brand-yellow: #E1AD01;
     --brand-green: #1B4D2E;
-    --brand-cream: #FFF8E7;
+    --brand-cream: #FFFFFF;
+    --brand-primary: #1B4D2E;
+    --brand-secondary: #E1AD01;
+    --brand-accent: #E1AD01;
+    --page-bg: #FFFFFF;
+    --card-bg: #FFFFFF;
+    --header-bg: #FFFFFF;
+    --footer-bg: #12351F;
+    --text-color: #1B4D2E;
+    --btn-bg: #1B4D2E;
+    --btn-text: #FFFFFF;
+    --border-color: #1B4D2E26;
+    --heading-font: 'Playfair Display', Georgia, serif;
+    --body-font: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --base-font-size: 16px;
   }
 
   body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    background-color: #FFF8E7;
-    color: #1B4D2E;
+    font-family: var(--body-font);
+    font-size: var(--base-font-size);
+    background-color: var(--page-bg);
+    color: var(--text-color);
   }
 
   h1, h2, h3, .font-display {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: var(--heading-font);
   }
 }
 
