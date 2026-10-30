@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { SiteContent } from '../types';
-import { 
-  MapPin, 
-  Phone, 
-  Mail, 
-  Clock, 
-  Instagram, 
-  Send, 
-  CheckCircle2, 
+import { dataRepo } from '../lib/storage';
+import {
+  MapPin,
+  Phone,
+  Mail,
+  Clock,
+  Instagram,
+  Send,
+  CheckCircle2,
   MessageCircle,
-  ExternalLink
 } from 'lucide-react';
 
 interface ContactSectionProps {
@@ -26,6 +26,23 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ content }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !message) return;
+
+    // Persist general contact messages into inquiries so admin can view & respond in dashboard
+    dataRepo.addInquiry({
+      fullName: name,
+      email: email || 'Not provided',
+      phone: phone || 'Not provided',
+      eventType: 'General Website Contact',
+      eventDate: new Date().toISOString().slice(0, 10),
+      guestCount: 0,
+      eventLocation: 'Contact Us Page',
+      bottleSizesNeeded: ['50cl'],
+      selectedFlavors: [],
+      customLabelingNeeded: false,
+      budgetRange: 'General Inquiry',
+      message,
+    });
+
     setSent(true);
     setTimeout(() => {
       setName('');
@@ -38,12 +55,11 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ content }) => {
   return (
     <section id="contact" className="py-20 bg-[#FFF8E7] relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto space-y-3 mb-14">
-          <div className="inline-flex items-center space-x-2 bg-[#1B4D2E]/10 border border-[#1B4D2E]/20 px-3.5 py-1.5 rounded-full text-xs font-bold text-[#1B4D2E]">
-            <MapPin className="w-3.5 h-3.5 text-[#E1AD01]" />
-            <span>CONNECT WITH DELIGHTFUL JUICE</span>
+          <div className="inline-flex items-center space-x-2 text-xs font-extrabold uppercase tracking-[0.16em] text-[#1B4D2E]">
+            <MapPin className="w-4 h-4 text-[#E1AD01]" />
+            <span>CONNECT WITH DELIGHTFUL JUICES</span>
           </div>
 
           <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-5xl text-[#1B4D2E] tracking-tight">
@@ -51,24 +67,20 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ content }) => {
           </h2>
 
           <p className="text-xs sm:text-sm text-[#1B4D2E]/75 leading-relaxed">
-            Have a question about bottle orders, custom catering packages, or retail distribution? We would love to hear from you.
+            Have a question about fresh bottle orders, custom catering packages, or retail distribution? Our Quakertown kitchen team would love to hear from you.
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Left: Contact Details Cards */}
+          {/* Left: Contact Details Card */}
           <div className="lg:col-span-5 space-y-5">
-            
-            {/* Primary Details Card */}
             <div className="bg-[#1B4D2E] text-[#FFF8E7] rounded-3xl p-6 sm:p-7 shadow-lg border border-[#E1AD01]/30 space-y-6">
-              
               <div>
                 <span className="text-xs font-bold text-[#E1AD01] uppercase tracking-wider block mb-1">
                   Our Quakertown Location
                 </span>
                 <h3 className="font-display font-bold text-2xl text-white">
-                  Delightful Juice Headquarters
+                  Delightful Juices Headquarters
                 </h3>
                 <p className="text-xs text-[#FFF8E7]/80 mt-1">
                   Commercial Kitchen & Customer Order Pickup
@@ -76,7 +88,6 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ content }) => {
               </div>
 
               <div className="space-y-4 text-xs sm:text-sm">
-                
                 <div className="flex items-start space-x-3">
                   <div className="w-9 h-9 rounded-xl bg-[#143822] text-[#E1AD01] flex items-center justify-center shrink-0 border border-[#E1AD01]/30">
                     <MapPin className="w-4 h-4" />
@@ -127,12 +138,12 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ content }) => {
                     <div className="text-[#FFF8E7]/80">{content.operatingHours}</div>
                   </div>
                 </div>
-
               </div>
 
-              {/* Social Channels */}
               <div className="pt-4 border-t border-[#FFF8E7]/15 flex items-center justify-between">
-                <span className="text-xs font-semibold text-[#FFF8E7]/80">Follow our fresh drops:</span>
+                <span className="text-xs font-semibold text-[#FFF8E7]/80">
+                  Follow our fresh drops:
+                </span>
                 <div className="flex items-center space-x-2">
                   <a
                     href="https://instagram.com/delightful_juicecreation"
@@ -154,9 +165,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ content }) => {
                   </a>
                 </div>
               </div>
-
             </div>
-
           </div>
 
           {/* Right: Message Form */}
@@ -166,13 +175,16 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ content }) => {
                 <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
-                <h3 className="font-display font-bold text-2xl text-[#1B4D2E]">Message Sent!</h3>
+                <h3 className="font-display font-bold text-2xl text-[#1B4D2E]">
+                  Message Sent!
+                </h3>
                 <p className="text-xs sm:text-sm text-[#1B4D2E]/80 max-w-sm mx-auto">
-                  Thank you for reaching out. We will respond promptly to your email or telephone number.
+                  Thank you for reaching out to Delightful Juices. We will respond promptly via email or phone.
                 </p>
                 <button
+                  type="button"
                   onClick={() => setSent(false)}
-                  className="mt-3 text-xs font-bold text-[#E1AD01] bg-[#1B4D2E] px-4 py-2 rounded-lg"
+                  className="mt-3 text-xs font-bold text-[#E1AD01] bg-[#1B4D2E] px-4 py-2 rounded-lg cursor-pointer"
                 >
                   Send Another Message
                 </button>
@@ -267,9 +279,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ content }) => {
               </form>
             )}
           </div>
-
         </div>
-
       </div>
     </section>
   );

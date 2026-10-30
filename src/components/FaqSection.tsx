@@ -12,7 +12,17 @@ export const FaqSection: React.FC<FaqSectionProps> = ({ content }) => {
   const faqs = [
     {
       q: 'Where do you deliver, and what are the delivery fees?',
-      a: `We provide direct cold-insulated delivery throughout Quakertown, Bucks County, Montgomery County, and the Lehigh Valley in Pennsylvania. Free delivery is provided on all orders over $${content.freeDeliveryThreshold.toFixed(2)}. For orders under $40, a standard local courier fee of $${content.standardDeliveryFee.toFixed(2)} applies. You can also choose free local pickup at 500 W Broad St, Quakertown, PA.`,
+      a: `Delightful Juices provides direct cold-insulated delivery throughout Quakertown, Bucks County, Montgomery County, and the Lehigh Valley in Pennsylvania. Free delivery is provided on all orders over $${content.freeDeliveryThreshold.toFixed(
+        2
+      )}. For orders under $${content.freeDeliveryThreshold.toFixed(
+        0
+      )}, a standard local courier fee of $${content.standardDeliveryFee.toFixed(
+        2
+      )} applies. You can also choose free local pickup at 500 W Broad St, Quakertown, PA.`,
+    },
+    {
+      q: 'What bottle sizes do you offer?',
+      a: 'All of our signature juices and plant milks are bottled in convenient US fluid ounce sizes: 11.8 oz Pocket Sip bottles, 16.9 oz Daily Refresh bottles, and 33.8 oz Family Sharing Jugs, plus our popular 6 × 16.9 oz Party Sampler Pack.',
     },
     {
       q: 'What is your delivery timeframe?',
@@ -24,30 +34,29 @@ export const FaqSection: React.FC<FaqSectionProps> = ({ content }) => {
     },
     {
       q: 'What makes your Zobo drink so special?',
-      a: 'Zobo is a traditional West African botanical elixir made from deep-red organic hibiscus calyces (also known as Sorrel or Flor de Jamaica). We simmer it with fresh ginger root, whole cloves, and pineapple peels, then infuse our signature DelightOil. It is intensely flavorful, tart, antioxidant-rich, and deeply hydrating.',
+      a: 'Zobo is a traditional West African botanical elixir made from deep-red organic hibiscus calyces (also known as Sorrel or Flor de Jamaica). Delightful Juices steeps whole hibiscus with fresh ginger root, aromatic cloves, and sweet pineapple peels—delivering a tart, antioxidant-rich, caffeine-free refreshment.',
     },
     {
       q: 'Is Tigernut Milk really dairy-free and nut-free?',
-      a: 'Yes, 100%! Despite the name, tigernuts (chufa) are not nuts at all — they are small nutrient-dense root tubers. Our Tigernut Milk (Kunu Aya) is completely dairy-free, lactose-free, gluten-free, and nut-free. We sweeten it naturally with whole dates and coconut.',
+      a: 'Yes, 100%! Despite the name, tigernuts (chufa) are nutrient-dense root tubers rather than tree nuts. Our Tigernut Milk (Kunu Aya) is completely dairy-free, lactose-free, gluten-free, and nut-free, sweetened naturally with Medjool dates and organic coconut.',
     },
     {
       q: 'Can we get custom branded labels for our wedding or corporate party?',
-      a: 'Yes! We frequently design and apply custom branded waterproof labels with wedding monograms, birthday photos, or corporate logos on our 35cl and 50cl bottles. Simply select "Custom Branded Labels" in our Catering section or message us on WhatsApp.',
+      a: 'Yes! We design and apply custom waterproof labels with wedding monograms, birthday photos, or corporate logos on our 11.8 oz and 16.9 oz bottles. Simply select "Custom Event Branded Labels" on our Events & Catering page or message us on WhatsApp.',
     },
     {
       q: 'What payment methods do you accept?',
-      a: 'We accept Zelle, Cash on Delivery / Pickup, Debit/Credit Cards via invoice or at pickup, and direct WhatsApp payment transfers.',
+      a: 'We accept Credit/Debit Cards via Stripe Checkout, Zelle transfers, Cash on Delivery / Pickup, and direct WhatsApp order coordination.',
     },
   ];
 
   return (
     <section id="faq" className="py-20 bg-white border-t border-[#1B4D2E]/10">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        
         {/* Header */}
         <div className="text-center space-y-3 mb-12">
-          <div className="inline-flex items-center space-x-2 bg-[#E1AD01]/20 border border-[#E1AD01]/40 px-3.5 py-1.5 rounded-full text-xs font-bold text-[#1B4D2E]">
-            <HelpCircle className="w-3.5 h-3.5 text-[#1B4D2E]" />
+          <div className="inline-flex items-center space-x-2 text-xs font-extrabold uppercase tracking-[0.16em] text-[#1B4D2E]">
+            <HelpCircle className="w-4 h-4 text-[#E1AD01]" />
             <span>ANSWERS & DELIVERY INFORMATION</span>
           </div>
 
@@ -55,7 +64,7 @@ export const FaqSection: React.FC<FaqSectionProps> = ({ content }) => {
             Frequently Asked Questions
           </h2>
           <p className="text-xs sm:text-sm text-[#1B4D2E]/70 max-w-xl mx-auto">
-            Everything you need to know about our cold-pressed process, bottle sizes, shelf life, and delivery policies.
+            Everything you need to know about our cold-pressed process, ounce bottle sizes, shelf life, and delivery policies.
           </p>
         </div>
 
@@ -78,8 +87,8 @@ export const FaqSection: React.FC<FaqSectionProps> = ({ content }) => {
           </div>
           <div className="bg-[#FFF8E7] p-3 rounded-2xl border border-[#1B4D2E]/15 text-center">
             <ShieldCheck className="w-5 h-5 text-[#1B4D2E] mx-auto mb-1" />
-            <div className="text-xs font-bold text-[#1B4D2E]">100% Quality</div>
-            <div className="text-[10px] text-[#1B4D2E]/70">Signature DelightOil</div>
+            <div className="text-xs font-bold text-[#1B4D2E]">100% Pure Craft</div>
+            <div className="text-[10px] text-[#1B4D2E]/70">Delightful Juices Quality</div>
           </div>
         </div>
 
@@ -113,7 +122,6 @@ export const FaqSection: React.FC<FaqSectionProps> = ({ content }) => {
             );
           })}
         </div>
-
       </div>
     </section>
   );

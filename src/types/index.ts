@@ -1,9 +1,15 @@
-export type BottleSize = '35cl' | '50cl' | '1L' | 'Pack';
+export type BottleSize = string; // Supports legacy '35cl' | '50cl' | '1L' | 'Pack' and custom quantities/oz
+
+export type MeasurementUnit = 'cl' | 'L' | 'oz' | 'ml' | 'Pack';
 
 export interface SizeOption {
-  size: BottleSize;
-  label: string; // e.g. "35cl (12 oz)", "50cl (16.9 oz)", "1 Litre (Family Jug)"
+  size: BottleSize; // Unique key for cart/orders (preserved for existing products, e.g. '35cl', '50cl', '1L', 'Pack', or '16.9oz')
+  label: string; // Customer-facing descriptive label
   price: number;
+  quantityValue?: number; // Numeric quantity entered by admin, e.g. 35, 50, 1, 6
+  unit?: MeasurementUnit; // Unit entered by admin: 'cl' | 'L' | 'oz' | 'ml' | 'Pack'
+  packBottleQuantity?: number; // For multi-packs: quantity of each bottle (e.g., 50)
+  packBottleUnit?: MeasurementUnit; // For multi-packs: unit of each bottle (e.g., 'cl')
 }
 
 export interface Product {
@@ -81,7 +87,7 @@ export interface EventInquiry {
   fullName: string;
   email: string;
   phone: string;
-  eventType: string; // Wedding, Birthday, Corporate, Pop-up, etc.
+  eventType: string;
   eventDate: string;
   guestCount: number;
   eventLocation: string;
@@ -100,6 +106,101 @@ export interface NavItem {
   href: string;
   visible: boolean;
   order: number;
+  parentId?: string | null;
+  isDropdown?: boolean;
+  children?: NavItem[];
+}
+
+export interface HeroSlide {
+  id: string;
+  heading: string;
+  subheading: string;
+  kicker?: string;
+  ctaLabel: string;
+  ctaUrl: string;
+  secondaryCtaLabel?: string;
+  secondaryCtaUrl?: string;
+  desktopImageUrl: string;
+  mobileImageUrl?: string;
+  overlayOpacity: number; // e.g. 0.45 to 0.75
+  displayOrder: number;
+  active: boolean;
+  enabled?: boolean;
+  updatedAt?: string;
+}
+
+export type PageSectionType =
+  | 'hero'
+  | 'image_text'
+  | 'full_image'
+  | 'text_only'
+  | 'promo_banner'
+  | 'featured_products'
+  | 'image_gallery'
+  | 'cta'
+  | 'contact_info'
+  | 'catering_calculator'
+  | 'wholesale_tiers'
+  | 'faq_list';
+
+export interface GalleryImageItem {
+  url: string;
+  caption?: string;
+}
+
+export interface PageSection {
+  id: string;
+  type: PageSectionType;
+  kicker?: string;
+  heading?: string;
+  subheading?: string;
+  body?: string;
+  imageUrl?: string;
+  imagePosition?: 'left' | 'right';
+  imageCaption?: string;
+  galleryImages?: GalleryImageItem[];
+  buttonLabel?: string;
+  buttonUrl?: string;
+  secondaryButtonLabel?: string;
+  secondaryButtonUrl?: string;
+  theme?: 'light' | 'white' | 'cream' | 'green' | 'gold' | 'soft' | 'dark';
+  backgroundTone?: 'white' | 'soft' | 'dark';
+  productCategory?: 'all' | 'featured' | 'zobo' | 'ginger' | 'other' | 'bundles';
+  maxProducts?: number;
+  order?: number;
+}
+
+export interface CmsPage {
+  id: string;
+  title: string;
+  slug: string; // e.g. "about-us", "contact-us", "our-story" (without leading slash, rendered at /slug)
+  status: 'published' | 'draft';
+  seoTitle?: string;
+  metaDescription?: string;
+  showInNav: boolean;
+  parentNavId?: string | null;
+  navParentId?: string | null;
+  navLabel?: string;
+  isSystemRoute?: boolean; // Optional marker if backed by core template
+  sections: PageSection[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AboutShowcaseSettings {
+  imageUrl?: string;
+  imageAlt?: string;
+  badgeText: string;
+  showBadge: boolean;
+  showCeoCard: boolean;
+  ceoInitials: string;
+  ceoAvatarUrl?: string;
+  ceoRole: string;
+  ceoQuote: string;
+  sectionKicker?: string;
+  sectionHeading?: string;
+  extraStoryParagraph1?: string;
+  extraStoryParagraph2?: string;
 }
 
 export interface BrandSettings {
@@ -107,36 +208,37 @@ export interface BrandSettings {
   mobileLogoUrl?: string;
   logoText: string;
   showLogoIcon: boolean;
+  aboutShowcase?: AboutShowcaseSettings;
 }
 
 export interface ColorThemeSettings {
-  primaryColor: string; // default: #1B4D2E
-  secondaryColor: string; // default: #E1AD01
-  accentColor: string; // default: #E1AD01
-  pageBgColor: string; // default: #FFFFFF (strictly white)
-  cardBgColor: string; // default: #FFFFFF
-  headerBgColor: string; // default: #FFFFFF
-  footerBgColor: string; // default: #12351F
-  textColor: string; // default: #1B4D2E
-  buttonBgColor: string; // default: #1B4D2E
-  buttonTextColor: string; // default: #FFF8E7
-  borderColor: string; // default: #1B4D2E26
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  pageBgColor: string;
+  cardBgColor: string;
+  headerBgColor: string;
+  footerBgColor: string;
+  textColor: string;
+  buttonBgColor: string;
+  buttonTextColor: string;
+  borderColor: string;
 }
 
 export interface TypographySettings {
-  headingFont: string; // default: 'Playfair Display', Georgia, serif
-  bodyFont: string; // default: 'Plus Jakarta Sans', system-ui, sans-serif
-  baseFontSize: string; // default: 16px
-  headingWeight: string; // default: 700
-  bodyWeight: string; // default: 400
+  headingFont: string;
+  bodyFont: string;
+  baseFontSize: string;
+  headingWeight: string;
+  bodyWeight: string;
 }
 
 export interface StripePaymentSettings {
   enabled: boolean;
   mode: 'test' | 'live';
   publishableKey: string;
-  currency: string; // default: USD
-  customerFacingName: string; // e.g. "Credit / Debit Card (Stripe)"
+  currency: string;
+  customerFacingName: string;
   description: string;
 }
 
@@ -146,7 +248,7 @@ export interface SiteContent {
   motto: string;
   tagline: string;
   phone: string;
-  whatsappNumber: string; // e.g. "14847928023"
+  whatsappNumber: string;
   email: string;
   address: string;
   cityStateZip: string;
@@ -162,7 +264,7 @@ export interface SiteContent {
   standardDeliveryFee: number;
   pickupAddress: string;
   operatingHours: string;
-  chatButtonLabel?: string; // default: "Chat with us"
+  chatButtonLabel?: string;
   branding?: BrandSettings;
   colors?: ColorThemeSettings;
   typography?: TypographySettings;

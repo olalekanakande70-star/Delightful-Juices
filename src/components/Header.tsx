@@ -1,57 +1,97 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
 import { SiteContent, NavItem } from '../types';
-import { 
-  ShoppingCart, 
-  Menu as MenuIcon, 
-  X, 
-  Phone, 
-  MapPin, 
-  ShieldCheck, 
-  Sparkles,
-  ExternalLink,
-  MessageCircle
+import { sanitizeBrandText } from '../lib/units';
+import {
+  ShoppingCart,
+  Menu as MenuIcon,
+  X,
+  Phone,
+  MapPin,
+  MessageCircle,
+  ChevronDown,
+  ShoppingBag,
 } from 'lucide-react';
 
 interface HeaderProps {
   content: SiteContent;
   navItems: NavItem[];
-  onOpenAdmin: () => void;
-  isAdminLoggedIn: boolean;
+  currentPath: string;
+  onNavigate: (href: string) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   content,
   navItems,
-  onOpenAdmin,
-  isAdminLoggedIn,
+  currentPath,
+  onNavigate,
 }) => {
   const { totalCount, setIsCartOpen } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [expandedMobileGroupIds, setExpandedMobileGroupIds] = useState<Record<string, boolean>>({});
+  const navRef = useRef<HTMLElement>(null);
 
-  const visibleNav = navItems.filter((i) => i.visible);
+  // Build hierarchical navigation tree from flat navItems
+  const visibleItems = navItems
+    .filter((i) => i.visible)
+    .sort((a, b) => a.order - b.order);
 
-  const handleNavClick = (href: string) => {
+  const topLevelItems = visibleItems.filter((item) => !item.parentId);
+  const getChildren = (parentId: string) =>
+    visibleItems.filter((child) => child.parentId === parentId);
+
+  // Close desktop dropdown when clicking outside or pressing Escape
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (navRef.current && !navRef.current.contains(e.target as Node)) {
+        setOpenDropdownId(null);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpenDropdownId(null);
+        setMobileMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  const handleLinkSelect = (href: string) => {
+    setOpenDropdownId(null);
     setMobileMenuOpen(false);
-    const element = document.querySelector(href);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
+    onNavigate(href);
   };
+
+  const isRouteActive = (href: string) => {
+    if (!href || href.startsWith('#')) return false;
+    const cleanCurrent = currentPath === '' ? '/' : currentPath;
+    if (href === '/') return cleanCurrent === '/';
+    return cleanCurrent === href || cleanCurrent.startsWith(`${href}/`);
+  };
+
+  const brandTitle = sanitizeBrandText(
+    content.branding?.logoText || content.businessName || 'Delightful Juices'
+  );
 
   return (
     <>
       {/* Top Announcement Bar */}
-      <div className="bg-[#1B4D2E] text-[#FFF8E7] text-xs sm:text-sm font-medium py-2 px-4 shadow-sm border-b border-[#143822]">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+      <div className="bg-[#1B4D2E] text-[#FFF8E7] text-xs sm:text-sm font-medium py-2 px-4 shadow-xs border-b border-[#143822]">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center space-x-2 truncate">
-            <span className="inline-block w-2 h-2 rounded-full bg-[#E1AD01] animate-pulse"></span>
-            <span className="truncate">{content.announcementTicker}</span>
+            <span className="inline-block w-2 h-2 rounded-full bg-[#E1AD01] animate-pulse shrink-0" />
+            <span className="truncate">{sanitizeBrandText(content.announcementTicker)}</span>
           </div>
 
           <div className="hidden md:flex items-center space-x-5 text-xs text-[#FFF8E7]/90 shrink-0">
-            <a 
-              href={`https://wa.me/${content.whatsappNumber}?text=Hello%20Delightful%20Juice%2C%20I%20would%20like%20to%20inquire%20about%20ordering%20fresh%20drinks!`}
+            <a
+              href={`https://wa.me/${content.whatsappNumber}?text=Hello%20Delightful%20Juices%2C%20I%20would%20like%20to%20inquire%20about%20ordering%20fresh%20drinks!`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center space-x-1 hover:text-[#E1AD01] transition-colors"
@@ -68,76 +108,159 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Main Navigation Header */}
+      {/* Main Sticky Navigation Header */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#1B4D2E]/10 transition-all shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            
-            {/* Logo Brand */}
-            <a href="#" className="flex items-center space-x-3 group">
-              {content.branding?.showLogoIcon !== false && (
-                content.branding?.logoUrl ? (
+          <div className="flex items-center justify-between h-20 gap-3">
+            {/* Brand Logo */}
+            <button
+              type="button"
+              onClick={() => handleLinkSelect('/')}
+              className="flex items-center space-x-3 group text-left cursor-pointer shrink-0"
+            >
+              {content.branding?.showLogoIcon !== false &&
+                (content.branding?.logoUrl ? (
                   <img
                     src={content.branding.logoUrl}
-                    alt={content.branding.logoText || content.businessName}
+                    alt={brandTitle}
                     className="h-11 sm:h-12 w-auto max-w-[160px] sm:max-w-[200px] object-contain group-hover:scale-105 transition-transform"
                   />
                 ) : (
-                  <div className="w-12 h-12 rounded-full bg-[#1B4D2E] border-2 border-[#E1AD01] flex items-center justify-center text-[#E1AD01] shadow-md group-hover:scale-105 transition-transform shrink-0">
-                    <span className="font-display font-black text-xl italic tracking-tight">DJ</span>
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#1B4D2E] border-2 border-[#E1AD01] flex items-center justify-center text-[#E1AD01] shadow-md group-hover:scale-105 transition-transform shrink-0">
+                    <span className="font-display font-black text-lg sm:text-xl italic tracking-tight">
+                      DJ
+                    </span>
                   </div>
-                )
-              )}
+                ))}
               <div className="flex flex-col">
-                <span className="font-display font-extrabold text-xl sm:text-2xl text-[#1B4D2E] leading-tight tracking-tight">
-                  {content.branding?.logoText ? (
-                    content.branding.logoText
+                <span className="font-display font-extrabold text-lg sm:text-2xl text-[#1B4D2E] leading-tight tracking-tight">
+                  {brandTitle === 'Delightful Juices' ? (
+                    <>
+                      Delightful <span className="text-[#E1AD01]">Juices</span>
+                    </>
                   ) : (
-                    <>Delightful<span className="text-[#E1AD01]">Juice</span></>
+                    brandTitle
                   )}
                 </span>
                 <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-[#1B4D2E]/70">
                   {content.motto}
                 </span>
               </div>
-            </a>
+            </button>
 
-            {/* Desktop Navigation Links */}
-            <nav className="hidden lg:flex items-center space-x-7">
-              {visibleNav.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => handleNavClick(item.href)}
-                  className="text-sm font-semibold text-[#1B4D2E]/80 hover:text-[#1B4D2E] relative py-1 transition-colors hover:after:w-full after:w-0 after:h-0.5 after:bg-[#E1AD01] after:absolute after:bottom-0 after:left-0 after:transition-all cursor-pointer"
-                >
-                  {item.label}
-                </button>
-              ))}
+            {/* Desktop Navigation with Dropdown Support */}
+            <nav
+              ref={navRef}
+              aria-label="Primary Navigation"
+              className="hidden lg:flex items-center space-x-6 xl:space-x-7"
+            >
+              {topLevelItems.map((item) => {
+                const children = getChildren(item.id);
+                const hasDropdown = item.isDropdown || children.length > 0;
+                const isOpen = openDropdownId === item.id;
+                const isActive =
+                  isRouteActive(item.href) || children.some((c) => isRouteActive(c.href));
+
+                if (!hasDropdown) {
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleLinkSelect(item.href)}
+                      className={`text-sm font-semibold relative py-2 transition-colors cursor-pointer ${
+                        isActive
+                          ? 'text-[#1B4D2E] after:w-full'
+                          : 'text-[#1B4D2E]/80 hover:text-[#1B4D2E] after:w-0 hover:after:w-full'
+                      } after:h-0.5 after:bg-[#E1AD01] after:absolute after:bottom-0 after:left-0 after:transition-all`}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                }
+
+                return (
+                  <div
+                    key={item.id}
+                    className="relative"
+                    onMouseEnter={() => setOpenDropdownId(item.id)}
+                    onMouseLeave={() => setOpenDropdownId((prev) => (prev === item.id ? null : prev))}
+                  >
+                    <button
+                      type="button"
+                      aria-expanded={isOpen}
+                      aria-haspopup="true"
+                      onClick={() => setOpenDropdownId(isOpen ? null : item.id)}
+                      className={`inline-flex items-center space-x-1 text-sm font-semibold py-2 relative transition-colors cursor-pointer ${
+                        isActive
+                          ? 'text-[#1B4D2E] after:w-full'
+                          : 'text-[#1B4D2E]/80 hover:text-[#1B4D2E] after:w-0 hover:after:w-full'
+                      } after:h-0.5 after:bg-[#E1AD01] after:absolute after:bottom-0 after:left-0 after:transition-all`}
+                    >
+                      <span>{item.label}</span>
+                      <ChevronDown
+                        className={`w-4 h-4 text-[#1B4D2E]/70 transition-transform duration-200 ${
+                          isOpen ? 'rotate-180 text-[#E1AD01]' : ''
+                        }`}
+                      />
+                    </button>
+
+                    {/* Dropdown Panel */}
+                    {isOpen && children.length > 0 && (
+                      <div className="absolute left-0 top-full pt-2 w-60 z-50 animate-in fade-in duration-150">
+                        <div className="bg-white rounded-2xl shadow-xl border border-[#1B4D2E]/15 py-2 overflow-hidden">
+                          {children.map((child) => {
+                            const childActive = isRouteActive(child.href);
+                            return (
+                              <button
+                                key={child.id}
+                                type="button"
+                                onClick={() => handleLinkSelect(child.href)}
+                                className={`w-full text-left px-4 py-2.5 text-xs sm:text-sm font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                                  childActive
+                                    ? 'bg-[#FFF8E7] text-[#1B4D2E] border-l-3 border-[#E1AD01]'
+                                    : 'text-[#1B4D2E]/85 hover:bg-[#FFF8E7] hover:text-[#1B4D2E]'
+                                }`}
+                              >
+                                <span>{child.label}</span>
+                                <span className="text-[#E1AD01] text-xs">→</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </nav>
 
-            {/* Action Buttons & Cart */}
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              
-              {/* Admin Portal Shortcut */}
+            {/* Right Action Buttons: Prominent Shop Now + Cart (Admin button removed per client request) */}
+            <div className="flex items-center space-x-2.5 sm:space-x-3">
+              {/* Prominent Shop Now CTA */}
               <button
-                onClick={onOpenAdmin}
-                className="hidden sm:flex items-center space-x-1 text-xs font-medium px-2.5 py-1.5 rounded-md text-[#1B4D2E]/70 hover:text-[#1B4D2E] hover:bg-[#1B4D2E]/5 border border-[#1B4D2E]/20 transition-all cursor-pointer"
-                title="Open Admin Portal"
+                type="button"
+                onClick={() => handleLinkSelect('/shop')}
+                className={`hidden sm:inline-flex items-center space-x-1.5 px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all cursor-pointer shadow-xs ${
+                  isRouteActive('/shop')
+                    ? 'bg-[#E1AD01] text-[#1B4D2E]'
+                    : 'bg-[#E1AD01] hover:bg-[#f0bc0e] text-[#1B4D2E]'
+                }`}
               >
-                <ShieldCheck className={`w-3.5 h-3.5 ${isAdminLoggedIn ? 'text-green-600' : 'text-[#E1AD01]'}`} />
-                <span>{isAdminLoggedIn ? 'Admin Active' : 'Admin'}</span>
+                <ShoppingBag className="w-4 h-4" />
+                <span>Shop Now</span>
               </button>
 
               {/* Shopping Cart Button */}
               <button
+                type="button"
                 onClick={() => setIsCartOpen(true)}
-                className="relative flex items-center space-x-2 bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] px-4 py-2.5 rounded-xl font-semibold text-sm shadow-sm hover:shadow transition-all group cursor-pointer"
+                className="relative flex items-center space-x-2 bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] px-3.5 sm:px-4 py-2.5 rounded-xl font-semibold text-sm shadow-xs hover:shadow transition-all group cursor-pointer"
                 aria-label="View Shopping Cart"
               >
                 <ShoppingCart className="w-4 h-4 text-[#E1AD01] group-hover:scale-110 transition-transform" />
                 <span className="hidden sm:inline">Cart</span>
                 {totalCount > 0 && (
-                  <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-bold bg-[#E1AD01] text-[#1B4D2E] rounded-full shadow-xs animate-bounce">
+                  <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-bold bg-[#E1AD01] text-[#1B4D2E] rounded-full shadow-xs">
                     {totalCount}
                   </span>
                 )}
@@ -145,51 +268,111 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Mobile Menu Hamburger */}
               <button
+                type="button"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="lg:hidden p-2 rounded-lg text-[#1B4D2E] hover:bg-[#1B4D2E]/10 transition-colors cursor-pointer"
                 aria-label="Toggle Navigation Menu"
+                aria-expanded={mobileMenuOpen}
               >
                 {mobileMenuOpen ? <X className="w-6 h-6" /> : <MenuIcon className="w-6 h-6" />}
               </button>
             </div>
-
           </div>
         </div>
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden bg-[#FFF8E7] border-b border-[#1B4D2E]/15 px-6 pt-3 pb-6 shadow-xl animate-in slide-in-from-top duration-200">
-            <div className="flex flex-col space-y-3">
-              {visibleNav.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => handleNavClick(item.href)}
-                  className="text-left text-base font-semibold py-2.5 px-3 rounded-lg text-[#1B4D2E] hover:bg-[#1B4D2E]/10 transition-colors flex items-center justify-between"
-                >
-                  <span>{item.label}</span>
-                  <span className="text-[#E1AD01] text-xs">→</span>
-                </button>
-              ))}
+          <div className="lg:hidden bg-[#FFF8E7] border-b border-[#1B4D2E]/15 px-5 pt-3 pb-6 shadow-xl animate-in slide-in-from-top duration-200 max-h-[82vh] overflow-y-auto">
+            <div className="flex flex-col space-y-1.5">
+              {topLevelItems.map((item) => {
+                const children = getChildren(item.id);
+                const hasDropdown = item.isDropdown || children.length > 0;
+                const isExpanded = Boolean(expandedMobileGroupIds[item.id]);
+                const active = isRouteActive(item.href);
 
-              <div className="pt-3 border-t border-[#1B4D2E]/10 flex flex-col space-y-2">
+                if (!hasDropdown) {
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleLinkSelect(item.href)}
+                      className={`text-left text-base font-bold py-2.5 px-3.5 rounded-xl transition-colors flex items-center justify-between cursor-pointer ${
+                        active
+                          ? 'bg-[#1B4D2E] text-[#FFF8E7]'
+                          : 'text-[#1B4D2E] hover:bg-[#1B4D2E]/10'
+                      }`}
+                    >
+                      <span>{item.label}</span>
+                      <span className="text-[#E1AD01] text-xs">→</span>
+                    </button>
+                  );
+                }
+
+                return (
+                  <div key={item.id} className="rounded-xl border border-[#1B4D2E]/10 bg-white/60 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedMobileGroupIds((prev) => ({
+                          ...prev,
+                          [item.id]: !prev[item.id],
+                        }))
+                      }
+                      aria-expanded={isExpanded}
+                      className="w-full text-left text-base font-bold py-2.5 px-3.5 text-[#1B4D2E] hover:bg-[#1B4D2E]/5 transition-colors flex items-center justify-between cursor-pointer"
+                    >
+                      <span>{item.label}</span>
+                      <ChevronDown
+                        className={`w-4.5 h-4.5 text-[#1B4D2E] transition-transform duration-200 ${
+                          isExpanded ? 'rotate-180 text-[#E1AD01]' : ''
+                        }`}
+                      />
+                    </button>
+
+                    {isExpanded && children.length > 0 && (
+                      <div className="bg-white border-t border-[#1B4D2E]/10 py-1.5 px-2 space-y-1">
+                        {children.map((child) => {
+                          const childActive = isRouteActive(child.href);
+                          return (
+                            <button
+                              key={child.id}
+                              type="button"
+                              onClick={() => handleLinkSelect(child.href)}
+                              className={`w-full text-left text-sm font-semibold py-2 px-3 rounded-lg flex items-center justify-between cursor-pointer ${
+                                childActive
+                                  ? 'bg-[#1B4D2E] text-[#FFF8E7]'
+                                  : 'text-[#1B4D2E]/85 hover:bg-[#FFF8E7]'
+                              }`}
+                            >
+                              <span>{child.label}</span>
+                              <span className="text-[#E1AD01] text-xs">→</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Prominent Mobile Shop Now & Call Actions */}
+              <div className="pt-3 mt-2 border-t border-[#1B4D2E]/10 flex flex-col space-y-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleLinkSelect('/shop')}
+                  className="w-full flex items-center justify-center space-x-2 py-3 px-4 text-sm font-extrabold text-[#1B4D2E] rounded-xl bg-[#E1AD01] hover:bg-[#f0bc0e] shadow-xs cursor-pointer"
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                  <span>Shop Fresh Juices Now</span>
+                </button>
+
                 <a
                   href={`tel:${content.phone.replace(/[^0-9]/g, '')}`}
-                  className="flex items-center space-x-2 py-2 px-3 text-sm font-semibold text-[#1B4D2E] rounded-lg bg-[#E1AD01]/20 hover:bg-[#E1AD01]/30"
+                  className="flex items-center justify-center space-x-2 py-2.5 px-3 text-sm font-semibold text-[#1B4D2E] rounded-xl bg-white border border-[#1B4D2E]/15 hover:bg-[#1B4D2E]/5"
                 >
                   <Phone className="w-4 h-4 text-[#1B4D2E]" />
-                  <span>Call Us: {content.phone}</span>
+                  <span>Call Kitchen: {content.phone}</span>
                 </a>
-
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    onOpenAdmin();
-                  }}
-                  className="flex items-center space-x-2 py-2 px-3 text-sm font-medium text-[#1B4D2E]/80 rounded-lg hover:bg-[#1B4D2E]/10"
-                >
-                  <ShieldCheck className="w-4 h-4 text-[#E1AD01]" />
-                  <span>Admin CMS Dashboard</span>
-                </button>
               </div>
             </div>
           </div>

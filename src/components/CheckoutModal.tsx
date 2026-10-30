@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { dataRepo } from '../lib/storage';
+import {
+  getCustomerSizeFullLabel,
+  formatBottleCodeToOz,
+} from '../lib/units';
 import { SiteContent, Order } from '../types';
-import { 
-  X, 
-  CheckCircle2, 
-  Truck, 
-  Store, 
-  CreditCard, 
-  ShieldCheck, 
+import {
+  X,
+  CheckCircle2,
+  Truck,
+  Store,
+  ShieldCheck,
   MessageCircle,
-  Copy,
-  Calendar,
-  Clock
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -60,7 +60,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
       productId: item.product.id,
       productName: item.product.name,
       size: item.selectedSize.size,
-      sizeLabel: item.selectedSize.label,
+      sizeLabel: getCustomerSizeFullLabel(item.selectedSize),
       unitPrice: item.selectedSize.price,
       quantity: item.quantity,
       totalPrice: item.selectedSize.price * item.quantity,
@@ -88,7 +88,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
       status: 'pending',
     });
 
-    // If Stripe Card is chosen, call Stripe server checkout session
     if (paymentMethod === 'stripe_card') {
       try {
         const response = await fetch('/api/create-checkout-session', {
@@ -113,7 +112,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
           window.location.href = data.url;
           return;
         } else {
-          // If server reports STRIPE_NOT_CONFIGURED or error
           setStripeNotice(
             data.message ||
               'Stripe payments require STRIPE_SECRET_KEY in server environment. Your order has been placed in pending state! You can complete payment via Zelle or WhatsApp.'
@@ -122,7 +120,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
           setCompletedOrder(newOrder);
           clearCart();
         }
-      } catch (err: any) {
+      } catch {
         setStripeNotice(
           'Stripe server function is currently offline. Your order has been recorded! Please notify us via WhatsApp to complete payment.'
         );
@@ -133,7 +131,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
       return;
     }
 
-    // Standard manual payment methods
     setTimeout(() => {
       setIsSubmitting(false);
       setCompletedOrder(newOrder);
@@ -152,26 +149,42 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
     }, 500);
   };
 
-  const handleNotifyWhatsApp = () => {
-    if (!completedOrder) return;
-    const text = encodeURIComponent(
-      `Hello Delightful Juice! I just placed order *${completedOrder.orderNumber}* for $${completedOrder.total.toFixed(2)}.\n\n` +
-      `*Customer:* ${completedOrder.customerName} (${completedOrder.customerPhone})\n` +
-      `*Delivery:* ${completedOrder.deliveryMethod === 'pickup' ? 'Kitchen Pickup' : completedOrder.deliveryAddress}\n` +
-      `*Items:*\n` +
-      completedOrder.items.map((it) => `- ${it.productName} (${it.size}) x${it.quantity}`).join('\n') +
-      `\n\nLooking forward to confirmation! Thank you.`
-    );
-    window.open(`https://wa.me/${content.whatsappNumber}?text=${text}`, '_blank');
-  };
+  const completedWhatsAppUrl = completedOrder
+    ? `https://wa.me/${content.whatsappNumber}?text=${encodeURIComponent(
+        `Hello Delightful Juices! I just placed order *${completedOrder.orderNumber}* for $${completedOrder.total.toFixed(
+          2
+        )}.\n\n` +
+          `*Customer:* ${completedOrder.customerName} (${completedOrder.customerPhone})\n` +
+          `*Delivery:* ${
+            completedOrder.deliveryMethod === 'pickup'
+              ? 'Kitchen Pickup'
+              : completedOrder.deliveryAddress
+          }\n` +
+          `*Items:*\n` +
+          completedOrder.items
+            .map(
+              (it) =>
+                `- ${it.productName} (${it.sizeLabel || formatBottleCodeToOz(it.size)}) x${
+                  it.quantity
+                }`
+            )
+            .join('\n') +
+          `\n\nLooking forward to confirmation! Thank you.`
+      )}`
+    : '#';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div 
+    <div
+      onClick={() => {
+        setIsCheckoutOpen(false);
+        setCompletedOrder(null);
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+    >
+      <div
         className="bg-white rounded-3xl max-w-xl w-full overflow-hidden shadow-2xl border border-[#1B4D2E]/20 max-h-[92vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        
         {/* Header */}
         <div className="p-5 bg-[#1B4D2E] text-white flex items-center justify-between shrink-0">
           <div>
@@ -179,11 +192,14 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
               {completedOrder ? 'Order Confirmed!' : 'Checkout & Delivery Details'}
             </h3>
             <p className="text-xs text-[#E1AD01]">
-              {completedOrder ? 'Thank you for savoring pure goodness' : 'Complete your juice order for Quakertown & Regional Delivery'}
+              {completedOrder
+                ? 'Thank you for choosing Delightful Juices'
+                : 'Complete your fresh juice order for Quakertown & Regional Delivery'}
             </p>
           </div>
 
           <button
+            type="button"
             onClick={() => {
               setIsCheckoutOpen(false);
               setCompletedOrder(null);
@@ -203,7 +219,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
               </div>
 
               <div>
-                <span className="text-xs uppercase font-bold text-[#1B4D2E]/60 tracking-wider">Order Reference</span>
+                <span className="text-xs uppercase font-bold text-[#1B4D2E]/60 tracking-wider">
+                  Order Reference
+                </span>
                 <div className="font-display font-black text-3xl text-[#1B4D2E] mt-0.5">
                   {completedOrder.orderNumber}
                 </div>
@@ -226,7 +244,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[#1B4D2E]/70">Total Amount:</span>
-                  <span className="font-black text-sm text-[#1B4D2E]">${completedOrder.total.toFixed(2)}</span>
+                  <span className="font-black text-sm text-[#1B4D2E] tabular-nums">
+                    ${completedOrder.total.toFixed(2)}
+                  </span>
                 </div>
               </div>
 
@@ -238,19 +258,22 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
               )}
 
               <p className="text-xs text-[#1B4D2E]/80 max-w-sm mx-auto leading-relaxed">
-                Your order has been logged into our kitchen system. We will cold-pack your fresh bottles and notify you when ready for dispatch or pickup.
+                Your order has been logged into our Delightful Juices kitchen system. We will cold-pack your fresh bottles and notify you when ready for dispatch or pickup.
               </p>
 
               <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
-                <button
-                  onClick={handleNotifyWhatsApp}
-                  className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-5 rounded-xl text-xs transition-colors cursor-pointer"
+                <a
+                  href={completedWhatsAppUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-5 rounded-xl text-xs transition-colors"
                 >
                   <MessageCircle className="w-4 h-4" />
                   <span>Send Order Copy via WhatsApp</span>
-                </button>
+                </a>
 
                 <button
+                  type="button"
                   onClick={() => {
                     setIsCheckoutOpen(false);
                     setCompletedOrder(null);
@@ -263,9 +286,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
-              
               {/* Order Summary Snapshot */}
-              <div className="bg-[#FFF8E7] p-3.5 rounded-2xl border border-[#1B4D2E]/15 flex items-center justify-between text-xs">
+              <div className="bg-[#FFF8E7] p-3.5 rounded-2xl border border-[#1B4D2E]/15 flex items-center justify-between text-xs tabular-nums">
                 <div>
                   <span className="font-bold text-[#1B4D2E]">Cart Subtotal: </span>
                   <span>${subtotal.toFixed(2)}</span>
@@ -299,7 +321,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                     <Truck className="w-4 h-4 shrink-0 text-[#E1AD01]" />
                     <div>
                       <div>Doorstep Delivery</div>
-                      <div className="text-[10px] font-normal opacity-80">Quakertown & Regional</div>
+                      <div className="text-[10px] font-normal opacity-80">
+                        Quakertown & Regional
+                      </div>
                     </div>
                   </button>
 
@@ -315,7 +339,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                     <Store className="w-4 h-4 shrink-0 text-[#E1AD01]" />
                     <div>
                       <div>Kitchen Pickup</div>
-                      <div className="text-[10px] font-normal opacity-80">500 W Broad St (Free)</div>
+                      <div className="text-[10px] font-normal opacity-80">
+                        500 W Broad St (Free)
+                      </div>
                     </div>
                   </button>
                 </div>
@@ -365,7 +391,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                 />
               </div>
 
-              {/* Delivery Address if delivery */}
               {deliveryMethod === 'local_delivery' && (
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
@@ -382,7 +407,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                 </div>
               )}
 
-              {/* Delivery Time Slot */}
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
                   Preferred Delivery Window
@@ -393,7 +417,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                   className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs font-semibold text-[#1B4D2E] focus:ring-2 focus:ring-[#E1AD01] focus:outline-hidden"
                 >
                   <option value="Morning (9:30 AM - 12:30 PM)">Morning (9:30 AM - 12:30 PM)</option>
-                  <option value="Afternoon (1:00 PM - 5:00 PM)">Afternoon (1:00 PM - 5:00 PM)</option>
+                  <option value="Afternoon (1:00 PM - 5:00 PM)">
+                    Afternoon (1:00 PM - 5:00 PM)
+                  </option>
                   <option value="Evening (5:30 PM - 7:30 PM)">Evening (5:30 PM - 7:30 PM)</option>
                 </select>
               </div>
@@ -405,11 +431,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                 </label>
                 <div className="space-y-2">
                   {content.stripe?.enabled !== false && (
-                    <label className={`flex items-center space-x-3 p-3.5 rounded-2xl border-2 transition-all cursor-pointer ${
-                      paymentMethod === 'stripe_card'
-                        ? 'bg-emerald-50/60 border-emerald-600 shadow-xs'
-                        : 'bg-white border-gray-200 hover:border-gray-300'
-                    }`}>
+                    <label
+                      className={`flex items-center space-x-3 p-3.5 rounded-2xl border-2 transition-all cursor-pointer ${
+                        paymentMethod === 'stripe_card'
+                          ? 'bg-emerald-50/60 border-emerald-600 shadow-xs'
+                          : 'bg-white border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
                       <input
                         type="radio"
                         name="payment"
@@ -422,20 +450,25 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                           <span className="font-bold text-[#1B4D2E] text-sm">
                             {content.stripe?.customerFacingName || 'Credit / Debit Card (Stripe)'}
                           </span>
-                          <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full uppercase">
+                          <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-md uppercase">
                             Instant Checkout
                           </span>
                         </div>
                         <span className="text-[#1B4D2E]/70 block mt-0.5">
-                          {content.stripe?.description || 'Visa, Mastercard, Amex, Apple Pay & Google Pay'}
+                          {content.stripe?.description ||
+                            'Visa, Mastercard, Amex, Apple Pay & Google Pay'}
                         </span>
                       </div>
                     </label>
                   )}
 
-                  <label className={`flex items-center space-x-3 p-3 rounded-2xl border transition-all cursor-pointer ${
-                    paymentMethod === 'zelle' ? 'bg-[#FFF8E7] border-[#1B4D2E]' : 'bg-white border-gray-200 hover:border-gray-300'
-                  }`}>
+                  <label
+                    className={`flex items-center space-x-3 p-3 rounded-2xl border transition-all cursor-pointer ${
+                      paymentMethod === 'zelle'
+                        ? 'bg-[#FFF8E7] border-[#1B4D2E]'
+                        : 'bg-white border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
                     <input
                       type="radio"
                       name="payment"
@@ -444,14 +477,22 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                       className="w-4 h-4 accent-[#1B4D2E]"
                     />
                     <div className="text-xs">
-                      <span className="font-bold text-[#1B4D2E] block">Zelle Transfer (Instant & Direct)</span>
-                      <span className="text-[#1B4D2E]/70">Send to (484) 792-8023 / Delightful Juice</span>
+                      <span className="font-bold text-[#1B4D2E] block">
+                        Zelle Transfer (Instant & Direct)
+                      </span>
+                      <span className="text-[#1B4D2E]/70">
+                        Send to (484) 792-8023 / Delightful Juices
+                      </span>
                     </div>
                   </label>
 
-                  <label className={`flex items-center space-x-3 p-3 rounded-2xl border transition-all cursor-pointer ${
-                    paymentMethod === 'cash_on_delivery' ? 'bg-[#FFF8E7] border-[#1B4D2E]' : 'bg-white border-gray-200 hover:border-gray-300'
-                  }`}>
+                  <label
+                    className={`flex items-center space-x-3 p-3 rounded-2xl border transition-all cursor-pointer ${
+                      paymentMethod === 'cash_on_delivery'
+                        ? 'bg-[#FFF8E7] border-[#1B4D2E]'
+                        : 'bg-white border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
                     <input
                       type="radio"
                       name="payment"
@@ -460,14 +501,22 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                       className="w-4 h-4 accent-[#1B4D2E]"
                     />
                     <div className="text-xs">
-                      <span className="font-bold text-[#1B4D2E] block">Cash on Delivery / Pickup</span>
-                      <span className="text-[#1B4D2E]/70">Pay when receiving your fresh insulated order</span>
+                      <span className="font-bold text-[#1B4D2E] block">
+                        Cash on Delivery / Pickup
+                      </span>
+                      <span className="text-[#1B4D2E]/70">
+                        Pay when receiving your fresh insulated order
+                      </span>
                     </div>
                   </label>
 
-                  <label className={`flex items-center space-x-3 p-3 rounded-2xl border transition-all cursor-pointer ${
-                    paymentMethod === 'whatsapp_order' ? 'bg-[#FFF8E7] border-[#1B4D2E]' : 'bg-white border-gray-200 hover:border-gray-300'
-                  }`}>
+                  <label
+                    className={`flex items-center space-x-3 p-3 rounded-2xl border transition-all cursor-pointer ${
+                      paymentMethod === 'whatsapp_order'
+                        ? 'bg-[#FFF8E7] border-[#1B4D2E]'
+                        : 'bg-white border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
                     <input
                       type="radio"
                       name="payment"
@@ -476,14 +525,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                       className="w-4 h-4 accent-[#1B4D2E]"
                     />
                     <div className="text-xs">
-                      <span className="font-bold text-[#1B4D2E] block">Pay & Confirm via WhatsApp</span>
-                      <span className="text-[#1B4D2E]/70">Coordinate custom payment link or card invoice</span>
+                      <span className="font-bold text-[#1B4D2E] block">
+                        Pay & Confirm via WhatsApp
+                      </span>
+                      <span className="text-[#1B4D2E]/70">
+                        Coordinate custom payment link or card invoice
+                      </span>
                     </div>
                   </label>
                 </div>
               </div>
 
-              {/* Notes */}
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
                   Delivery Notes or Special Instructions
@@ -497,12 +549,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                 />
               </div>
 
-              {/* Submit Button */}
               <div className="pt-2">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-3.5 px-4 rounded-xl text-sm shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer"
+                  className="w-full bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-3.5 px-4 rounded-xl text-sm shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer tabular-nums"
                 >
                   <ShieldCheck className="w-4 h-4 text-[#E1AD01]" />
                   <span>
@@ -512,11 +563,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                   </span>
                 </button>
               </div>
-
             </form>
           )}
         </div>
-
       </div>
     </div>
   );

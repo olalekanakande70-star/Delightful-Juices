@@ -1,16 +1,13 @@
 import React, { useState } from 'react';
 import { SiteContent, BottleSize } from '../types';
 import { dataRepo } from '../lib/storage';
-import { 
-  Calendar, 
-  Users, 
-  Sparkles, 
-  CheckCircle2, 
-  Send, 
-  MessageCircle, 
-  GlassWater, 
-  Tag,
-  Clock
+import { formatBottleCodeToOz } from '../lib/units';
+import {
+  Users,
+  Sparkles,
+  CheckCircle2,
+  Send,
+  MessageCircle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -57,7 +54,6 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
     'Tigernut Milk (Kunu Aya)',
   ];
 
-  // Estimated bottles calculation (typical recommendation: 1.5 - 2 bottles per guest for a 3-4 hr event)
   const recommendedBottles = Math.ceil(guestCount * 1.5);
   const estimatedMinBudget = Math.round(recommendedBottles * 4.25);
   const estimatedMaxBudget = Math.round(recommendedBottles * 5.75);
@@ -118,30 +114,26 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
     }, 600);
   };
 
-  const handleWhatsAppInquiry = () => {
-    const text = encodeURIComponent(
-      `Hello Delightful Juice! I would like to request an Event Catering Quote.\n\n` +
+  const whatsappInquiryUrl = `https://wa.me/${content.whatsappNumber}?text=${encodeURIComponent(
+    `Hello Delightful Juices! I would like to request an Event Catering Quote.\n\n` +
       `*Event Type:* ${eventType}\n` +
       `*Date:* ${eventDate || 'TBD'}\n` +
       `*Guest Count:* ${guestCount} (~${recommendedBottles} bottles recommended)\n` +
       `*Selected Flavors:* ${selectedFlavors.join(', ')}\n` +
-      `*Bottle Sizes:* ${selectedSizes.join(', ')}\n` +
+      `*Bottle Sizes:* ${selectedSizes.map((s) => formatBottleCodeToOz(s)).join(', ')}\n` +
       `*Custom Branded Labels:* ${customLabeling ? 'Yes' : 'No'}\n` +
       `*Location:* ${location || 'PA / Regional'}\n` +
-      `*Contact:* ${fullName} (${phone})\n\n` +
+      `*Contact:* ${fullName || 'Event Host'} (${phone || 'TBD'})\n\n` +
       `Looking forward to hearing back with official packages!`
-    );
-    window.open(`https://wa.me/${content.whatsappNumber}?text=${text}`, '_blank');
-  };
+  )}`;
 
   return (
     <section id="events-catering" className="py-20 bg-[#FFF8E7] relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-14">
-          <div className="inline-flex items-center space-x-2 bg-[#1B4D2E]/10 border border-[#1B4D2E]/20 px-3.5 py-1.5 rounded-full text-xs font-bold text-[#1B4D2E]">
-            <Sparkles className="w-3.5 h-3.5 text-[#E1AD01]" />
+          <div className="inline-flex items-center space-x-2 text-xs font-extrabold uppercase tracking-[0.16em] text-[#1B4D2E]">
+            <Sparkles className="w-4 h-4 text-[#E1AD01]" />
             <span>CELEBRATIONS & CORPORATE GATHERINGS</span>
           </div>
 
@@ -150,17 +142,14 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
           </h2>
 
           <p className="text-sm sm:text-base text-[#1B4D2E]/80 leading-relaxed">
-            Elevate your wedding, birthday, family reunion, or corporate gathering with refreshing, chilled bottles of Delightful Juice. We provide custom bottle labeling, signature cold ice coolers, and bulk discounts.
+            Elevate your wedding, birthday, family reunion, or corporate gathering with refreshing, chilled bottles of <strong>Delightful Juices</strong>. We provide custom bottle labeling, signature cold ice coolers, and bulk event pricing in <strong>11.8 oz</strong>, <strong>16.9 oz</strong>, and <strong>33.8 oz</strong> sizes.
           </p>
         </div>
 
         {/* 2-Column Layout: Interactive Calculator & Inquiry Form */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Left: Interactive Drink Estimator & Highlights */}
+          {/* Left: Interactive Drink Estimator */}
           <div className="lg:col-span-5 space-y-6">
-            
-            {/* Live Recommendation Card */}
             <div className="bg-[#1B4D2E] text-[#FFF8E7] rounded-3xl p-6 sm:p-7 shadow-lg border-2 border-[#E1AD01]/30">
               <h3 className="font-display font-bold text-2xl text-[#E1AD01] mb-2">
                 Live Catering Estimator
@@ -175,19 +164,23 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
                     <Users className="w-5 h-5 text-[#E1AD01]" />
                     <div>
                       <div className="text-xs text-[#FFF8E7]/70">Expected Guests</div>
-                      <div className="font-bold text-lg text-white">{guestCount} Guests</div>
+                      <div className="font-bold text-lg text-white tabular-nums">
+                        {guestCount} Guests
+                      </div>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="text-xs text-[#FFF8E7]/70">Recommended Sips</div>
-                    <div className="font-black text-xl text-[#E1AD01]">~{recommendedBottles} Bottles</div>
+                    <div className="font-black text-xl text-[#E1AD01] tabular-nums">
+                      ~{recommendedBottles} Bottles
+                    </div>
                   </div>
                 </div>
 
                 <div className="bg-[#143822] p-4 rounded-2xl flex items-center justify-between border border-[#E1AD01]/20">
                   <div>
                     <div className="text-xs text-[#FFF8E7]/70">Estimated Package Tier</div>
-                    <div className="font-extrabold text-base text-white">
+                    <div className="font-extrabold text-base text-white tabular-nums">
                       ${estimatedMinBudget} - ${estimatedMaxBudget}
                     </div>
                   </div>
@@ -197,7 +190,6 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
                 </div>
               </div>
 
-              {/* Service Inclusions */}
               <div className="mt-6 pt-5 border-t border-[#FFF8E7]/15 space-y-2 text-xs">
                 <div className="flex items-center space-x-2">
                   <CheckCircle2 className="w-4 h-4 text-[#E1AD01] shrink-0" />
@@ -218,27 +210,27 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
               </div>
             </div>
 
-            {/* Quick Call / WhatsApp Card */}
-            <div className="bg-white rounded-3xl p-6 border border-[#1B4D2E]/15 shadow-sm">
-              <h4 className="font-bold text-sm text-[#1B4D2E] mb-1">Need a fast quote in under 15 minutes?</h4>
+            <div className="bg-white rounded-3xl p-6 border border-[#1B4D2E]/15 shadow-xs">
+              <h4 className="font-bold text-sm text-[#1B4D2E] mb-1">
+                Need a fast quote in under 15 minutes?
+              </h4>
               <p className="text-xs text-[#1B4D2E]/70 mb-4">
-                Chat directly with CEO Oluyemi B. Ajibolade via WhatsApp with your event specs.
+                Chat directly with C.E.O. Oluyemi B. Ajibolade via WhatsApp with your event specs.
               </p>
-              <button
-                type="button"
-                onClick={handleWhatsAppInquiry}
-                className="w-full flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-xs transition-colors cursor-pointer"
+              <a
+                href={whatsappInquiryUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-xs transition-colors"
               >
                 <MessageCircle className="w-4 h-4" />
                 <span>Instant Quote on WhatsApp</span>
-              </button>
+              </a>
             </div>
-
           </div>
 
           {/* Right: Booking Form */}
           <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 border border-[#1B4D2E]/15 shadow-md">
-            
             {submitted ? (
               <div className="text-center py-12 space-y-5">
                 <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center">
@@ -248,17 +240,20 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
                   Inquiry Received!
                 </h3>
                 <p className="text-sm text-[#1B4D2E]/80 max-w-md mx-auto">
-                  Thank you, <span className="font-bold">{fullName}</span>. Your event catering request for {guestCount} guests has been logged. Our team will review your menu selection and reach out within 24 hours.
+                  Thank you, <span className="font-bold">{fullName}</span>. Your Delightful Juices event catering request for {guestCount} guests has been logged. Our team will review your menu selection and reach out within 24 hours.
                 </p>
                 <div className="pt-4 flex flex-col sm:flex-row justify-center gap-3">
-                  <button
-                    onClick={handleWhatsAppInquiry}
-                    className="inline-flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl text-xs cursor-pointer"
+                  <a
+                    href={whatsappInquiryUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl text-xs"
                   >
                     <MessageCircle className="w-4 h-4" />
                     <span>Follow Up on WhatsApp</span>
-                  </button>
+                  </a>
                   <button
+                    type="button"
                     onClick={() => {
                       setSubmitted(false);
                       setFullName('');
@@ -281,7 +276,6 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
                   </p>
                 </div>
 
-                {/* Event Type & Guest Count Slider */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1.5">
@@ -319,7 +313,7 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
                     <label className="text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70">
                       Estimated Guest Count
                     </label>
-                    <span className="text-sm font-extrabold text-[#1B4D2E] bg-[#E1AD01]/25 px-2.5 py-0.5 rounded-lg">
+                    <span className="text-sm font-extrabold text-[#1B4D2E] bg-[#E1AD01]/25 px-2.5 py-0.5 rounded-lg tabular-nums">
                       {guestCount} Guests
                     </span>
                   </div>
@@ -369,10 +363,10 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
                   </div>
                 </div>
 
-                {/* Bottle Sizes Needed */}
+                {/* Bottle Sizes Needed (Displayed in Ounces) */}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-2">
-                    Preferred Bottle Sizes:
+                    Preferred Bottle Sizes (US Fluid Ounces):
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {(['35cl', '50cl', '1L'] as BottleSize[]).map((size) => {
@@ -388,7 +382,11 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
                               : 'bg-[#FFF8E7] text-[#1B4D2E]/80 border-[#1B4D2E]/20'
                           }`}
                         >
-                          {size === '35cl' ? '35cl Pocket Sip' : size === '50cl' ? '50cl Standard' : '1 Litre Family Jug'}
+                          {size === '35cl'
+                            ? '11.8 oz Pocket Sip'
+                            : size === '50cl'
+                            ? '16.9 oz Standard'
+                            : '33.8 oz Family Jug'}
                         </button>
                       );
                     })}
@@ -398,8 +396,12 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
                 {/* Custom Labeling Switch */}
                 <div className="bg-[#FFF8E7] p-3 rounded-2xl border border-[#1B4D2E]/15 flex items-center justify-between">
                   <div className="pr-3">
-                    <div className="text-xs font-bold text-[#1B4D2E]">Custom Event Branded Labels?</div>
-                    <div className="text-[11px] text-[#1B4D2E]/70">Add your wedding monogram, anniversary photo, or corporate logo to every bottle.</div>
+                    <div className="text-xs font-bold text-[#1B4D2E]">
+                      Custom Event Branded Labels?
+                    </div>
+                    <div className="text-[11px] text-[#1B4D2E]/70">
+                      Add your wedding monogram, anniversary photo, or corporate logo to every bottle.
+                    </div>
                   </div>
                   <input
                     type="checkbox"
@@ -466,7 +468,6 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
                   </div>
                 </div>
 
-                {/* Additional Notes */}
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
                     Special Requests & Setup Needs
@@ -480,7 +481,6 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
                   />
                 </div>
 
-                {/* Submit Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
                   <button
                     type="submit"
@@ -488,25 +488,25 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
                     className="flex-1 bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-3.5 px-6 rounded-xl text-xs sm:text-sm shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer"
                   >
                     <Send className="w-4 h-4 text-[#E1AD01]" />
-                    <span>{isSubmitting ? 'Sending Proposal Request...' : 'Submit Catering Request'}</span>
+                    <span>
+                      {isSubmitting ? 'Sending Proposal Request...' : 'Submit Catering Request'}
+                    </span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={handleWhatsAppInquiry}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-5 rounded-xl text-xs sm:text-sm shadow-xs transition-colors flex items-center justify-center space-x-1.5 cursor-pointer"
+                  <a
+                    href={whatsappInquiryUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-5 rounded-xl text-xs sm:text-sm shadow-xs transition-colors flex items-center justify-center space-x-1.5"
                   >
                     <MessageCircle className="w-4 h-4" />
                     <span>Send via WhatsApp</span>
-                  </button>
+                  </a>
                 </div>
               </form>
             )}
-
           </div>
-
         </div>
-
       </div>
     </section>
   );

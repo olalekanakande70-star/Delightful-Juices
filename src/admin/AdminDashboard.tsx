@@ -5,15 +5,29 @@ import {
   EventInquiry, 
   SiteContent, 
   NavItem, 
-  BottleSize, 
+  SizeOption,
+  MeasurementUnit,
+  HeroSlide,
+  CmsPage,
   SupabaseConfig,
   ColorThemeSettings,
   BrandSettings,
+  AboutShowcaseSettings,
   StripePaymentSettings
 } from '../types';
-import { dataRepo, SUPABASE_SQL_MIGRATION } from '../lib/storage';
+import {
+  dataRepo,
+  SUPABASE_SQL_MIGRATION,
+  ABOUT_ARTISANAL_IMAGE,
+  DEFAULT_ABOUT_SHOWCASE,
+  FALLBACK_BEVERAGE_IMAGE,
+} from '../lib/storage';
 import { supabaseService } from '../lib/supabaseClient';
 import { applyTheme, DEFAULT_COLORS, DEFAULT_TYPOGRAPHY } from '../lib/theme';
+import { getCustomerSizeDisplay, formatBottleCodeToOz } from '../lib/units';
+import { HeroSliderManager } from './HeroSliderManager';
+import { PagesManager } from './PagesManager';
+import { NavigationManager } from './NavigationManager';
 import { 
   ShieldCheck, 
   LogOut, 
@@ -47,11 +61,14 @@ import {
   RefreshCw,
   Sliders,
   DollarSign,
-  HelpCircle
+  HelpCircle,
+  Layers,
+  Monitor
 } from 'lucide-react';
 
 interface AdminDashboardProps {
   onClose: () => void;
+  onNavigate?: (href: string) => void;
 }
 
 export const CURATED_PRODUCT_PHOTOS = [
@@ -65,13 +82,13 @@ export const CURATED_PRODUCT_PHOTOS = [
   { label: 'Cold-Pressed Green Herbs', url: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?w=800&auto=format&fit=crop&q=80' },
 ];
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavigate }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => dataRepo.isAdminLoggedIn());
   const [loginPass, setLoginPass] = useState('');
   const [loginError, setLoginError] = useState('');
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'branding' | 'appearance' | 'products' | 'orders' | 'inquiries' | 'stripe' | 'content' | 'nav' | 'supabase'
+    'overview' | 'hero_slider' | 'pages' | 'branding' | 'appearance' | 'products' | 'orders' | 'inquiries' | 'stripe' | 'content' | 'nav' | 'supabase'
   >('overview');
 
   // Repositories state
@@ -80,6 +97,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   const [inquiries, setInquiries] = useState<EventInquiry[]>([]);
   const [content, setContent] = useState<SiteContent>(dataRepo.getContent());
   const [navItems, setNavItems] = useState<NavItem[]>([]);
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
+  const [cmsPages, setCmsPages] = useState<CmsPage[]>([]);
   const [supabaseCfg, setSupabaseCfg] = useState<SupabaseConfig>(dataRepo.getSupabaseConfig());
 
   // Modals & form state
@@ -90,6 +109,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
   const [syncStatusMsg, setSyncStatusMsg] = useState<{ text: string; success: boolean } | null>(null);
   const [isTestingSupabase, setIsTestingSupabase] = useState(false);
   const [saveSuccessNotice, setSaveSuccessNotice] = useState<string | null>(null);
+  const [confirmResetSeed, setConfirmResetSeed] = useState(false);
+  const [confirmDeleteProdId, setConfirmDeleteProdId] = useState<string | null>(null);
 
   // Stripe test endpoint state
   const [isTestingStripe, setIsTestingStripe] = useState(false);
@@ -103,6 +124,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       setInquiries(dataRepo.getInquiries());
       setContent(dataRepo.getContent());
       setNavItems(dataRepo.getNavItems());
+      setHeroSlides(dataRepo.getHeroSlides());
+      setCmsPages(dataRepo.getPages());
       setSupabaseCfg(dataRepo.getSupabaseConfig());
     };
     refreshData();
@@ -143,15 +166,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       slug: 'new-seasonal-juice-' + Date.now(),
       category: 'ginger',
       categoryLabel: 'Ginger Elixirs',
-      tagline: 'Freshly pressed cold drink with herbs',
-      description: 'Crafted with natural ingredients and infused with our signature DelightOil.',
-      ingredients: ['Cold-Pressed Ginger', 'Fresh Citrus', 'DelightOil'],
+      tagline: 'Freshly pressed cold drink with botanicals',
+      description: 'Crafted in small batches by Delightful Juices with natural organic fruits and cold-pressed botanicals.',
+      ingredients: ['Cold-Pressed Ginger', 'Fresh Citrus', 'Organic Botanicals'],
       tasteProfile: 'Zesty, crisp and balanced sweetness',
       healthBenefits: ['Natural immune support', 'Revitalizing enzymes'],
       sizes: [
-        { size: '35cl', label: '35cl Pocket Sip', price: 5.50 },
-        { size: '50cl', label: '50cl Daily Refresh', price: 7.50 },
-        { size: '1L', label: '1 Litre Family Jug', price: 14.00 },
+        { size: '11.8 oz', label: '11.8 oz Pocket Sip', price: 5.50, quantityValue: 11.8, unit: 'oz' },
+        { size: '16.9 oz', label: '16.9 oz Daily Refresh', price: 7.50, quantityValue: 16.9, unit: 'oz' },
+        { size: '33.8 oz', label: '33.8 oz Family Jug', price: 14.00, quantityValue: 33.8, unit: 'oz' },
       ],
       imageUrl: 'https://images.unsplash.com/photo-1556881286-fc6915169721?w=800&auto=format&fit=crop&q=80',
       galleryImages: [],
@@ -173,7 +196,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('Logo file exceeds 5MB limit. Please upload an image under 5MB.');
+      showToast('Logo file exceeds 5MB limit. Please upload an image under 5MB.');
       return;
     }
 
@@ -184,7 +207,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       const res = await supabaseService.uploadAsset('delightful_assets', path, file);
       if (res.url) {
         const updatedBranding: BrandSettings = {
-          ...(content.branding || { logoText: 'Delightful Juice', showLogoIcon: true }),
+          ...(content.branding || { logoText: 'Delightful Juices', showLogoIcon: true }),
           [isMobile ? 'mobileLogoUrl' : 'logoUrl']: res.url,
         };
         const updatedContent = { ...content, branding: updatedBranding };
@@ -200,7 +223,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     reader.onload = () => {
       const dataUrl = reader.result as string;
       const updatedBranding: BrandSettings = {
-        ...(content.branding || { logoText: 'Delightful Juice', showLogoIcon: true }),
+        ...(content.branding || { logoText: 'Delightful Juices', showLogoIcon: true }),
         [isMobile ? 'mobileLogoUrl' : 'logoUrl']: dataUrl,
       };
       const updatedContent = { ...content, branding: updatedBranding };
@@ -211,13 +234,69 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
     reader.readAsDataURL(file);
   };
 
+  const currentShowcase: AboutShowcaseSettings = {
+    ...DEFAULT_ABOUT_SHOWCASE,
+    ...(content.branding?.aboutShowcase || {}),
+  };
+
+  const updateAboutShowcase = (patch: Partial<AboutShowcaseSettings>, autoSave = false) => {
+    const nextShowcase: AboutShowcaseSettings = {
+      ...currentShowcase,
+      ...patch,
+    };
+    const updatedBranding: BrandSettings = {
+      ...(content.branding || { logoText: 'Delightful Juices', showLogoIcon: true }),
+      aboutShowcase: nextShowcase,
+    };
+    const updatedContent: SiteContent = {
+      ...content,
+      branding: updatedBranding,
+    };
+    setContent(updatedContent);
+    if (autoSave) {
+      dataRepo.saveContent(updatedContent);
+    }
+  };
+
+  const handleAboutShowcaseUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    targetField: 'imageUrl' | 'ceoAvatarUrl'
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image file exceeds 5MB limit. Please choose an image under 5MB.');
+      return;
+    }
+
+    if (supabaseCfg.connected) {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `about/${targetField}-${Date.now()}.${ext}`;
+      const res = await supabaseService.uploadAsset('delightful_assets', path, file);
+      if (res.url) {
+        updateAboutShowcase({ [targetField]: res.url }, true);
+        showToast('Showcase image uploaded to Supabase Storage and saved!');
+        return;
+      }
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      updateAboutShowcase({ [targetField]: dataUrl }, true);
+      showToast('Showcase image updated and saved persistently!');
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Upload Product Image file handler
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isGallery = false) => {
     const file = e.target.files?.[0];
     if (!file || !editingProduct) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image file exceeds 5MB limit.');
+      showToast('Image file exceeds 5MB limit.');
       return;
     }
 
@@ -311,9 +390,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
       }
       await supabaseService.upsertSiteContent(content);
       await supabaseService.saveNavigation(navItems);
+      await supabaseService.saveAllHeroSlides(heroSlides);
+      for (const pg of cmsPages) {
+        await supabaseService.upsertCmsPage(pg);
+      }
 
       setIsSeeding(false);
-      setSeedResult('Successfully seeded all official drinks, site copy, and navigation items into your Supabase project!');
+      setSeedResult('Successfully seeded drinks, site copy, navigation menus, hero slides, and CMS pages into your Supabase project!');
       await handleTestSupabase();
     } catch (err: any) {
       setIsSeeding(false);
@@ -332,7 +415,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
         body: JSON.stringify({
           orderId: 'test-' + Date.now(),
           orderNumber: 'DJ-TEST',
-          items: [{ productName: 'Zobo Test Sip', size: '35cl', unitPrice: 5.50, quantity: 1 }],
+          items: [{ productName: 'Zobo Test Sip', size: '11.8 oz', unitPrice: 5.50, quantity: 1 }],
           customerEmail: 'test@delightfuljuices.com',
           customerName: 'Test Customer',
         }),
@@ -375,7 +458,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
 
           <div>
             <h2 className="font-display font-black text-2xl text-[#1B4D2E]">
-              Delightful Juice Admin
+              Delightful Juices Admin
             </h2>
             <p className="text-xs text-[#1B4D2E]/70 mt-1">
               Authorized business portal for Oluyemi B. Ajibolade
@@ -542,9 +625,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
           </div>
           <div>
             <div className="font-display font-extrabold text-base text-[#FFF8E7] flex items-center space-x-2">
-              <span>Delightful Juice Admin</span>
+              <span>Delightful Juices Admin</span>
               <span className="text-[10px] bg-[#E1AD01] text-[#1B4D2E] font-black px-2 py-0.5 rounded-full uppercase">
-                CMS v2.2
+                CMS v3.0
               </span>
             </div>
             <div className="text-[10px] text-[#FFF8E7]/70">
@@ -599,6 +682,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
             >
               <LayoutDashboard className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
               <span className="hidden md:inline">Dashboard</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('hero_slider')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                activeTab === 'hero_slider'
+                  ? 'bg-[#1B4D2E] text-[#FFF8E7] shadow-xs'
+                  : 'text-[#1B4D2E]/75 hover:bg-[#FFF8E7]'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <Monitor className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
+                <span className="hidden md:inline">Hero Slider</span>
+              </div>
+              <span className="hidden md:inline text-[11px] bg-gray-100 text-[#1B4D2E] font-bold px-2 py-0.5 rounded-full">
+                {heroSlides.filter((s) => s.active !== false).length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('pages')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                activeTab === 'pages'
+                  ? 'bg-[#1B4D2E] text-[#FFF8E7] shadow-xs'
+                  : 'text-[#1B4D2E]/75 hover:bg-[#FFF8E7]'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <Layers className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
+                <span className="hidden md:inline">Pages Builder</span>
+              </div>
+              <span className="hidden md:inline text-[11px] bg-gray-100 text-[#1B4D2E] font-bold px-2 py-0.5 rounded-full">
+                {cmsPages.length}
+              </span>
             </button>
 
             <button
@@ -730,18 +847,39 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
           </nav>
 
           <div className="p-3 md:p-4 border-t border-[#1B4D2E]/10 space-y-2">
-            <button
-              onClick={() => {
-                if (confirm('Reset all demo data back to default factory seed?')) {
-                  dataRepo.resetToDefaultSeed();
-                  showToast('Data restored to initial factory seed!');
-                }
-              }}
-              className="w-full flex items-center justify-center space-x-1.5 py-2 px-2 text-[11px] font-semibold text-[#1B4D2E]/70 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Reset Factory Seed</span>
-            </button>
+            {confirmResetSeed ? (
+              <div className="space-y-1.5 bg-red-50 p-2 rounded-xl border border-red-200">
+                <span className="block text-[10px] font-bold text-red-800 text-center">
+                  Reset local factory seed?
+                </span>
+                <div className="flex items-center justify-center gap-1.5">
+                  <button
+                    onClick={() => {
+                      dataRepo.resetToDefaultSeed();
+                      setConfirmResetSeed(false);
+                      showToast('Data restored to initial factory seed!');
+                    }}
+                    className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-md cursor-pointer"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    onClick={() => setConfirmResetSeed(false)}
+                    className="bg-white text-gray-700 border text-[10px] font-bold px-2.5 py-1 rounded-md cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmResetSeed(true)}
+                className="w-full flex items-center justify-center space-x-1.5 py-2 px-2 text-[11px] font-semibold text-[#1B4D2E]/70 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Reset Factory Seed</span>
+              </button>
+            )}
           </div>
         </aside>
 
@@ -810,7 +948,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     {products.filter((p) => p.inStock).length} / {products.length}
                   </div>
                   <div className="text-[11px] text-[#1B4D2E]/70 mt-1">
-                    All sizes (35cl, 50cl, 1L)
+                    All sizes in oz (11.8, 16.9, 33.8 oz)
                   </div>
                 </div>
               </div>
@@ -826,7 +964,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     </h3>
                     <button
                       onClick={() => setActiveTab('orders')}
-                      className="text-xs font-bold text-[#E1AD01] bg-[#1B4D2E] px-3 py-1.5 rounded-lg"
+                      className="text-xs font-bold text-[#E1AD01] bg-[#1B4D2E] px-3 py-1.5 rounded-lg cursor-pointer"
                     >
                       View All Orders
                     </button>
@@ -852,7 +990,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                               <div className="text-[10px] text-gray-500">{ord.customerPhone}</div>
                             </td>
                             <td className="p-3 text-[11px]">
-                              {ord.items.map((i) => `${i.quantity}x ${i.productName} (${i.size})`).join(', ')}
+                              {ord.items.map((i) => `${i.quantity}x ${i.productName} (${formatBottleCodeToOz(i.size)})`).join(', ')}
                             </td>
                             <td className="p-3 font-extrabold text-[#1B4D2E]">${ord.total.toFixed(2)}</td>
                             <td className="p-3">
@@ -883,6 +1021,39 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     </h3>
                     <div className="space-y-2">
                       <button
+                        onClick={() => setActiveTab('hero_slider')}
+                        className="w-full flex items-center justify-between p-3 rounded-xl bg-[#143822] hover:bg-[#0e2717] border border-[#E1AD01]/20 text-xs font-bold text-white transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <Monitor className="w-4 h-4 text-[#E1AD01]" />
+                          <span>Manage Hero Slider</span>
+                        </div>
+                        <span>→</span>
+                      </button>
+
+                      <button
+                        onClick={() => setActiveTab('pages')}
+                        className="w-full flex items-center justify-between p-3 rounded-xl bg-[#143822] hover:bg-[#0e2717] border border-[#E1AD01]/20 text-xs font-bold text-white transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <Layers className="w-4 h-4 text-[#E1AD01]" />
+                          <span>Create & Edit Pages</span>
+                        </div>
+                        <span>→</span>
+                      </button>
+
+                      <button
+                        onClick={() => setActiveTab('content')}
+                        className="w-full flex items-center justify-between p-3 rounded-xl bg-[#143822] hover:bg-[#0e2717] border border-[#E1AD01]/20 text-xs font-bold text-white transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <FileText className="w-4 h-4 text-[#E1AD01]" />
+                          <span>Edit Craft Showcase &amp; Copy</span>
+                        </div>
+                        <span>→</span>
+                      </button>
+
+                      <button
                         onClick={() => setActiveTab('branding')}
                         className="w-full flex items-center justify-between p-3 rounded-xl bg-[#143822] hover:bg-[#0e2717] border border-[#E1AD01]/20 text-xs font-bold text-white transition-colors cursor-pointer"
                       >
@@ -900,17 +1071,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                         <div className="flex items-center space-x-2">
                           <Palette className="w-4 h-4 text-[#E1AD01]" />
                           <span>Customize Brand Palette</span>
-                        </div>
-                        <span>→</span>
-                      </button>
-
-                      <button
-                        onClick={() => setActiveTab('stripe')}
-                        className="w-full flex items-center justify-between p-3 rounded-xl bg-[#143822] hover:bg-[#0e2717] border border-[#E1AD01]/20 text-xs font-bold text-white transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <CreditCard className="w-4 h-4 text-[#E1AD01]" />
-                          <span>Stripe Card Payment Settings</span>
                         </div>
                         <span>→</span>
                       </button>
@@ -989,7 +1149,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                           </div>
                           <div>
                             <div className="font-display font-extrabold text-lg text-[#1B4D2E]">
-                              Delightful<span className="text-[#E1AD01]">Juice</span>
+                              Delightful<span className="text-[#E1AD01]">Juices</span>
                             </div>
                             <div className="text-[10px] text-[#1B4D2E]/60 uppercase font-semibold">
                               {content.motto}
@@ -1030,7 +1190,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                           </div>
                           <div>
                             <div className="font-display font-extrabold text-lg text-white">
-                              Delightful<span className="text-[#E1AD01]">Juice</span>
+                              Delightful<span className="text-[#E1AD01]">Juices</span>
                             </div>
                             <div className="text-[10px] text-[#E1AD01] uppercase font-semibold">
                               {content.motto}
@@ -1073,7 +1233,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                       type="button"
                       onClick={() => {
                         const updatedBranding: BrandSettings = {
-                          ...(content.branding || { logoText: 'Delightful Juice', showLogoIcon: true }),
+                          ...(content.branding || { logoText: 'Delightful Juices', showLogoIcon: true }),
                           logoUrl: '',
                           mobileLogoUrl: '',
                         };
@@ -1103,7 +1263,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     value={content.branding?.logoUrl || ''}
                     onChange={(e) => {
                       const updatedBranding: BrandSettings = {
-                        ...(content.branding || { logoText: 'Delightful Juice', showLogoIcon: true }),
+                        ...(content.branding || { logoText: 'Delightful Juices', showLogoIcon: true }),
                         logoUrl: e.target.value,
                       };
                       setContent({ ...content, branding: updatedBranding });
@@ -1123,7 +1283,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     value={content.branding?.mobileLogoUrl || ''}
                     onChange={(e) => {
                       const updatedBranding: BrandSettings = {
-                        ...(content.branding || { logoText: 'Delightful Juice', showLogoIcon: true }),
+                        ...(content.branding || { logoText: 'Delightful Juices', showLogoIcon: true }),
                         mobileLogoUrl: e.target.value,
                       };
                       setContent({ ...content, branding: updatedBranding });
@@ -1149,7 +1309,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                         };
                         setContent({ ...content, branding: updatedBranding });
                       }}
-                      placeholder="Delightful Juice"
+                      placeholder="Delightful Juices"
                       className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E]"
                     />
                   </div>
@@ -1161,7 +1321,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                         checked={content.branding?.showLogoIcon !== false}
                         onChange={(e) => {
                           const updatedBranding: BrandSettings = {
-                            ...(content.branding || { logoText: 'Delightful Juice' }),
+                            ...(content.branding || { logoText: 'Delightful Juices' }),
                             showLogoIcon: e.target.checked,
                           };
                           setContent({ ...content, branding: updatedBranding });
@@ -1920,7 +2080,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                     Juice & Drink Catalog
                   </h2>
                   <p className="text-xs sm:text-sm text-[#1B4D2E]/70">
-                    Manage drink photography, flavors, bottle sizes (35cl, 50cl, 1L), prices, and inventory
+                    Manage drink photography, flavors, bottle sizes &amp; measurement units (oz), prices, and inventory
                   </p>
                 </div>
 
@@ -1941,7 +2101,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                       <tr>
                         <th className="p-4">Drink Photo</th>
                         <th className="p-4">Category</th>
-                        <th className="p-4">Bottle Sizes & Prices</th>
+                        <th className="p-4">Bottle Sizes (oz) &amp; Prices</th>
                         <th className="p-4">Stock</th>
                         <th className="p-4">Featured</th>
                         <th className="p-4 text-right">Actions</th>
@@ -1980,9 +2140,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                           </td>
                           <td className="p-4">
                             <div className="space-y-0.5">
-                              {p.sizes.map((s) => (
-                                <div key={s.size} className="text-[11px] text-gray-700">
-                                  <strong className="text-[#1B4D2E]">{s.size}:</strong> ${s.price.toFixed(2)}
+                              {p.sizes.map((s, idx) => (
+                                <div key={`${s.size}-${idx}`} className="text-[11px] text-gray-700">
+                                  <strong className="text-[#1B4D2E]">{getCustomerSizeDisplay(s)}:</strong> ${s.price.toFixed(2)}
                                 </div>
                               ))}
                             </div>
@@ -2023,18 +2183,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                               >
                                 <Edit3 className="w-4 h-4" />
                               </button>
-                              <button
-                                onClick={() => {
-                                  if (confirm(`Delete ${p.name}?`)) {
-                                    dataRepo.deleteProduct(p.id);
-                                    showToast(`Deleted ${p.name}`);
-                                  }
-                                }}
-                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                                title="Delete Drink"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              {confirmDeleteProdId === p.id ? (
+                                <div className="flex items-center space-x-1">
+                                  <button
+                                    onClick={() => {
+                                      dataRepo.deleteProduct(p.id);
+                                      setConfirmDeleteProdId(null);
+                                      showToast(`Deleted ${p.name}`);
+                                    }}
+                                    className="px-2 py-1 bg-red-600 text-white rounded-md text-[10px] font-bold cursor-pointer"
+                                  >
+                                    Delete
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmDeleteProdId(null)}
+                                    className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-[10px] font-bold cursor-pointer"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirmDeleteProdId(p.id)}
+                                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                  title="Delete Drink"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -2167,7 +2343,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                               <span className="w-5 h-5 rounded-full bg-[#1B4D2E] text-[#FFF8E7] text-[10px] font-bold flex items-center justify-center shrink-0">
                                 {it.quantity}
                               </span>
-                              <span>{it.productName} ({it.size})</span>
+                              <span>{it.productName} ({formatBottleCodeToOz(it.size)})</span>
                               <span className="font-bold text-[#1B4D2E] ml-auto">
                                 ${(it.unitPrice * it.quantity).toFixed(2)}
                               </span>
@@ -2203,7 +2379,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                         <a
                           href={`https://wa.me/${ord.customerPhone.replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(
                             ord.customerName
-                          )}%2C%20this%20is%20Delightful%20Juice%20regarding%20your%20order%20${ord.orderNumber}.`}
+                          )}%2C%20this%20is%20Delightful%20Juices%20regarding%20your%20order%20${ord.orderNumber}.`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-3.5 rounded-xl flex items-center space-x-1.5 cursor-pointer shadow-xs"
@@ -2305,7 +2481,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                       <a
                         href={`https://wa.me/${inq.phone.replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(
                           inq.fullName
-                        )}%2C%20thank%20you%20for%20contacting%20Delightful%20Juice%20regarding%20your%20${encodeURIComponent(
+                        )}%2C%20thank%20you%20for%20contacting%20Delightful%20Juices%20regarding%20your%20${encodeURIComponent(
                           inq.eventType
                         )}.`}
                         target="_blank"
@@ -2324,17 +2500,361 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
 
           {/* TAB: CONTENT CMS */}
           {activeTab === 'content' && (
-            <div className="space-y-6 max-w-4xl">
+            <div className="space-y-6 max-w-5xl">
               <div>
                 <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-[#1B4D2E]">
-                  Website Copy & Information CMS
+                  Website Copy &amp; Craft Showcase CMS
                 </h2>
                 <p className="text-xs sm:text-sm text-[#1B4D2E]/70">
-                  Update headlines, operating hours, announcement ticker, delivery pricing, and brand text
+                  Customize the Homepage Craft Showcase image, badge &amp; founder card, plus headlines, story copy, and store details
                 </p>
               </div>
 
+              {/* HOMEPAGE CRAFT SHOWCASE & FOUNDER CARD EDITOR */}
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#1B4D2E]/10 shadow-sm space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1B4D2E]/10 pb-4">
+                  <div>
+                    <h3 className="font-display font-bold text-lg sm:text-xl text-[#1B4D2E]">
+                      Homepage Craft Showcase &amp; Founder Card
+                    </h3>
+                    <p className="text-xs text-[#1B4D2E]/70">
+                      Edit the botanical showcase photo, top-left gold badge, bottom-right founder quote card, and story text
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      dataRepo.saveContent(content);
+                      showToast('Craft Showcase & Website Content saved!');
+                    }}
+                    className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-2.5 px-5 rounded-xl text-xs flex items-center space-x-2 shadow-xs cursor-pointer self-start sm:self-auto"
+                  >
+                    <Save className="w-4 h-4 text-[#E1AD01]" />
+                    <span>Save Changes</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                  {/* Live Visual Collage Preview */}
+                  <div className="lg:col-span-5">
+                    <span className="block text-[11px] font-bold uppercase tracking-wider text-[#1B4D2E]/65 mb-3">
+                      Live Showcase Preview
+                    </span>
+                    <div className="bg-[#FFF8E7] p-6 sm:p-7 rounded-3xl border border-[#1B4D2E]/15">
+                      <div className="relative mx-auto max-w-[300px]">
+                        <div className="aspect-4/5 rounded-3xl overflow-hidden shadow-xl border-4 border-white bg-[#1B4D2E]/10">
+                          <img
+                            src={currentShowcase.imageUrl?.trim() ? currentShowcase.imageUrl : ABOUT_ARTISANAL_IMAGE}
+                            alt={currentShowcase.imageAlt || 'Craft showcase preview'}
+                            onError={(e) => {
+                              e.currentTarget.src = FALLBACK_BEVERAGE_IMAGE;
+                            }}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+
+                        {currentShowcase.showBadge !== false && currentShowcase.badgeText?.trim() && (
+                          <div className="absolute -top-3 -left-3 bg-[#E1AD01] text-[#1B4D2E] px-3 py-2 rounded-2xl shadow-md font-black text-[10px] uppercase tracking-wider flex items-center space-x-1.5">
+                            <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                            <span>{currentShowcase.badgeText}</span>
+                          </div>
+                        )}
+
+                        {currentShowcase.showCeoCard !== false && (
+                          <div className="absolute -bottom-4 -right-3 bg-white rounded-2xl p-3.5 shadow-xl border border-[#1B4D2E]/10 max-w-[230px]">
+                            <div className="flex items-center space-x-2.5 mb-1.5">
+                              {currentShowcase.ceoAvatarUrl?.trim() ? (
+                                <img
+                                  src={currentShowcase.ceoAvatarUrl}
+                                  alt={content.ceoName}
+                                  className="w-9 h-9 rounded-full object-cover border-2 border-[#E1AD01] shrink-0"
+                                />
+                              ) : (
+                                <div className="w-9 h-9 rounded-full bg-[#1B4D2E] text-[#E1AD01] flex items-center justify-center font-bold text-xs shrink-0">
+                                  {currentShowcase.ceoInitials?.trim() || 'OA'}
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <div className="font-extrabold text-[11px] text-[#1B4D2E] truncate">
+                                  {content.ceoName}
+                                </div>
+                                {currentShowcase.ceoRole?.trim() && (
+                                  <div className="text-[9px] text-[#1B4D2E]/70 uppercase tracking-wider font-semibold truncate">
+                                    {currentShowcase.ceoRole}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            {currentShowcase.ceoQuote?.trim() && (
+                              <p className="text-[10px] text-[#1B4D2E]/80 italic leading-relaxed line-clamp-3">
+                                &ldquo;{currentShowcase.ceoQuote}&rdquo;
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Editable Fields for Image, Badge & Founder Card */}
+                  <div className="lg:col-span-7 space-y-5">
+                    {/* 1. Main Showcase Image */}
+                    <div className="p-4 rounded-2xl bg-[#FFF8E7]/65 border border-[#1B4D2E]/12 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-extrabold uppercase tracking-wider text-[#1B4D2E]">
+                          1. Showcase Photo
+                        </label>
+                        {currentShowcase.imageUrl && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateAboutShowcase({ imageUrl: '' }, true);
+                              showToast('Restored default craft showcase photo.');
+                            }}
+                            className="text-[11px] font-bold text-[#1B4D2E]/75 hover:text-[#1B4D2E] inline-flex items-center space-x-1 cursor-pointer"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            <span>Restore Default Photo</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <label className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold text-xs py-2 px-3.5 rounded-xl inline-flex items-center space-x-2 shadow-xs cursor-pointer">
+                          <Upload className="w-3.5 h-3.5 text-[#E1AD01]" />
+                          <span>Upload Photo from Device</span>
+                          <input
+                            type="file"
+                            accept="image/png, image/jpeg, image/webp, image/svg+xml"
+                            onChange={(e) => handleAboutShowcaseUpload(e, 'imageUrl')}
+                            className="hidden"
+                          />
+                        </label>
+                        <span className="text-[11px] text-[#1B4D2E]/65">
+                          Recommended portrait 4:5 ratio (JPG, PNG, WebP up to 5MB)
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-[#1B4D2E]/70 mb-1">
+                            Or Paste Image URL
+                          </label>
+                          <input
+                            type="url"
+                            value={currentShowcase.imageUrl || ''}
+                            onChange={(e) => updateAboutShowcase({ imageUrl: e.target.value })}
+                            placeholder="Leave blank for default craft photo"
+                            className="w-full bg-white border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs text-[#1B4D2E]"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-[#1B4D2E]/70 mb-1">
+                            Image Alt Description
+                          </label>
+                          <input
+                            type="text"
+                            value={currentShowcase.imageAlt || ''}
+                            onChange={(e) => updateAboutShowcase({ imageAlt: e.target.value })}
+                            className="w-full bg-white border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs text-[#1B4D2E]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 2. Top-Left Gold Corner Badge */}
+                    <div className="p-4 rounded-2xl bg-[#FFF8E7]/65 border border-[#1B4D2E]/12 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-extrabold uppercase tracking-wider text-[#1B4D2E]">
+                          2. Top-Left Gold Badge
+                        </label>
+                        <label className="inline-flex items-center space-x-2 text-xs font-bold text-[#1B4D2E] cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={currentShowcase.showBadge !== false}
+                            onChange={(e) => updateAboutShowcase({ showBadge: e.target.checked })}
+                            className="w-4 h-4 accent-[#1B4D2E] rounded"
+                          />
+                          <span>Show Badge</span>
+                        </label>
+                      </div>
+                      <input
+                        type="text"
+                        value={currentShowcase.badgeText}
+                        onChange={(e) => updateAboutShowcase({ badgeText: e.target.value })}
+                        placeholder="e.g. Quakertown, PA Craft"
+                        className="w-full bg-white border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs text-[#1B4D2E] font-bold"
+                      />
+                    </div>
+
+                    {/* 3. Bottom-Right Founder / C.E.O. Card */}
+                    <div className="p-4 rounded-2xl bg-[#FFF8E7]/65 border border-[#1B4D2E]/12 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-extrabold uppercase tracking-wider text-[#1B4D2E]">
+                          3. Founder / C.E.O. Card
+                        </label>
+                        <label className="inline-flex items-center space-x-2 text-xs font-bold text-[#1B4D2E] cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={currentShowcase.showCeoCard !== false}
+                            onChange={(e) => updateAboutShowcase({ showCeoCard: e.target.checked })}
+                            className="w-4 h-4 accent-[#1B4D2E] rounded"
+                          />
+                          <span>Show Card</span>
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-[#1B4D2E]/70 mb-1">
+                            Founder Name
+                          </label>
+                          <input
+                            type="text"
+                            value={content.ceoName}
+                            onChange={(e) => setContent({ ...content, ceoName: e.target.value })}
+                            className="w-full bg-white border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs text-[#1B4D2E] font-bold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-[#1B4D2E]/70 mb-1">
+                            Role / Title
+                          </label>
+                          <input
+                            type="text"
+                            value={currentShowcase.ceoRole}
+                            onChange={(e) => updateAboutShowcase({ ceoRole: e.target.value })}
+                            placeholder="Founder & C.E.O."
+                            className="w-full bg-white border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs text-[#1B4D2E]"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-[#1B4D2E]/70 mb-1">
+                            Badge Initials
+                          </label>
+                          <input
+                            type="text"
+                            maxLength={4}
+                            value={currentShowcase.ceoInitials}
+                            onChange={(e) => updateAboutShowcase({ ceoInitials: e.target.value })}
+                            placeholder="OA"
+                            className="w-full bg-white border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs text-[#1B4D2E] font-bold uppercase"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Optional Founder Portrait Upload */}
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <label className="bg-white hover:bg-gray-50 border border-[#1B4D2E]/25 text-[#1B4D2E] font-bold text-xs py-1.5 px-3 rounded-xl inline-flex items-center space-x-1.5 cursor-pointer">
+                          <Upload className="w-3.5 h-3.5 text-[#1B4D2E]" />
+                          <span>Upload Founder Portrait (Optional)</span>
+                          <input
+                            type="file"
+                            accept="image/png, image/jpeg, image/webp"
+                            onChange={(e) => handleAboutShowcaseUpload(e, 'ceoAvatarUrl')}
+                            className="hidden"
+                          />
+                        </label>
+                        {currentShowcase.ceoAvatarUrl && (
+                          <button
+                            type="button"
+                            onClick={() => updateAboutShowcase({ ceoAvatarUrl: '' }, true)}
+                            className="text-[11px] font-bold text-red-700 hover:underline cursor-pointer"
+                          >
+                            Use Initials Circle Instead
+                          </button>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-[#1B4D2E]/70 mb-1">
+                          Founder Quote
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={currentShowcase.ceoQuote}
+                          onChange={(e) => updateAboutShowcase({ ceoQuote: e.target.value })}
+                          className="w-full bg-white border border-[#1B4D2E]/20 rounded-xl p-2.5 text-xs text-[#1B4D2E]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Story Section Heading & Paragraphs alongside the Showcase */}
+                <div className="pt-4 border-t border-[#1B4D2E]/10 space-y-4">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-[#1B4D2E]">
+                    Story Section Heading &amp; Paragraphs (Beside Showcase)
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#1B4D2E]/70 mb-1">
+                        Section Kicker
+                      </label>
+                      <input
+                        type="text"
+                        value={currentShowcase.sectionKicker || ''}
+                        onChange={(e) => updateAboutShowcase({ sectionKicker: e.target.value })}
+                        className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs text-[#1B4D2E]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#1B4D2E]/70 mb-1">
+                        Section Headline
+                      </label>
+                      <input
+                        type="text"
+                        value={currentShowcase.sectionHeading || ''}
+                        onChange={(e) => updateAboutShowcase({ sectionHeading: e.target.value })}
+                        className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs text-[#1B4D2E] font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#1B4D2E]/70 mb-1">
+                      Story Paragraph 1 (Main Brand Story)
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={content.aboutStory}
+                      onChange={(e) => setContent({ ...content, aboutStory: e.target.value })}
+                      className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl p-3 text-xs text-[#1B4D2E]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#1B4D2E]/70 mb-1">
+                        Story Paragraph 2
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={currentShowcase.extraStoryParagraph1 ?? ''}
+                        onChange={(e) => updateAboutShowcase({ extraStoryParagraph1: e.target.value })}
+                        className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl p-3 text-xs text-[#1B4D2E]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#1B4D2E]/70 mb-1">
+                        Story Paragraph 3
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={currentShowcase.extraStoryParagraph2 ?? ''}
+                        onChange={(e) => updateAboutShowcase({ extraStoryParagraph2: e.target.value })}
+                        className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl p-3 text-xs text-[#1B4D2E]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* GENERAL WEBSITE COPY & STORE DETAILS */}
               <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#1B4D2E]/10 shadow-sm space-y-4">
+                <h3 className="font-display font-bold text-lg text-[#1B4D2E]">
+                  General Store Information &amp; Copy
+                </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
@@ -2518,55 +3038,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
             </div>
           )}
 
+          {/* TAB: HERO SLIDER MANAGEMENT */}
+          {activeTab === 'hero_slider' && (
+            <HeroSliderManager
+              slides={heroSlides}
+              content={content}
+              cmsPages={cmsPages}
+              supabaseConnected={supabaseCfg.connected}
+              onToast={showToast}
+            />
+          )}
+
+          {/* TAB: DYNAMIC PAGES BUILDER */}
+          {activeTab === 'pages' && (
+            <PagesManager
+              pages={cmsPages}
+              products={products}
+              content={content}
+              navItems={navItems}
+              supabaseConnected={supabaseCfg.connected}
+              onToast={showToast}
+              onOpenPublicUrl={(url) => {
+                onClose();
+                if (onNavigate) onNavigate(url);
+              }}
+            />
+          )}
+
           {/* TAB: NAVIGATION MANAGEMENT */}
           {activeTab === 'nav' && (
-            <div className="space-y-6 max-w-4xl">
-              <div>
-                <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-[#1B4D2E]">
-                  Navigation Menu Management
-                </h2>
-                <p className="text-xs sm:text-sm text-[#1B4D2E]/70">
-                  Control which links appear in header and mobile drawers
-                </p>
-              </div>
-
-              <div className="bg-white rounded-3xl p-6 border border-[#1B4D2E]/10 shadow-sm space-y-4">
-                {navItems.map((item, idx) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between p-3.5 bg-[#FFF8E7] rounded-2xl border border-[#1B4D2E]/15"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <span className="w-6 h-6 rounded-full bg-[#1B4D2E] text-[#E1AD01] flex items-center justify-center font-bold text-xs">
-                        {idx + 1}
-                      </span>
-                      <div>
-                        <div className="font-bold text-xs sm:text-sm text-[#1B4D2E]">{item.label}</div>
-                        <div className="text-[10px] text-gray-500 font-mono">{item.href}</div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => {
-                          const updated = navItems.map((n) =>
-                            n.id === item.id ? { ...n, visible: !n.visible } : n
-                          );
-                          setNavItems(updated);
-                          dataRepo.saveNavItems(updated);
-                          showToast(`Navigation item "${item.label}" visibility updated`);
-                        }}
-                        className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase cursor-pointer ${
-                          item.visible ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-600'
-                        }`}
-                      >
-                        {item.visible ? 'Visible' : 'Hidden'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <NavigationManager
+              navItems={navItems}
+              cmsPages={cmsPages}
+              onToast={showToast}
+            />
           )}
 
           {/* TAB: SUPABASE INTEGRATION */}
@@ -2684,7 +3189,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                       Schema Migration SQL (supabase/migrations/)
                     </h3>
                     <p className="text-xs text-gray-600">
-                      Creates tables for products, orders, event_inquiries, site_content, navigation_items, and storage buckets.
+                      Creates idempotent tables &amp; RLS policies for products, orders, event_inquiries, site_content, navigation_items, hero_slides, cms_pages, and storage buckets.
                     </p>
                   </div>
 
@@ -2891,26 +3396,147 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose }) => {
                 </div>
               </div>
 
-              {/* Bottle Sizes Prices */}
-              <div>
-                <label className="block font-bold mb-1">Pricing per Bottle Size ($)</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {editingProduct.sizes.map((s, idx) => (
-                    <div key={s.size} className="bg-[#FFF8E7] p-2.5 rounded-xl border border-gray-200">
-                      <span className="font-bold block text-[11px] mb-1">{s.size} ({s.label})</span>
-                      <input
-                        type="number"
-                        step="0.25"
-                        value={s.price}
-                        onChange={(e) => {
-                          const updatedSizes = [...editingProduct.sizes];
-                          updatedSizes[idx] = { ...s, price: parseFloat(e.target.value) || 0 };
-                          setEditingProduct({ ...editingProduct, sizes: updatedSizes });
-                        }}
-                        className="w-full bg-white border rounded-lg p-1.5 font-extrabold text-[#1B4D2E]"
-                      />
-                    </div>
-                  ))}
+              {/* Bottle Sizes, Measurement Units & Prices */}
+              <div className="p-4 bg-[#FFF8E7] rounded-2xl border border-gray-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="block font-bold text-[#1B4D2E] text-xs uppercase tracking-wider">
+                      Bottle Sizes, Measurement Units &amp; Pricing ($)
+                    </label>
+                    <span className="text-[10px] text-gray-600">
+                      Customer storefront displays all liquid volumes in US fluid ounces (oz). Entering cl, L, or ml converts accurately automatically.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextSize: SizeOption = {
+                        size: '16.9 oz',
+                        label: '16.9 oz Bottle',
+                        price: 7.50,
+                        quantityValue: 16.9,
+                        unit: 'oz',
+                      };
+                      setEditingProduct({
+                        ...editingProduct,
+                        sizes: [...editingProduct.sizes, nextSize],
+                      });
+                    }}
+                    className="bg-[#1B4D2E] text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg flex items-center space-x-1 shrink-0 cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3 text-[#E1AD01]" />
+                    <span>Add Size</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2.5">
+                  {editingProduct.sizes.map((s, idx) => {
+                    const currentUnit: MeasurementUnit = s.unit || 'oz';
+                    const currentQty = s.quantityValue ?? (parseFloat(String(s.size)) || 16.9);
+                    return (
+                      <div key={idx} className="bg-white p-3 rounded-xl border border-gray-200 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md">
+                            Customer Storefront Display: <strong>{getCustomerSizeDisplay(s)}</strong>
+                          </span>
+                          {editingProduct.sizes.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const filtered = editingProduct.sizes.filter((_, i) => i !== idx);
+                                setEditingProduct({ ...editingProduct, sizes: filtered });
+                              }}
+                              className="text-[10px] text-red-600 hover:underline font-bold cursor-pointer"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Quantity</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="0.1"
+                              value={currentQty}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                const updatedSizes = [...editingProduct.sizes];
+                                const nextOpt: SizeOption = {
+                                  ...s,
+                                  quantityValue: val,
+                                  unit: currentUnit,
+                                  size: currentUnit === 'Pack' ? s.size : `${val} ${currentUnit}`,
+                                };
+                                updatedSizes[idx] = nextOpt;
+                                setEditingProduct({ ...editingProduct, sizes: updatedSizes });
+                              }}
+                              className="w-full bg-[#FFF8E7] border rounded-lg px-2 py-1.5 font-bold text-[#1B4D2E]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Unit</label>
+                            <select
+                              value={currentUnit}
+                              onChange={(e) => {
+                                const u = e.target.value as MeasurementUnit;
+                                const updatedSizes = [...editingProduct.sizes];
+                                const nextOpt: SizeOption = {
+                                  ...s,
+                                  quantityValue: currentQty,
+                                  unit: u,
+                                  size: u === 'Pack' ? `${currentQty}-Pack` : `${currentQty} ${u}`,
+                                };
+                                updatedSizes[idx] = nextOpt;
+                                setEditingProduct({ ...editingProduct, sizes: updatedSizes });
+                              }}
+                              className="w-full bg-[#FFF8E7] border rounded-lg px-2 py-1.5 font-bold text-[#1B4D2E]"
+                            >
+                              <option value="oz">oz (US Fluid Ounces)</option>
+                              <option value="cl">cl (Auto-converts to oz)</option>
+                              <option value="L">L (Auto-converts to oz)</option>
+                              <option value="ml">ml (Auto-converts to oz)</option>
+                              <option value="Pack">Pack / Bundle</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Bottle Label</label>
+                            <input
+                              type="text"
+                              value={s.label}
+                              onChange={(e) => {
+                                const updatedSizes = [...editingProduct.sizes];
+                                updatedSizes[idx] = { ...s, label: e.target.value };
+                                setEditingProduct({ ...editingProduct, sizes: updatedSizes });
+                              }}
+                              placeholder="e.g. Daily Refresh"
+                              className="w-full bg-[#FFF8E7] border rounded-lg px-2 py-1.5 text-[#1B4D2E]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Price ($)</label>
+                            <input
+                              type="number"
+                              step="0.25"
+                              min="0"
+                              value={s.price}
+                              onChange={(e) => {
+                                const updatedSizes = [...editingProduct.sizes];
+                                updatedSizes[idx] = { ...s, price: parseFloat(e.target.value) || 0 };
+                                setEditingProduct({ ...editingProduct, sizes: updatedSizes });
+                              }}
+                              className="w-full bg-[#FFF8E7] border rounded-lg px-2 py-1.5 font-extrabold text-[#1B4D2E]"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

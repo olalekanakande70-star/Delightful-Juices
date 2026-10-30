@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import { Product, SizeOption } from '../types';
 import { useCart } from '../context/CartContext';
-import { 
-  X, 
-  ShoppingCart, 
-  Sparkles, 
-  CheckCircle2, 
-  Heart, 
-  ShieldCheck, 
+import { FALLBACK_BEVERAGE_IMAGE } from '../lib/storage';
+import {
+  getCustomerSizeDisplay,
+  getCustomerSizeFullLabel,
+  sanitizeBrandAndUnitsText,
+} from '../lib/units';
+import {
+  X,
+  ShoppingCart,
+  Sparkles,
+  CheckCircle2,
+  Heart,
   MessageCircle,
   Plus,
-  Minus
+  Minus,
 } from 'lucide-react';
 
 interface ProductDetailModalProps {
@@ -34,13 +39,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const [justAdded, setJustAdded] = useState(false);
   const [activeImage, setActiveImage] = useState<string>(product.imageUrl);
 
-  // Sync activeImage if product changes
   React.useEffect(() => {
     setActiveImage(product.imageUrl);
     setSelectedSize(product.sizes[1] || product.sizes[0]);
   }, [product]);
 
-  const allImages = [product.imageUrl, ...(product.galleryImages || [])];
+  const allImages = [product.imageUrl, ...(product.galleryImages || [])].filter(Boolean);
 
   const handleAdd = () => {
     addToCart(product, selectedSize, quantity);
@@ -51,38 +55,46 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     }, 900);
   };
 
-  const handleWhatsAppOrder = () => {
-    const text = encodeURIComponent(
-      `Hello Delightful Juice! I would like to order *${quantity}x ${product.name} (${selectedSize.label})* at $${(selectedSize.price * quantity).toFixed(2)}. Please confirm delivery time!`
-    );
-    window.open(`https://wa.me/${whatsappNumber}?text=${text}`, '_blank');
-  };
+  const whatsappText = encodeURIComponent(
+    `Hello Delightful Juices! I would like to order *${quantity}x ${product.name} (${getCustomerSizeFullLabel(
+      selectedSize
+    )})* at $${(selectedSize.price * quantity).toFixed(2)}. Please confirm delivery time!`
+  );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div 
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+    >
+      <div
         className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl border border-[#1B4D2E]/20 max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        
         {/* Modal Header */}
         <div className="relative aspect-16/9 sm:aspect-21/9 bg-[#FFF8E7] overflow-hidden shrink-0">
           <img
-            src={activeImage}
+            src={activeImage || FALLBACK_BEVERAGE_IMAGE}
             alt={product.name}
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (target.src !== FALLBACK_BEVERAGE_IMAGE) {
+                target.src = FALLBACK_BEVERAGE_IMAGE;
+              }
+            }}
             className="w-full h-full object-cover transition-all duration-300"
           />
           <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent" />
-          
+
           <button
+            type="button"
             onClick={onClose}
-            className="absolute top-4 right-4 bg-white/80 hover:bg-white text-[#1B4D2E] p-2 rounded-full shadow-md transition-transform hover:scale-105 cursor-pointer z-10"
+            className="absolute top-4 right-4 bg-white/85 hover:bg-white text-[#1B4D2E] p-2 rounded-full shadow-md transition-transform hover:scale-105 cursor-pointer z-10"
             aria-label="Close Modal"
           >
             <X className="w-5 h-5" />
           </button>
 
-          {/* Gallery Thumbnails if multiple images */}
+          {/* Gallery Thumbnails */}
           {allImages.length > 1 && (
             <div className="absolute top-4 left-4 flex items-center space-x-1.5 z-10 bg-black/40 backdrop-blur-md p-1 rounded-xl">
               {allImages.map((img, i) => (
@@ -91,38 +103,46 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   type="button"
                   onClick={() => setActiveImage(img)}
                   className={`w-9 h-9 rounded-lg overflow-hidden border-2 transition-transform cursor-pointer ${
-                    activeImage === img ? 'border-[#E1AD01] scale-105' : 'border-transparent opacity-70 hover:opacity-100'
+                    activeImage === img
+                      ? 'border-[#E1AD01] scale-105'
+                      : 'border-transparent opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  <img
+                    src={img}
+                    alt=""
+                    onError={(e) => {
+                      e.currentTarget.src = FALLBACK_BEVERAGE_IMAGE;
+                    }}
+                    className="w-full h-full object-cover"
+                  />
                 </button>
               ))}
             </div>
           )}
 
           <div className="absolute bottom-4 left-4 right-4 text-white">
-            <span className="bg-[#E1AD01] text-[#1B4D2E] text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full inline-block mb-1">
+            <span className="bg-[#E1AD01] text-[#1B4D2E] text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md inline-block mb-1">
               {product.categoryLabel}
             </span>
             <h2 className="font-display font-bold text-2xl sm:text-3xl leading-tight">
-              {product.name}
+              {sanitizeBrandAndUnitsText(product.name)}
             </h2>
             <p className="text-xs text-[#E1AD01] font-medium mt-0.5">
-              {product.tagline}
+              {sanitizeBrandAndUnitsText(product.tagline)}
             </p>
           </div>
         </div>
 
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-5 text-[#1B4D2E] flex-1">
-          
           {/* Description */}
           <div>
             <h4 className="font-bold text-xs uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
               About This Recipe
             </h4>
             <p className="text-xs sm:text-sm text-[#1B4D2E]/85 leading-relaxed">
-              {product.description}
+              {sanitizeBrandAndUnitsText(product.description)}
             </p>
           </div>
 
@@ -133,29 +153,26 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               <span>Taste & Aroma Profile</span>
             </div>
             <p className="text-xs text-[#1B4D2E]/80">
-              {product.tasteProfile}
+              {sanitizeBrandAndUnitsText(product.tasteProfile)}
             </p>
           </div>
 
           {/* Ingredients & Health Benefits Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            
-            {/* Ingredients */}
             <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
-              <h5 className="font-bold text-xs uppercase tracking-wider text-[#1B4D2E] mb-2 flex items-center space-x-1">
-                <span>Real Ingredients</span>
+              <h5 className="font-bold text-xs uppercase tracking-wider text-[#1B4D2E] mb-2">
+                Real Whole Ingredients
               </h5>
               <ul className="space-y-1.5 text-xs text-[#1B4D2E]/80">
                 {product.ingredients.map((ing, i) => (
                   <li key={i} className="flex items-center space-x-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#E1AD01] shrink-0" />
-                    <span>{ing}</span>
+                    <span>{sanitizeBrandAndUnitsText(ing)}</span>
                   </li>
                 ))}
               </ul>
             </div>
 
-            {/* Health Benefits */}
             <div className="bg-emerald-50/60 p-4 rounded-2xl border border-emerald-200/60">
               <h5 className="font-bold text-xs uppercase tracking-wider text-[#1B4D2E] mb-2 flex items-center space-x-1">
                 <Heart className="w-3.5 h-3.5 text-red-500" />
@@ -165,20 +182,27 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 {product.healthBenefits.map((ben, i) => (
                   <li key={i} className="flex items-center space-x-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>{ben}</span>
+                    <span>{sanitizeBrandAndUnitsText(ben)}</span>
                   </li>
                 ))}
               </ul>
             </div>
-
           </div>
 
-          {/* Bottle Size Selector */}
+          {/* Bottle Size Selector in oz */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-2">
-              Choose Bottle Size:
+              Choose Bottle Size (US Fluid Ounces):
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div
+              className={`grid gap-2 ${
+                product.sizes.length === 1
+                  ? 'grid-cols-1'
+                  : product.sizes.length === 2
+                  ? 'grid-cols-2'
+                  : 'grid-cols-3'
+              }`}
+            >
               {product.sizes.map((s) => {
                 const isSelected = selectedSize.size === s.size;
                 return (
@@ -188,15 +212,19 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     onClick={() => setSelectedSize(s)}
                     className={`p-3 rounded-2xl text-left border transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-[#1B4D2E] text-white border-[#1B4D2E] shadow-sm'
+                        ? 'bg-[#1B4D2E] text-white border-[#1B4D2E] shadow-xs'
                         : 'bg-[#FFF8E7] text-[#1B4D2E] border-[#1B4D2E]/20 hover:bg-[#1B4D2E]/5'
                     }`}
                   >
-                    <div className="text-xs font-extrabold">{s.size}</div>
-                    <div className={`text-[11px] ${isSelected ? 'text-[#E1AD01]' : 'text-[#1B4D2E]/70'}`}>
-                      {s.label}
+                    <div className="text-sm font-extrabold">{getCustomerSizeDisplay(s)}</div>
+                    <div
+                      className={`text-[11px] ${
+                        isSelected ? 'text-[#E1AD01]' : 'text-[#1B4D2E]/70'
+                      }`}
+                    >
+                      {getCustomerSizeFullLabel(s)}
                     </div>
-                    <div className="text-sm font-black mt-1">
+                    <div className="text-sm font-black mt-1 tabular-nums">
                       ${s.price.toFixed(2)}
                     </div>
                   </button>
@@ -204,54 +232,58 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               })}
             </div>
           </div>
-
         </div>
 
         {/* Modal Footer Controls */}
         <div className="p-4 sm:p-5 bg-[#FFF8E7] border-t border-[#1B4D2E]/15 flex items-center justify-between gap-3 shrink-0">
-          
-          {/* Quantity */}
           <div className="flex items-center border border-[#1B4D2E]/20 rounded-xl bg-white px-2 py-1.5">
             <button
+              type="button"
               onClick={() => setQuantity(Math.max(1, quantity - 1))}
               className="p-1 text-[#1B4D2E] hover:text-[#E1AD01] cursor-pointer"
+              aria-label="Decrease quantity"
             >
               <Minus className="w-4 h-4" />
             </button>
-            <span className="px-3 font-bold text-sm text-[#1B4D2E]">{quantity}</span>
+            <span className="px-3 font-bold text-sm text-[#1B4D2E] tabular-nums">{quantity}</span>
             <button
+              type="button"
               onClick={() => setQuantity(quantity + 1)}
               className="p-1 text-[#1B4D2E] hover:text-[#E1AD01] cursor-pointer"
+              aria-label="Increase quantity"
             >
               <Plus className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Add to Cart */}
           <div className="flex items-center space-x-2 flex-1">
             <button
+              type="button"
               onClick={handleAdd}
-              className="flex-1 bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-3 px-4 rounded-xl text-xs sm:text-sm shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer"
+              disabled={!product.inStock}
+              className="flex-1 bg-[#1B4D2E] hover:bg-[#143822] disabled:bg-gray-300 text-[#FFF8E7] font-bold py-3 px-4 rounded-xl text-xs sm:text-sm shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer"
             >
               <ShoppingCart className="w-4 h-4 text-[#E1AD01]" />
-              <span>
+              <span className="tabular-nums">
                 {justAdded
                   ? 'Added to Cart!'
-                  : `Add to Cart • $${(selectedSize.price * quantity).toFixed(2)}`}
+                  : product.inStock
+                  ? `Add to Cart • $${(selectedSize.price * quantity).toFixed(2)}`
+                  : 'Sold Out'}
               </span>
             </button>
 
-            <button
-              onClick={handleWhatsAppOrder}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white p-3 rounded-xl transition-colors cursor-pointer"
+            <a
+              href={`https://wa.me/${whatsappNumber}?text=${whatsappText}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white p-3 rounded-xl transition-colors"
               title="Order on WhatsApp"
             >
               <MessageCircle className="w-5 h-5" />
-            </button>
+            </a>
           </div>
-
         </div>
-
       </div>
     </div>
   );

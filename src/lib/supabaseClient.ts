@@ -1,5 +1,14 @@
 import { createClient, SupabaseClient, User, Session } from '@supabase/supabase-js';
-import { Product, Order, EventInquiry, SiteContent, NavItem, SupabaseConfig } from '../types';
+import {
+  Product,
+  Order,
+  EventInquiry,
+  SiteContent,
+  NavItem,
+  SupabaseConfig,
+  HeroSlide,
+  CmsPage,
+} from '../types';
 
 export const DEFAULT_SUPABASE_URL = 'https://abrgqtrobgorsaggooxv.supabase.co';
 const STORAGE_CONFIG_KEY = 'delightful_juice_supabase_cfg_v1';
@@ -26,22 +35,22 @@ class SupabaseService {
           },
         });
 
-        // Listen for Supabase Auth state changes
         this.client.auth.onAuthStateChange((_event, session) => {
           this.currentSession = session;
           this.currentUser = session?.user || null;
           this.notifyAuthListeners();
         });
 
-        // Retrieve initial session
-        this.client.auth.getSession().then(({ data: { session } }) => {
-          this.currentSession = session;
-          this.currentUser = session?.user || null;
-          this.notifyAuthListeners();
-        }).catch((err) => {
-          console.warn('Supabase getSession notice:', err);
-        });
-
+        this.client.auth
+          .getSession()
+          .then(({ data: { session } }) => {
+            this.currentSession = session;
+            this.currentUser = session?.user || null;
+            this.notifyAuthListeners();
+          })
+          .catch((err) => {
+            console.warn('Supabase getSession notice:', err);
+          });
       } catch (err) {
         console.error('Failed to initialize Supabase client:', err);
         this.client = null;
@@ -119,7 +128,10 @@ class SupabaseService {
     return this.currentUser;
   }
 
-  public async signInWithEmail(email: string, password: string): Promise<{ success: boolean; error?: string; user?: User }> {
+  public async signInWithEmail(
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string; user?: User }> {
     const client = this.getClient();
     if (!client) {
       return { success: false, error: 'Supabase client is not configured with URL and Anon key.' };
@@ -153,7 +165,10 @@ class SupabaseService {
   }
 
   // --- TEST CONNECTION & TABLE INSPECTION ---
-  public async testConnection(url: string, anonKey: string): Promise<{ success: boolean; message: string; tablesFound: string[] }> {
+  public async testConnection(
+    url: string,
+    anonKey: string
+  ): Promise<{ success: boolean; message: string; tablesFound: string[] }> {
     if (!url || !anonKey) {
       return { success: false, message: 'Both Supabase URL and Anon Key are required.', tablesFound: [] };
     }
@@ -161,26 +176,26 @@ class SupabaseService {
       const testClient = createClient(url, anonKey);
       const tablesFound: string[] = [];
 
-      // Check products table
-      const { data: prodData, error: prodErr } = await testClient.from('products').select('id').limit(1);
+      const { error: prodErr } = await testClient.from('products').select('id').limit(1);
       if (!prodErr) tablesFound.push('products');
 
-      // Check site_content table
-      const { data: contentData, error: contentErr } = await testClient.from('site_content').select('key').limit(1);
+      const { error: contentErr } = await testClient.from('site_content').select('key').limit(1);
       if (!contentErr) tablesFound.push('site_content');
 
-      // Check navigation_items table
-      const { data: navData, error: navErr } = await testClient.from('navigation_items').select('id').limit(1);
+      const { error: navErr } = await testClient.from('navigation_items').select('id').limit(1);
       if (!navErr) tablesFound.push('navigation_items');
 
-      // Check orders table
+      const { error: slideErr } = await testClient.from('hero_slides').select('id').limit(1);
+      if (!slideErr) tablesFound.push('hero_slides');
+
+      const { error: pageErr } = await testClient.from('cms_pages').select('id').limit(1);
+      if (!pageErr) tablesFound.push('cms_pages');
+
       const { error: ordErr } = await testClient.from('orders').select('id').limit(1);
       if (!ordErr || ordErr.code === 'PGRST116' || ordErr.message.includes('permission denied')) {
-        // Even if RLS denies public select on orders, the table exists!
         tablesFound.push('orders');
       }
 
-      // Check event_inquiries table
       const { error: inqErr } = await testClient.from('event_inquiries').select('id').limit(1);
       if (!inqErr || inqErr.code === 'PGRST116' || inqErr.message.includes('permission denied')) {
         tablesFound.push('event_inquiries');
@@ -194,9 +209,10 @@ class SupabaseService {
         lastTestedAt: new Date().toISOString(),
       });
 
-      const msg = tablesFound.length > 0
-        ? `Successfully connected to Supabase! Detected ${tablesFound.length} initialized tables (${tablesFound.join(', ')}).`
-        : `Connected to Supabase project, but tables are not yet initialized. Please run the SQL migration script from supabase/migrations/.`;
+      const msg =
+        tablesFound.length > 0
+          ? `Connected to Supabase! Detected ${tablesFound.length} initialized tables (${tablesFound.join(', ')}).`
+          : `Connected to Supabase project, but tables are not yet initialized. Please run the SQL migration script from the Supabase tab.`;
 
       return {
         success: true,
@@ -287,6 +303,18 @@ class SupabaseService {
     }
   }
 
+  public async deleteProduct(id: string): Promise<boolean> {
+    const client = this.getClient();
+    if (!client) return false;
+    try {
+      const { error } = await client.from('products').delete().eq('id', id);
+      return !error;
+    } catch (err) {
+      console.warn('deleteProduct error:', err);
+      return false;
+    }
+  }
+
   // --- STORAGE & ASSET UPLOAD ---
   public async uploadAsset(
     bucket: string,
@@ -312,14 +340,178 @@ class SupabaseService {
     }
   }
 
-  public async deleteProduct(id: string): Promise<boolean> {
+  // --- HERO SLIDES CRUD ---
+  public async fetchHeroSlides(): Promise<HeroSlide[] | null> {
+    const client = this.getClient();
+    if (!client) return null;
+    try {
+      const { data, error } = await client
+        .from('hero_slides')
+        .select('*')
+        .order('display_order', { ascending: true });
+
+      if (error || !data || data.length === 0) return null;
+
+      return data.map((row: any) => ({
+        id: row.id,
+        heading: row.heading,
+        subheading: row.subheading,
+        kicker: row.kicker || undefined,
+        ctaLabel: row.cta_label || 'Shop Now',
+        ctaUrl: row.cta_url || '/shop',
+        secondaryCtaLabel: row.secondary_cta_label || undefined,
+        secondaryCtaUrl: row.secondary_cta_url || undefined,
+        desktopImageUrl: row.desktop_image_url,
+        mobileImageUrl: row.mobile_image_url || undefined,
+        overlayOpacity: Number(row.overlay_opacity) || 0.55,
+        displayOrder: Number(row.display_order) || 1,
+        active: row.enabled !== false,
+        enabled: row.enabled !== false,
+        updatedAt: row.updated_at,
+      }));
+    } catch (err) {
+      console.warn('fetchHeroSlides error:', err);
+      return null;
+    }
+  }
+
+  public async upsertHeroSlide(slide: HeroSlide): Promise<boolean> {
     const client = this.getClient();
     if (!client) return false;
     try {
-      const { error } = await client.from('products').delete().eq('id', id);
+      const payload = {
+        id: slide.id,
+        heading: slide.heading,
+        subheading: slide.subheading,
+        kicker: slide.kicker || null,
+        cta_label: slide.ctaLabel,
+        cta_url: slide.ctaUrl,
+        secondary_cta_label: slide.secondaryCtaLabel || null,
+        secondary_cta_url: slide.secondaryCtaUrl || null,
+        desktop_image_url: slide.desktopImageUrl,
+        mobile_image_url: slide.mobileImageUrl || null,
+        overlay_opacity: slide.overlayOpacity,
+        display_order: slide.displayOrder,
+        enabled: slide.active ?? slide.enabled ?? true,
+        updated_at: new Date().toISOString(),
+      };
+      const { error } = await client.from('hero_slides').upsert(payload);
       return !error;
     } catch (err) {
-      console.warn('deleteProduct error:', err);
+      console.warn('upsertHeroSlide error:', err);
+      return false;
+    }
+  }
+
+  public async saveAllHeroSlides(slides: HeroSlide[]): Promise<boolean> {
+    const client = this.getClient();
+    if (!client) return false;
+    try {
+      const payload = slides.map((slide) => ({
+        id: slide.id,
+        heading: slide.heading,
+        subheading: slide.subheading,
+        kicker: slide.kicker || null,
+        cta_label: slide.ctaLabel,
+        cta_url: slide.ctaUrl,
+        secondary_cta_label: slide.secondaryCtaLabel || null,
+        secondary_cta_url: slide.secondaryCtaUrl || null,
+        desktop_image_url: slide.desktopImageUrl,
+        mobile_image_url: slide.mobileImageUrl || null,
+        overlay_opacity: slide.overlayOpacity,
+        display_order: slide.displayOrder,
+        enabled: slide.active ?? slide.enabled ?? true,
+        updated_at: new Date().toISOString(),
+      }));
+      const { error } = await client.from('hero_slides').upsert(payload);
+      return !error;
+    } catch (err) {
+      console.warn('saveAllHeroSlides error:', err);
+      return false;
+    }
+  }
+
+  public async deleteHeroSlide(id: string): Promise<boolean> {
+    const client = this.getClient();
+    if (!client) return false;
+    try {
+      const { error } = await client.from('hero_slides').delete().eq('id', id);
+      return !error;
+    } catch (err) {
+      console.warn('deleteHeroSlide error:', err);
+      return false;
+    }
+  }
+
+  // --- DYNAMIC CMS PAGES CRUD ---
+  public async fetchCmsPages(): Promise<CmsPage[] | null> {
+    const client = this.getClient();
+    if (!client) return null;
+    try {
+      const { data, error } = await client
+        .from('cms_pages')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error || !data || data.length === 0) return null;
+
+      return data.map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        slug: row.slug,
+        status: row.status === 'draft' ? 'draft' : 'published',
+        seoTitle: row.seo_title || undefined,
+        metaDescription: row.meta_description || undefined,
+        showInNav: !!row.show_in_nav,
+        parentNavId: row.nav_parent_id || null,
+        navParentId: row.nav_parent_id || null,
+        navLabel: row.nav_label || undefined,
+        isSystemRoute: !!row.is_system_route,
+        sections: Array.isArray(row.sections) ? row.sections : [],
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+    } catch (err) {
+      console.warn('fetchCmsPages error:', err);
+      return null;
+    }
+  }
+
+  public async upsertCmsPage(page: CmsPage): Promise<boolean> {
+    const client = this.getClient();
+    if (!client) return false;
+    try {
+      const payload = {
+        id: page.id,
+        title: page.title,
+        slug: page.slug,
+        status: page.status,
+        seo_title: page.seoTitle || null,
+        meta_description: page.metaDescription || null,
+        show_in_nav: page.showInNav,
+        nav_parent_id: page.parentNavId ?? page.navParentId ?? null,
+        nav_label: page.navLabel || null,
+        is_system_route: !!page.isSystemRoute,
+        sections: page.sections,
+        created_at: page.createdAt || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      const { error } = await client.from('cms_pages').upsert(payload);
+      return !error;
+    } catch (err) {
+      console.warn('upsertCmsPage error:', err);
+      return false;
+    }
+  }
+
+  public async deleteCmsPage(id: string): Promise<boolean> {
+    const client = this.getClient();
+    if (!client) return false;
+    try {
+      const { error } = await client.from('cms_pages').delete().eq('id', id);
+      return !error;
+    } catch (err) {
+      console.warn('deleteCmsPage error:', err);
       return false;
     }
   }
@@ -597,6 +789,8 @@ class SupabaseService {
         href: row.href,
         visible: row.visible,
         order: row.order_index,
+        parentId: row.parent_id || null,
+        isDropdown: !!row.is_dropdown,
       }));
     } catch (err) {
       console.warn('fetchNavigation Supabase error:', err);
@@ -614,12 +808,39 @@ class SupabaseService {
         href: item.href,
         visible: item.visible,
         order_index: item.order,
+        parent_id: item.parentId || null,
+        is_dropdown: !!item.isDropdown,
         updated_at: new Date().toISOString(),
       }));
       const { error } = await client.from('navigation_items').upsert(payload);
-      return !error;
+      if (error) {
+        // Fallback if parent_id / is_dropdown columns not migrated yet
+        const legacyPayload = items.map((item) => ({
+          id: item.id,
+          label: item.label,
+          href: item.href,
+          visible: item.visible,
+          order_index: item.order,
+          updated_at: new Date().toISOString(),
+        }));
+        const { error: legacyErr } = await client.from('navigation_items').upsert(legacyPayload);
+        return !legacyErr;
+      }
+      return true;
     } catch (err) {
       console.warn('saveNavigation error:', err);
+      return false;
+    }
+  }
+
+  public async deleteNavigationItem(id: string): Promise<boolean> {
+    const client = this.getClient();
+    if (!client) return false;
+    try {
+      const { error } = await client.from('navigation_items').delete().eq('id', id);
+      return !error;
+    } catch (err) {
+      console.warn('deleteNavigationItem error:', err);
       return false;
     }
   }

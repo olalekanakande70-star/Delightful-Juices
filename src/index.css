@@ -58,3 +58,31 @@
   animation: float 4s ease-in-out infinite;
 }
 
+/* Subtle commercial Ken Burns slow zoom effect (GPU compositor transform only) */
+@keyframes kenBurnsSlow {
+  0% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  100% {
+    transform: scale(1.075) translate3d(-0.8%, -0.5%, 0);
+  }
+}
+
+.hero-ken-burns {
+  animation: kenBurnsSlow 9s ease-out forwards;
+  will-change: transform;
+}
+
+.hero-ken-burns-paused {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-ken-burns {
+    animation: none !important;
+    transform: scale(1) !important;
+  }
+  .animate-float {
+    animation: none !important;
+  }
+}

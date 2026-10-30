@@ -1,24 +1,27 @@
 import React from 'react';
 import { useCart } from '../context/CartContext';
-import { 
-  X, 
-  ShoppingCart, 
-  Plus, 
-  Minus, 
-  Trash2, 
-  ArrowRight, 
-  Truck, 
-  Store, 
+import { FALLBACK_BEVERAGE_IMAGE } from '../lib/storage';
+import { getCustomerSizeDisplay, sanitizeBrandAndUnitsText } from '../lib/units';
+import {
+  X,
+  ShoppingCart,
+  Plus,
+  Minus,
+  Trash2,
+  ArrowRight,
+  Truck,
+  Store,
   MessageCircle,
-  Sparkles
+  Sparkles,
 } from 'lucide-react';
 import { SiteContent } from '../types';
 
 interface CartDrawerProps {
   content: SiteContent;
+  onNavigate?: (href: string) => void;
 }
 
-export const CartDrawer: React.FC<CartDrawerProps> = ({ content }) => {
+export const CartDrawer: React.FC<CartDrawerProps> = ({ content, onNavigate }) => {
   const {
     cart,
     isCartOpen,
@@ -40,36 +43,42 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content }) => {
   const amountNeededForFreeDelivery = Math.max(0, freeDeliveryThreshold - subtotal);
   const progressPercent = Math.min(100, Math.round((subtotal / freeDeliveryThreshold) * 100));
 
-  const handleWhatsAppCheckout = () => {
-    if (cart.length === 0) return;
+  const whatsappCheckoutUrl = (() => {
+    if (cart.length === 0) return `https://wa.me/${content.whatsappNumber}`;
     const itemsList = cart
       .map(
         (item, i) =>
-          `${i + 1}. *${item.product.name}* (${item.selectedSize.size}) x${item.quantity} = $${(
-            item.selectedSize.price * item.quantity
-          ).toFixed(2)}`
+          `${i + 1}. *${sanitizeBrandAndUnitsText(item.product.name)}* (${getCustomerSizeDisplay(
+            item.selectedSize
+          )}) x${item.quantity} = $${(item.selectedSize.price * item.quantity).toFixed(2)}`
       )
       .join('\n');
 
     const text = encodeURIComponent(
-      `Hello Delightful Juice! I would like to place an order:\n\n` +
-      `${itemsList}\n\n` +
-      `*Subtotal:* $${subtotal.toFixed(2)}\n` +
-      `*Delivery Method:* ${deliveryMethod === 'pickup' ? 'Free Pickup (500 W Broad St, Quakertown)' : 'Local Delivery'}\n` +
-      `*Delivery Fee:* $${deliveryFee.toFixed(2)}\n` +
-      `*Total:* $${total.toFixed(2)}\n\n` +
-      `Please let me know how soon this can be prepared and delivered!`
+      `Hello Delightful Juices! I would like to place an order:\n\n` +
+        `${itemsList}\n\n` +
+        `*Subtotal:* $${subtotal.toFixed(2)}\n` +
+        `*Delivery Method:* ${
+          deliveryMethod === 'pickup'
+            ? 'Free Pickup (500 W Broad St, Quakertown)'
+            : 'Local Delivery'
+        }\n` +
+        `*Delivery Fee:* $${deliveryFee.toFixed(2)}\n` +
+        `*Total:* $${total.toFixed(2)}\n\n` +
+        `Please let me know how soon this can be prepared and delivered!`
     );
-    window.open(`https://wa.me/${content.whatsappNumber}?text=${text}`, '_blank');
-  };
+    return `https://wa.me/${content.whatsappNumber}?text=${text}`;
+  })();
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div 
+    <div
+      onClick={() => setIsCartOpen(false)}
+      className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+    >
+      <div
         className="w-full max-w-md bg-[#FFF8E7] h-full shadow-2xl flex flex-col justify-between border-l border-[#1B4D2E]/20 animate-in slide-in-from-right duration-300"
         onClick={(e) => e.stopPropagation()}
       >
-        
         {/* Drawer Header */}
         <div className="p-5 bg-white border-b border-[#1B4D2E]/10 flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
@@ -77,12 +86,17 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content }) => {
               <ShoppingCart className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-lg text-[#1B4D2E]">Your Refreshment Cart</h3>
-              <p className="text-xs text-[#1B4D2E]/70">{totalCount} item{totalCount === 1 ? '' : 's'} selected</p>
+              <h3 className="font-display font-bold text-lg text-[#1B4D2E]">
+                Your Refreshment Cart
+              </h3>
+              <p className="text-xs text-[#1B4D2E]/70">
+                {totalCount} item{totalCount === 1 ? '' : 's'} selected
+              </p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={() => setIsCartOpen(false)}
             className="p-2 text-[#1B4D2E]/70 hover:text-[#1B4D2E] rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
             aria-label="Close Shopping Cart"
@@ -101,7 +115,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content }) => {
           ) : amountNeededForFreeDelivery > 0 ? (
             <div>
               <div className="flex justify-between items-center mb-1.5 font-semibold">
-                <span>Add <strong className="text-[#E1AD01]">${amountNeededForFreeDelivery.toFixed(2)}</strong> more for FREE delivery</span>
+                <span>
+                  Add <strong className="text-[#E1AD01]">${amountNeededForFreeDelivery.toFixed(2)}</strong> more for FREE delivery
+                </span>
                 <span>{progressPercent}%</span>
               </div>
               <div className="w-full h-1.5 bg-[#143822] rounded-full overflow-hidden">
@@ -114,7 +130,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content }) => {
           ) : (
             <div className="flex items-center space-x-2 font-bold text-[#E1AD01]">
               <Sparkles className="w-4 h-4" />
-              <span>You've unlocked FREE local delivery!</span>
+              <span>You&apos;ve unlocked FREE local delivery!</span>
             </div>
           )}
         </div>
@@ -126,15 +142,21 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content }) => {
               <div className="w-16 h-16 rounded-full bg-[#1B4D2E]/10 text-[#1B4D2E] flex items-center justify-center mx-auto">
                 <ShoppingCart className="w-8 h-8 opacity-60" />
               </div>
-              <div className="font-display font-bold text-lg text-[#1B4D2E]">Your Cart is Empty</div>
+              <div className="font-display font-bold text-lg text-[#1B4D2E]">
+                Your Cart is Empty
+              </div>
               <p className="text-xs text-[#1B4D2E]/70 max-w-xs mx-auto">
-                Explore our signature Zobo, Organic Ginger, and Tigernut Milk to start refreshing.
+                Explore our signature Zobo, Organic Ginger, and Tigernut Milk in 11.8 oz, 16.9 oz, and 33.8 oz sizes.
               </p>
               <button
-                onClick={() => setIsCartOpen(false)}
-                className="mt-2 text-xs font-bold text-white bg-[#1B4D2E] px-4 py-2.5 rounded-xl cursor-pointer"
+                type="button"
+                onClick={() => {
+                  setIsCartOpen(false);
+                  if (onNavigate) onNavigate('/shop');
+                }}
+                className="mt-2 text-xs font-bold text-white bg-[#1B4D2E] hover:bg-[#143822] px-5 py-2.5 rounded-xl cursor-pointer"
               >
-                Browse Flavors
+                Shop Fresh Flavors
               </button>
             </div>
           ) : (
@@ -144,17 +166,21 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content }) => {
                 className="bg-white p-3.5 rounded-2xl border border-[#1B4D2E]/10 shadow-xs flex items-center space-x-3"
               >
                 <img
-                  src={item.product.imageUrl}
+                  src={item.product.imageUrl || FALLBACK_BEVERAGE_IMAGE}
                   alt={item.product.name}
+                  onError={(e) => {
+                    e.currentTarget.src = FALLBACK_BEVERAGE_IMAGE;
+                  }}
                   className="w-16 h-16 rounded-xl object-cover shrink-0 bg-[#FFF8E7]"
                 />
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between">
                     <h4 className="font-bold text-xs sm:text-sm text-[#1B4D2E] truncate">
-                      {item.product.name}
+                      {sanitizeBrandAndUnitsText(item.product.name)}
                     </h4>
                     <button
+                      type="button"
                       onClick={() => removeFromCart(item.id)}
                       className="text-gray-400 hover:text-red-600 p-1 cursor-pointer"
                       title="Remove item"
@@ -165,9 +191,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content }) => {
 
                   <div className="flex items-center space-x-2 mt-0.5">
                     <span className="text-[10px] font-bold bg-[#E1AD01]/25 text-[#1B4D2E] px-2 py-0.5 rounded-md">
-                      {item.selectedSize.size}
+                      {getCustomerSizeDisplay(item.selectedSize)}
                     </span>
-                    <span className="text-xs text-[#1B4D2E]/70">
+                    <span className="text-xs text-[#1B4D2E]/70 tabular-nums">
                       ${item.selectedSize.price.toFixed(2)} each
                     </span>
                   </div>
@@ -175,14 +201,18 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content }) => {
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center border border-[#1B4D2E]/20 rounded-lg bg-[#FFF8E7] px-1.5 py-0.5">
                       <button
+                        type="button"
                         onClick={() => updateQuantity(item.id, -1)}
                         className="p-0.5 text-[#1B4D2E] hover:text-[#E1AD01] cursor-pointer"
                         aria-label="Decrease quantity"
                       >
                         <Minus className="w-3 h-3" />
                       </button>
-                      <span className="px-2 font-bold text-xs text-[#1B4D2E]">{item.quantity}</span>
+                      <span className="px-2 font-bold text-xs text-[#1B4D2E] tabular-nums">
+                        {item.quantity}
+                      </span>
                       <button
+                        type="button"
                         onClick={() => updateQuantity(item.id, 1)}
                         className="p-0.5 text-[#1B4D2E] hover:text-[#E1AD01] cursor-pointer"
                         aria-label="Increase quantity"
@@ -191,7 +221,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content }) => {
                       </button>
                     </div>
 
-                    <div className="font-extrabold text-sm text-[#1B4D2E]">
+                    <div className="font-extrabold text-sm text-[#1B4D2E] tabular-nums">
                       ${(item.selectedSize.price * item.quantity).toFixed(2)}
                     </div>
                   </div>
@@ -201,11 +231,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content }) => {
           )}
         </div>
 
-        {/* Drawer Footer with Method Toggle & Checkout Buttons */}
+        {/* Drawer Footer */}
         {cart.length > 0 && (
           <div className="p-5 bg-white border-t border-[#1B4D2E]/10 space-y-4">
-            
-            {/* Delivery Method Selector */}
             <div className="grid grid-cols-2 gap-2 p-1 bg-[#FFF8E7] rounded-xl border border-[#1B4D2E]/15">
               <button
                 type="button"
@@ -234,11 +262,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content }) => {
               </button>
             </div>
 
-            {/* Calculations */}
             <div className="space-y-1.5 text-xs text-[#1B4D2E]/80">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span className="font-bold text-[#1B4D2E]">${subtotal.toFixed(2)}</span>
+                <span className="font-bold text-[#1B4D2E] tabular-nums">
+                  ${subtotal.toFixed(2)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>
@@ -248,7 +277,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content }) => {
                     ? 'Local Delivery (Promo)'
                     : 'Local Delivery Fee'}
                 </span>
-                <span className="font-bold text-[#1B4D2E]">
+                <span className="font-bold text-[#1B4D2E] tabular-nums">
                   {deliveryFee === 0 ? (
                     <span className="text-emerald-700 font-bold uppercase text-[11px]">Free</span>
                   ) : (
@@ -256,15 +285,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content }) => {
                   )}
                 </span>
               </div>
-              <div className="flex justify-between text-base font-extrabold text-[#1B4D2E] pt-2 border-t border-gray-100">
+              <div className="flex justify-between text-base font-extrabold text-[#1B4D2E] pt-2 border-t border-gray-100 tabular-nums">
                 <span>Total</span>
                 <span className="text-[#1B4D2E]">${total.toFixed(2)}</span>
               </div>
             </div>
 
-            {/* Actions */}
             <div className="space-y-2">
               <button
+                type="button"
                 onClick={() => {
                   setIsCartOpen(false);
                   setIsCheckoutOpen(true);
@@ -275,18 +304,18 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content }) => {
                 <ArrowRight className="w-4 h-4 text-[#E1AD01]" />
               </button>
 
-              <button
-                onClick={handleWhatsAppCheckout}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-4 rounded-xl font-bold text-xs transition-colors flex items-center justify-center space-x-1.5 cursor-pointer"
+              <a
+                href={whatsappCheckoutUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-4 rounded-xl font-bold text-xs transition-colors flex items-center justify-center space-x-1.5"
               >
                 <MessageCircle className="w-4 h-4" />
                 <span>Quick Checkout via WhatsApp</span>
-              </button>
+              </a>
             </div>
-
           </div>
         )}
-
       </div>
     </div>
   );
