@@ -19,6 +19,7 @@ export const Hero: React.FC<HeroProps> = ({
   onEventClick,
 }) => {
   const resolvedSlides = slides || dataRepo.getHeroSlides();
+  const isLoading = slides === undefined && !dataRepo.isHeroSlidesLoaded() && resolvedSlides.length === 0;
   const handleNavigate = (href: string) => {
     if (onNavigate) {
       onNavigate(href);
@@ -34,6 +35,7 @@ export const Hero: React.FC<HeroProps> = ({
       slides={resolvedSlides}
       content={content}
       onNavigate={handleNavigate}
+      isLoading={isLoading}
     />
   );
 };

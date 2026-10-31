@@ -145,10 +145,23 @@ export const HeroSliderManager: React.FC<HeroSliderManagerProps> = ({
       setUploadingField(null);
 
       if (res.url) {
-        setEditingSlide({
-          ...editingSlide,
-          [field === 'desktop' ? 'desktopImageUrl' : 'mobileImageUrl']: res.url,
-        });
+        if (field === 'desktop') {
+          const prevMobile = (editingSlide.mobileImageUrl || '').trim();
+          const shouldClearLegacyMobile =
+            prevMobile === editingSlide.desktopImageUrl ||
+            prevMobile.startsWith('/src/assets/') ||
+            prevMobile.startsWith('/assets/hero_');
+          setEditingSlide({
+            ...editingSlide,
+            desktopImageUrl: res.url,
+            mobileImageUrl: shouldClearLegacyMobile ? '' : editingSlide.mobileImageUrl,
+          });
+        } else {
+          setEditingSlide({
+            ...editingSlide,
+            mobileImageUrl: res.url,
+          });
+        }
         onToast(
           `${field === 'desktop' ? 'Desktop' : 'Mobile'} slider image uploaded to live Supabase Storage!`
         );

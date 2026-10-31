@@ -36,6 +36,9 @@ function MainApp() {
   const [navItems, setNavItems] = useState<NavItem[]>(() => dataRepo.getNavItems());
   const [products, setProducts] = useState<Product[]>(() => dataRepo.getProducts());
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(() => dataRepo.getHeroSlides());
+  const [heroSlidesLoaded, setHeroSlidesLoaded] = useState<boolean>(() =>
+    dataRepo.isHeroSlidesLoaded()
+  );
   const [cmsPages, setCmsPages] = useState<CmsPage[]>(() => dataRepo.getPages());
   const [selectedProductForModal, setSelectedProductForModal] = useState<Product | null>(null);
 
@@ -115,6 +118,7 @@ function MainApp() {
       setNavItems(dataRepo.getNavItems());
       setProducts(dataRepo.getProducts());
       setHeroSlides(dataRepo.getHeroSlides());
+      setHeroSlidesLoaded(dataRepo.isHeroSlidesLoaded());
       setCmsPages(dataRepo.getPages());
     };
     const unsubscribe = dataRepo.subscribe(handleUpdate);
@@ -228,6 +232,7 @@ function MainApp() {
               slides={heroSlides}
               content={content}
               onNavigate={navigate}
+              isLoading={!heroSlidesLoaded && heroSlides.length === 0}
             />
 
             {/* 2. Featured Artisanal Drinks with Prominent Shop Now CTA */}

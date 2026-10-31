@@ -60,7 +60,7 @@ export const INITIAL_HERO_SLIDES: HeroSlide[] = [
     secondaryCtaLabel: 'Events & Catering',
     secondaryCtaUrl: '/events-catering',
     desktopImageUrl: heroSlideZobo,
-    mobileImageUrl: heroSlideZobo,
+    mobileImageUrl: '',
     overlayOpacity: 0.52,
     displayOrder: 1,
     active: true,
@@ -76,7 +76,7 @@ export const INITIAL_HERO_SLIDES: HeroSlide[] = [
     secondaryCtaLabel: 'Our Signature Promise',
     secondaryCtaUrl: '/our-story',
     desktopImageUrl: heroSlideGinger,
-    mobileImageUrl: heroSlideGinger,
+    mobileImageUrl: '',
     overlayOpacity: 0.50,
     displayOrder: 2,
     active: true,
@@ -92,12 +92,47 @@ export const INITIAL_HERO_SLIDES: HeroSlide[] = [
     secondaryCtaLabel: 'Shop Variety Packs',
     secondaryCtaUrl: '/shop',
     desktopImageUrl: heroSlideTigernut,
-    mobileImageUrl: heroSlideTigernut,
+    mobileImageUrl: '',
     overlayOpacity: 0.54,
     displayOrder: 3,
     active: true,
   },
 ];
+
+function isLegacyBundledHeroAsset(url?: string): boolean {
+  if (!url) return false;
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  return (
+    trimmed.startsWith('/src/assets/') ||
+    trimmed.startsWith('/assets/hero_') ||
+    trimmed === heroSlideZobo ||
+    trimmed === heroSlideGinger ||
+    trimmed === heroSlideTigernut
+  );
+}
+
+function normalizeHeroSlide(slide: HeroSlide): HeroSlide {
+  const desktopUrl = (slide.desktopImageUrl || '').trim();
+  const rawMobileUrl = (slide.mobileImageUrl || '').trim();
+  const desktopIsRemote = /^https?:\/\//i.test(desktopUrl);
+
+  // Clear stale seeded local asset path on mobile when desktop image was updated to a live cloud URL
+  const cleanedMobileUrl =
+    (desktopIsRemote && isLegacyBundledHeroAsset(rawMobileUrl)) ||
+    rawMobileUrl.startsWith('/src/assets/') ||
+    rawMobileUrl === desktopUrl
+      ? ''
+      : rawMobileUrl;
+
+  return {
+    ...slide,
+    heading: sanitizeBrandText(slide.heading),
+    subheading: sanitizeBrandText(slide.subheading),
+    desktopImageUrl: desktopUrl,
+    mobileImageUrl: cleanedMobileUrl,
+  };
+}
 
 export const INITIAL_PRODUCTS: Product[] = [
   {
@@ -1032,7 +1067,9 @@ class DataRepository {
   private products: Product[] = INITIAL_PRODUCTS.map(normalizeProduct);
   private content: SiteContent = normalizeSiteContent(INITIAL_SITE_CONTENT);
   private navItems: NavItem[] = normalizeNavItems(INITIAL_NAV_ITEMS);
-  private heroSlides: HeroSlide[] = [...INITIAL_HERO_SLIDES];
+  // Start empty until live Supabase responds so old bundled hero images never flash before live slides load
+  private heroSlides: HeroSlide[] = [];
+  private heroSlidesLoaded = false;
   private cmsPages: CmsPage[] = [...INITIAL_CMS_PAGES];
   private orders: Order[] = [];
   private inquiries: EventInquiry[] = [];
@@ -1074,8 +1111,21 @@ class DataRepository {
   }
 
   private async bootstrapSync() {
-    await supabaseService.ensurePublicConfig();
-    await this.syncFromSupabase();
+    if (supabaseService.isConfigured()) {
+      // Fetch live Supabase data immediately without waiting on /api/public-config waterfall
+      await Promise.all([this.syncFromSupabase(), supabaseService.ensurePublicConfig()]);
+      return;
+    }
+
+    const discovered = await supabaseService.ensurePublicConfig();
+    if (discovered) {
+      await this.syncFromSupabase();
+    } else {
+      // Fallback only if live Supabase is completely unconfigured
+      this.heroSlides = [...INITIAL_HERO_SLIDES];
+      this.heroSlidesLoaded = true;
+      this.notify();
+    }
   }
 
   private buildWriteResult(ok: boolean): SyncWriteResult {
@@ -1102,17 +1152,74 @@ class DataRepository {
     };
   }
 
+  private applyRemoteHeroSlides(remoteSlides: HeroSlide[] | null, isAdminAuthenticated: boolean) {
+    if (remoteSlides && remoteSlides.length > 0) {
+      const normalized = remoteSlides
+        .map(normalizeHeroSlide)
+        .sort((a, b) => a.displayOrder - b.displayOrder);
+      this.heroSlides = normalized;
+      this.heroSlidesLoaded = true;
+
+      // Persist cleaned mobile_image_url to live Supabase if any slide held a stale dev asset path
+      if (isAdminAuthenticated) {
+        for (const raw of remoteSlides) {
+          const clean = normalized.find((n) => n.id === raw.id);
+          if (clean && (raw.mobileImageUrl || '') !== (clean.mobileImageUrl || '')) {
+            supabaseService.upsertHeroSlide(clean).catch(() => {});
+          }
+        }
+      }
+      return;
+    }
+
+    if (remoteSlides && remoteSlides.length === 0) {
+      this.heroSlides = [...INITIAL_HERO_SLIDES];
+      this.heroSlidesLoaded = true;
+      if (isAdminAuthenticated) {
+        supabaseService.saveAllHeroSlides(INITIAL_HERO_SLIDES).catch(() => {});
+      }
+      return;
+    }
+
+    // Network error fallback only if nothing has been loaded yet
+    if (this.heroSlides.length === 0) {
+      this.heroSlides = [...INITIAL_HERO_SLIDES];
+    }
+    this.heroSlidesLoaded = true;
+  }
+
   public async syncFromSupabase() {
     if (!supabaseService.isConfigured()) {
       const discovered = await supabaseService.ensurePublicConfig();
-      if (!discovered) return;
+      if (!discovered) {
+        if (!this.heroSlidesLoaded) {
+          this.heroSlides = [...INITIAL_HERO_SLIDES];
+          this.heroSlidesLoaded = true;
+          this.notify();
+        }
+        return;
+      }
     }
     this.lastSyncAt = Date.now();
     const isAdminAuthenticated = Boolean(supabaseService.getCurrentUser());
 
     try {
-      // 1. Fetch live products
-      const remoteProducts = await supabaseService.fetchProducts();
+      // Kick off hero slides immediately and notify as soon as it resolves so the hero banner paints without waiting on other tables
+      const heroSlidesPromise = supabaseService.fetchHeroSlides().then((remoteSlides) => {
+        this.applyRemoteHeroSlides(remoteSlides, isAdminAuthenticated);
+        this.notify();
+        return remoteSlides;
+      });
+
+      const [remoteProducts, remoteContent, remoteNav, remotePages] = await Promise.all([
+        supabaseService.fetchProducts(),
+        supabaseService.fetchSiteContent(),
+        supabaseService.fetchNavigation(),
+        supabaseService.fetchCmsPages(),
+        heroSlidesPromise,
+      ]);
+
+      // 1. Apply live products
       if (remoteProducts && remoteProducts.length > 0) {
         this.products = remoteProducts.map(normalizeProduct);
       } else if (remoteProducts && remoteProducts.length === 0 && isAdminAuthenticated) {
@@ -1121,8 +1228,7 @@ class DataRepository {
         }
       }
 
-      // 2. Fetch live site content
-      const remoteContent = await supabaseService.fetchSiteContent();
+      // 2. Apply live site content
       if (remoteContent) {
         this.content = normalizeSiteContent({
           ...INITIAL_SITE_CONTENT,
@@ -1137,13 +1243,11 @@ class DataRepository {
         await supabaseService.upsertSiteContent(this.content);
       }
 
-      // 3. Fetch live navigation & self-heal any legacy duplicates / flattened dropdowns
-      const remoteNav = await supabaseService.fetchNavigation();
+      // 3. Apply live navigation & self-heal any legacy duplicates / flattened dropdowns
       if (remoteNav && remoteNav.length > 0) {
         const normalizedNav = normalizeNavItems(remoteNav);
         this.navItems = normalizedNav;
 
-        // If authenticated admin session is active and remote table had legacy hash rows or flattened rows, persist repaired tree to live Supabase
         if (
           isAdminAuthenticated &&
           (remoteNav.length !== normalizedNav.length ||
@@ -1155,25 +1259,7 @@ class DataRepository {
         await supabaseService.saveNavigation(INITIAL_NAV_ITEMS);
       }
 
-      // 4. Fetch live hero slides (auto-seed default slides into live Supabase when admin logs in if table is empty)
-      const remoteSlides = await supabaseService.fetchHeroSlides();
-      if (remoteSlides && remoteSlides.length > 0) {
-        this.heroSlides = remoteSlides
-          .map((s) => ({
-            ...s,
-            heading: sanitizeBrandText(s.heading),
-            subheading: sanitizeBrandText(s.subheading),
-          }))
-          .sort((a, b) => a.displayOrder - b.displayOrder);
-      } else if (remoteSlides && remoteSlides.length === 0 && isAdminAuthenticated) {
-        const seededOk = await supabaseService.saveAllHeroSlides(INITIAL_HERO_SLIDES);
-        if (seededOk) {
-          this.heroSlides = [...INITIAL_HERO_SLIDES];
-        }
-      }
-
-      // 5. Fetch live CMS pages (auto-seed default pages into live Supabase when admin logs in if table is empty)
-      const remotePages = await supabaseService.fetchCmsPages();
+      // 4. Apply live CMS pages
       if (remotePages && remotePages.length > 0) {
         const remoteSlugs = new Set(remotePages.map((p) => p.slug));
         const missingSeedPages = INITIAL_CMS_PAGES.filter((seedPage) => !remoteSlugs.has(seedPage.slug));
@@ -1190,14 +1276,15 @@ class DataRepository {
         this.cmsPages = [...INITIAL_CMS_PAGES];
       }
 
-      // 6. Fetch live orders & inquiries when authenticated (never fall back to fake demo records)
+      // 5. Fetch live orders & inquiries in parallel when authenticated
       if (isAdminAuthenticated) {
-        const remoteOrders = await supabaseService.fetchOrders();
+        const [remoteOrders, remoteInquiries] = await Promise.all([
+          supabaseService.fetchOrders(),
+          supabaseService.fetchInquiries(),
+        ]);
         if (remoteOrders !== null) {
           this.orders = remoteOrders;
         }
-
-        const remoteInquiries = await supabaseService.fetchInquiries();
         if (remoteInquiries !== null) {
           this.inquiries = remoteInquiries;
         }
@@ -1206,6 +1293,10 @@ class DataRepository {
       this.notify();
     } catch (err) {
       console.warn('Live Supabase sync notice:', err);
+      if (!this.heroSlidesLoaded) {
+        this.heroSlidesLoaded = true;
+        this.notify();
+      }
     }
   }
 
@@ -1276,35 +1367,44 @@ class DataRepository {
   }
 
   // --- HERO SLIDES ---
+  public isHeroSlidesLoaded(): boolean {
+    return this.heroSlidesLoaded;
+  }
+
   public getHeroSlides(): HeroSlide[] {
     return [...this.heroSlides].sort((a, b) => a.displayOrder - b.displayOrder);
   }
 
   public async saveHeroSlides(slides: HeroSlide[]): Promise<SyncWriteResult> {
-    const ordered = slides.map((s, idx) => ({
-      ...s,
-      displayOrder: idx + 1,
-    }));
+    const ordered = slides.map((s, idx) =>
+      normalizeHeroSlide({
+        ...s,
+        displayOrder: idx + 1,
+      })
+    );
     this.heroSlides = ordered;
+    this.heroSlidesLoaded = true;
     this.notify();
     const ok = await supabaseService.saveAllHeroSlides(ordered);
     return this.buildWriteResult(ok);
   }
 
   public async upsertHeroSlide(slide: HeroSlide): Promise<SyncWriteResult> {
+    const cleanedSlide = normalizeHeroSlide(slide);
     const list = [...this.heroSlides];
-    const idx = list.findIndex((s) => s.id === slide.id);
+    const idx = list.findIndex((s) => s.id === cleanedSlide.id);
     if (idx >= 0) {
-      list[idx] = slide;
+      list[idx] = cleanedSlide;
     } else {
-      list.push(slide);
+      list.push(cleanedSlide);
     }
     const ordered = list
       .sort((a, b) => a.displayOrder - b.displayOrder)
       .map((s, i) => ({ ...s, displayOrder: i + 1 }));
     this.heroSlides = ordered;
+    this.heroSlidesLoaded = true;
     this.notify();
-    const target = ordered.find((s) => s.id === slide.id) || slide;
+    const target = ordered.find((s) => s.id === cleanedSlide.id) || cleanedSlide;
     const ok = await supabaseService.upsertHeroSlide(target);
     return this.buildWriteResult(ok);
   }
@@ -1314,6 +1414,7 @@ class DataRepository {
       .filter((s) => s.id !== id)
       .map((s, i) => ({ ...s, displayOrder: i + 1 }));
     this.heroSlides = filtered;
+    this.heroSlidesLoaded = true;
     this.notify();
     const ok = await supabaseService.deleteHeroSlide(id);
     return this.buildWriteResult(ok);

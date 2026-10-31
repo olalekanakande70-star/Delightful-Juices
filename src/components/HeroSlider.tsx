@@ -18,6 +18,28 @@ interface HeroSliderProps {
   onNavigate: (href: string) => void;
   autoPlayIntervalMs?: number;
   previewMode?: boolean;
+  isLoading?: boolean;
+}
+
+function getScrimOpacityClass(opacity?: number): string {
+  const clamped = Math.min(0.85, Math.max(0.25, opacity ?? 0.52));
+  const pct = Math.round(clamped * 20) * 5;
+  const map: Record<number, string> = {
+    25: 'opacity-25',
+    30: 'opacity-30',
+    35: 'opacity-35',
+    40: 'opacity-40',
+    45: 'opacity-45',
+    50: 'opacity-50',
+    55: 'opacity-55',
+    60: 'opacity-60',
+    65: 'opacity-65',
+    70: 'opacity-70',
+    75: 'opacity-75',
+    80: 'opacity-80',
+    85: 'opacity-85',
+  };
+  return map[pct] || 'opacity-55';
 }
 
 export const HeroSlider: React.FC<HeroSliderProps> = ({
@@ -26,12 +48,13 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
   onNavigate,
   autoPlayIntervalMs = 6500,
   previewMode = false,
+  isLoading = false,
 }) => {
   const activeSlides = (previewMode ? slides : slides.filter((s) => s.active)).sort(
     (a, b) => a.displayOrder - b.displayOrder
   );
 
-  // Fallback single slide from SiteContent if all slides were disabled
+  // Fallback single slide from SiteContent ONLY after live fetch has finished and all slides are disabled
   const effectiveSlides: HeroSlide[] =
     activeSlides.length > 0
       ? activeSlides
@@ -46,7 +69,7 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
             secondaryCtaLabel: 'Events & Catering',
             secondaryCtaUrl: '/events-catering',
             desktopImageUrl: FALLBACK_BEVERAGE_IMAGE,
-            mobileImageUrl: FALLBACK_BEVERAGE_IMAGE,
+            mobileImageUrl: '',
             overlayOpacity: 0.55,
             displayOrder: 1,
             active: true,
@@ -56,6 +79,12 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [loadedUrls, setLoadedUrls] = useState<Record<string, boolean>>({});
+
+  const markImageLoaded = useCallback((url: string) => {
+    if (!url) return;
+    setLoadedUrls((prev) => (prev[url] ? prev : { ...prev, [url]: true }));
+  }, []);
 
   // Clamp index if slide count changes dynamically in CMS
   useEffect(() => {
@@ -83,10 +112,23 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
   }, [effectiveSlides.length]);
 
   useEffect(() => {
-    if (effectiveSlides.length <= 1 || isPaused || prefersReducedMotion) return;
+    if (isLoading || effectiveSlides.length <= 1 || isPaused || prefersReducedMotion) return;
     const timer = window.setInterval(goToNext, autoPlayIntervalMs);
     return () => window.clearInterval(timer);
-  }, [effectiveSlides.length, isPaused, prefersReducedMotion, autoPlayIntervalMs, goToNext]);
+  }, [isLoading, effectiveSlides.length, isPaused, prefersReducedMotion, autoPlayIntervalMs, goToNext]);
+
+  // While live Supabase slides are resolving (~100ms), render a clean brand backdrop with zero old/fallback image flash
+  if (!previewMode && isLoading && activeSlides.length === 0) {
+    return (
+      <section
+        aria-label="Delightful Juices Featured Promotions"
+        aria-busy="true"
+        className="relative w-full min-h-[560px] sm:min-h-[630px] lg:min-h-[76vh] bg-gradient-to-br from-[#0E2918] via-[#12351F] to-[#1B4D2E] overflow-hidden flex items-center"
+      >
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/35 to-transparent pointer-events-none" />
+      </section>
+    );
+  }
 
   const currentSlide = effectiveSlides[currentIndex] || effectiveSlides[0];
   const hasMultiple = effectiveSlides.length > 1;
@@ -104,9 +146,12 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
       {/* Background Slide Layers with Smooth Crossfade & Subtle Ken Burns Zoom */}
       {effectiveSlides.map((slide, idx) => {
         const isCurrent = idx === currentIndex;
-        const desktopSrc = slide.desktopImageUrl || FALLBACK_BEVERAGE_IMAGE;
-        const mobileSrc = slide.mobileImageUrl || desktopSrc;
-        const scrimOpacity = Math.min(0.85, Math.max(0.25, slide.overlayOpacity ?? 0.52));
+        const desktopSrc = (slide.desktopImageUrl || '').trim() || FALLBACK_BEVERAGE_IMAGE;
+        const rawMobile = (slide.mobileImageUrl || '').trim();
+        const customMobileSrc = rawMobile && rawMobile !== desktopSrc ? rawMobile : '';
+        const imageLoadKey = `${desktopSrc}::${customMobileSrc}`;
+        const isImgLoaded = Boolean(loadedUrls[imageLoadKey]);
+        const scrimClass = getScrimOpacityClass(slide.overlayOpacity);
 
         return (
           <div
@@ -124,35 +169,38 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
               } ${isPaused ? 'hero-ken-burns-paused' : ''}`}
             >
               <picture className="block w-full h-full">
-                {mobileSrc && <source media="(max-width: 767px)" srcSet={mobileSrc} />}
+                {customMobileSrc && <source media="(max-width: 767px)" srcSet={customMobileSrc} />}
                 <img
+                  ref={(el) => {
+                    if (el && el.complete && el.naturalWidth > 0) {
+                      markImageLoaded(imageLoadKey);
+                    }
+                  }}
                   src={desktopSrc}
                   alt={sanitizeBrandAndUnitsText(slide.heading)}
                   loading={idx === 0 ? 'eager' : 'lazy'}
+                  fetchPriority={idx === 0 ? 'high' : 'auto'}
+                  decoding="async"
+                  onLoad={() => markImageLoaded(imageLoadKey)}
                   onError={(e) => {
                     const target = e.currentTarget;
                     if (target.src !== FALLBACK_BEVERAGE_IMAGE) {
                       target.src = FALLBACK_BEVERAGE_IMAGE;
                     }
+                    markImageLoaded(imageLoadKey);
                   }}
-                  className="w-full h-full object-cover object-center select-none"
+                  className={`w-full h-full object-cover object-center select-none transition-opacity duration-500 ease-out ${
+                    isImgLoaded ? 'opacity-100' : 'opacity-0'
+                  }`}
                 />
               </picture>
             </div>
 
             {/* Layered Commercial Scrim for Optimal Text Contrast */}
             <div
-              className="absolute inset-0"
-              style={{
-                background: `linear-gradient(105deg, rgba(14, 41, 24, ${Math.min(
-                  0.92,
-                  scrimOpacity + 0.26
-                )}) 0%, rgba(18, 53, 31, ${scrimOpacity}) 52%, rgba(18, 53, 31, ${Math.max(
-                  0.22,
-                  scrimOpacity - 0.18
-                )}) 100%)`,
-              }}
+              className={`absolute inset-0 bg-gradient-to-r from-[#0E2918] via-[#12351F] to-[#12351F]/60 ${scrimClass}`}
             />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0E2918]/45 via-transparent to-transparent pointer-events-none" />
             <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
           </div>
         );
