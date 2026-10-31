@@ -67,9 +67,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
       imageUrl: item.product.imageUrl,
     }));
 
-    const newOrder = dataRepo.addOrder({
+    const newOrder = await dataRepo.createOrder({
       customerName,
-      customerEmail: customerEmail || 'customer@example.com',
+      customerEmail: customerEmail.trim(),
       customerPhone,
       deliveryMethod,
       deliveryAddress:
@@ -98,7 +98,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
             orderNumber: newOrder.orderNumber,
             items: orderItems,
             customerName,
-            customerEmail,
+            customerEmail: customerEmail.trim() || undefined,
             deliveryFee,
             currency: content.stripe?.currency || 'usd',
             successUrl: `${window.location.origin}/?order_success=true&order_number=${newOrder.orderNumber}`,
@@ -114,7 +114,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
         } else {
           setStripeNotice(
             data.message ||
-              'Stripe payments require STRIPE_SECRET_KEY in server environment. Your order has been placed in pending state! You can complete payment via Zelle or WhatsApp.'
+              'Online card payment is being activated. Your order has been recorded in our live kitchen queue—you can complete payment via Zelle or WhatsApp.'
           );
           setIsSubmitting(false);
           setCompletedOrder(newOrder);
@@ -122,7 +122,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
         }
       } catch {
         setStripeNotice(
-          'Stripe server function is currently offline. Your order has been recorded! Please notify us via WhatsApp to complete payment.'
+          'Unable to connect to the card payment gateway right now. Your order has been saved to our live kitchen queue—please message us via WhatsApp to confirm payment.'
         );
         setIsSubmitting(false);
         setCompletedOrder(newOrder);

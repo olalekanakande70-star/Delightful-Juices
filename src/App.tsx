@@ -31,7 +31,7 @@ function normalizePathname(raw: string): string {
 }
 
 function MainApp() {
-  const { setIsCartOpen, totalCount, toastMessage } = useCart();
+  const { setIsCartOpen, totalCount, toastMessage, showToast } = useCart();
   const [content, setContent] = useState<SiteContent>(() => dataRepo.getContent());
   const [navItems, setNavItems] = useState<NavItem[]>(() => dataRepo.getNavItems());
   const [products, setProducts] = useState<Product[]>(() => dataRepo.getProducts());
@@ -135,15 +135,14 @@ function MainApp() {
     };
     window.addEventListener('scroll', handleScroll);
 
-    // Handle Stripe redirect params
+    // Handle live Stripe Checkout redirect params
     const params = new URLSearchParams(window.location.search);
     if (params.get('order_success') === 'true') {
       const orderNum = params.get('order_number') || 'DJ-Order';
-      const orders = dataRepo.getOrders();
-      const target = orders.find((o) => o.orderNumber === orderNum);
-      if (target) {
-        dataRepo.updateOrderStatus(target.id, 'preparing');
-      }
+      showToast(`Thank you! Payment received for Order ${orderNum}.`);
+      dataRepo.syncFromSupabase();
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (params.get('order_cancelled') === 'true') {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 

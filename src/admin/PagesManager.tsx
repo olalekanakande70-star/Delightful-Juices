@@ -226,32 +226,27 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
     };
 
     try {
-      if (supabaseConnected) {
-        const ext = file.name.split('.').pop() || 'jpg';
-        const path = `pages/${editingPage.slug || 'page'}-${Date.now()}.${ext}`;
-        const res = await supabaseService.uploadAsset('delightful_assets', path, file);
-        if (res.url) {
-          applyUrl(res.url);
-          setUploadingSectionId(null);
-          onToast('Section image uploaded to Supabase Storage!');
-          return;
-        }
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `pages/${editingPage.slug || 'page'}-${Date.now()}.${ext}`;
+      const res = await supabaseService.uploadAsset('delightful_assets', path, file);
+      setUploadingSectionId(null);
+
+      if (res.url) {
+        applyUrl(res.url);
+        onToast('Section image uploaded to live Supabase Storage!');
+        return;
       }
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        applyUrl(reader.result as string);
-        setUploadingSectionId(null);
-        onToast('Section image loaded!');
-      };
-      reader.readAsDataURL(file);
+      setFormError(
+        `Live Supabase Storage upload failed: ${res.error || 'Ensure delightful_assets bucket is enabled.'}`
+      );
     } catch (err: any) {
       setUploadingSectionId(null);
-      setFormError(err?.message || 'Image upload failed.');
+      setFormError(err?.message || 'Live image upload failed.');
     }
   };
 
-  const handleSavePageWithStatus = (desiredStatus: 'draft' | 'published') => {
+  const handleSavePageWithStatus = async (desiredStatus: 'draft' | 'published') => {
     if (!editingPage) return;
     setFormError(null);
 
@@ -285,13 +280,18 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
       status: desiredStatus,
     };
 
-    dataRepo.saveCmsPage(finalPage);
+    const res = await dataRepo.saveCmsPage(finalPage);
+    if (supabaseConnected && !res.synced) {
+      setFormError(`Live Supabase database rejected page update: ${res.error}`);
+      return;
+    }
+
     setEditingPage(null);
     setIsNewPage(false);
     onToast(
       desiredStatus === 'published'
         ? `Page "${cleanTitle}" published live at /${cleanSlug}!`
-        : `Page "${cleanTitle}" saved as draft.`
+        : `Page "${cleanTitle}" saved as draft in live database.`
     );
   };
 
@@ -948,14 +948,18 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
                   <td className="p-4">
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         const nextStatus = page.status === 'published' ? 'draft' : 'published';
-                        dataRepo.saveCmsPage({ ...page, status: nextStatus });
-                        onToast(
-                          `Page "${page.title}" set to ${
-                            nextStatus === 'published' ? 'Published' : 'Draft'
-                          }.`
-                        );
+                        const res = await dataRepo.saveCmsPage({ ...page, status: nextStatus });
+                        if (!res.synced) {
+                          onToast(`Unable to update live page status: ${res.error}`);
+                        } else {
+                          onToast(
+                            `Page "${page.title}" set to ${
+                              nextStatus === 'published' ? 'Published' : 'Draft'
+                            } on live site.`
+                          );
+                        }
                       }}
                       className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase cursor-pointer ${
                         page.status === 'published'
@@ -1004,10 +1008,14 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
                         <div className="flex items-center space-x-1 bg-red-50 border border-red-200 px-2 py-1 rounded-lg">
                           <button
                             type="button"
-                            onClick={() => {
-                              dataRepo.deleteCmsPage(page.id);
+                            onClick={async () => {
+                              const res = await dataRepo.deleteCmsPage(page.id);
                               setConfirmDeleteId(null);
-                              onToast(`Deleted page "${page.title}".`);
+                              if (!res.synced) {
+                                onToast(`Unable to delete page from live database: ${res.error}`);
+                              } else {
+                                onToast(`Deleted page "${page.title}" from live database.`);
+                              }
                             }}
                             className="text-[10px] font-extrabold bg-red-600 text-white px-2 py-0.5 rounded cursor-pointer"
                           >

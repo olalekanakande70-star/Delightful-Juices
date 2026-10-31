@@ -29,8 +29,26 @@ export const DEFAULT_TYPOGRAPHY: TypographySettings = {
 export function applyTheme(content?: Partial<SiteContent> | null) {
   if (typeof document === 'undefined') return;
 
-  const colors = { ...DEFAULT_COLORS, ...(content?.colors || {}) };
-  const typography = { ...DEFAULT_TYPOGRAPHY, ...(content?.typography || {}) };
+  const rawColors: Partial<ColorThemeSettings> = content?.colors ?? {};
+  const cleanColors: Partial<ColorThemeSettings> = {};
+  (Object.keys(rawColors) as Array<keyof ColorThemeSettings>).forEach((k) => {
+    const val = rawColors[k];
+    if (typeof val === 'string' && val.trim().length > 0) {
+      cleanColors[k] = val.trim();
+    }
+  });
+
+  const rawTypo: Partial<TypographySettings> = content?.typography ?? {};
+  const cleanTypo: Partial<TypographySettings> = {};
+  (Object.keys(rawTypo) as Array<keyof TypographySettings>).forEach((k) => {
+    const val = rawTypo[k];
+    if (typeof val === 'string' && val.trim().length > 0) {
+      cleanTypo[k] = val.trim();
+    }
+  });
+
+  const colors = { ...DEFAULT_COLORS, ...cleanColors };
+  const typography = { ...DEFAULT_TYPOGRAPHY, ...cleanTypo };
   const root = document.documentElement;
 
   // Colors

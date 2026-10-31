@@ -30,7 +30,12 @@ export const Header: React.FC<HeaderProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [expandedMobileGroupIds, setExpandedMobileGroupIds] = useState<Record<string, boolean>>({});
+  const [logoImgError, setLogoImgError] = useState(false);
   const navRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    setLogoImgError(false);
+  }, [content.branding?.logoUrl]);
 
   // Build hierarchical navigation tree from flat navItems
   const visibleItems = navItems
@@ -119,11 +124,12 @@ export const Header: React.FC<HeaderProps> = ({
               className="flex items-center space-x-3 group text-left cursor-pointer shrink-0"
             >
               {content.branding?.showLogoIcon !== false &&
-                (content.branding?.logoUrl ? (
+                (content.branding?.logoUrl && !logoImgError ? (
                   <img
                     src={content.branding.logoUrl}
                     alt={brandTitle}
-                    className="h-11 sm:h-12 w-auto max-w-[160px] sm:max-w-[200px] object-contain group-hover:scale-105 transition-transform"
+                    onError={() => setLogoImgError(true)}
+                    className="h-11 sm:h-12 w-auto max-w-[160px] sm:max-w-[200px] object-contain group-hover:scale-105 transition-transform shrink-0"
                   />
                 ) : (
                   <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#1B4D2E] border-2 border-[#E1AD01] flex items-center justify-center text-[#E1AD01] shadow-md group-hover:scale-105 transition-transform shrink-0">
@@ -133,7 +139,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 ))}
               <div className="flex flex-col">
-                <span className="font-display font-extrabold text-lg sm:text-2xl text-[#1B4D2E] leading-tight tracking-tight">
+                <span className="font-display font-extrabold text-lg sm:text-2xl text-[#1B4D2E] leading-tight tracking-tight whitespace-nowrap">
                   {brandTitle === 'Delightful Juices' ? (
                     <>
                       Delightful <span className="text-[#E1AD01]">Juices</span>
@@ -142,7 +148,7 @@ export const Header: React.FC<HeaderProps> = ({
                     brandTitle
                   )}
                 </span>
-                <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-[#1B4D2E]/70">
+                <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-[#1B4D2E]/70 whitespace-nowrap">
                   {content.motto}
                 </span>
               </div>
@@ -152,7 +158,7 @@ export const Header: React.FC<HeaderProps> = ({
             <nav
               ref={navRef}
               aria-label="Primary Navigation"
-              className="hidden lg:flex items-center space-x-6 xl:space-x-7"
+              className="hidden lg:flex items-center space-x-1.5 xl:space-x-2.5 bg-[#FFF8E7]/75 border border-[#1B4D2E]/12 px-2.5 py-1.5 rounded-2xl shadow-2xs min-w-0"
             >
               {topLevelItems.map((item) => {
                 const children = getChildren(item.id);
@@ -167,11 +173,11 @@ export const Header: React.FC<HeaderProps> = ({
                       key={item.id}
                       type="button"
                       onClick={() => handleLinkSelect(item.href)}
-                      className={`text-sm font-semibold relative py-2 transition-colors cursor-pointer ${
+                      className={`text-xs xl:text-sm font-bold px-3.5 py-2 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                         isActive
-                          ? 'text-[#1B4D2E] after:w-full'
-                          : 'text-[#1B4D2E]/80 hover:text-[#1B4D2E] after:w-0 hover:after:w-full'
-                      } after:h-0.5 after:bg-[#E1AD01] after:absolute after:bottom-0 after:left-0 after:transition-all`}
+                          ? 'bg-[#1B4D2E] text-[#FFF8E7] shadow-xs'
+                          : 'text-[#1B4D2E]/85 hover:text-[#1B4D2E] hover:bg-white'
+                      }`}
                     >
                       {item.label}
                     </button>
@@ -190,16 +196,22 @@ export const Header: React.FC<HeaderProps> = ({
                       aria-expanded={isOpen}
                       aria-haspopup="true"
                       onClick={() => setOpenDropdownId(isOpen ? null : item.id)}
-                      className={`inline-flex items-center space-x-1 text-sm font-semibold py-2 relative transition-colors cursor-pointer ${
+                      className={`inline-flex items-center space-x-1 text-xs xl:text-sm font-bold px-3.5 py-2 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                         isActive
-                          ? 'text-[#1B4D2E] after:w-full'
-                          : 'text-[#1B4D2E]/80 hover:text-[#1B4D2E] after:w-0 hover:after:w-full'
-                      } after:h-0.5 after:bg-[#E1AD01] after:absolute after:bottom-0 after:left-0 after:transition-all`}
+                          ? 'bg-[#1B4D2E] text-[#FFF8E7] shadow-xs'
+                          : isOpen
+                          ? 'bg-white text-[#1B4D2E] shadow-2xs'
+                          : 'text-[#1B4D2E]/85 hover:text-[#1B4D2E] hover:bg-white'
+                      }`}
                     >
                       <span>{item.label}</span>
                       <ChevronDown
-                        className={`w-4 h-4 text-[#1B4D2E]/70 transition-transform duration-200 ${
-                          isOpen ? 'rotate-180 text-[#E1AD01]' : ''
+                        className={`w-4 h-4 transition-transform duration-200 ${
+                          isActive
+                            ? 'text-[#E1AD01]'
+                            : isOpen
+                            ? 'rotate-180 text-[#E1AD01]'
+                            : 'text-[#1B4D2E]/70'
                         }`}
                       />
                     </button>
@@ -235,7 +247,7 @@ export const Header: React.FC<HeaderProps> = ({
             </nav>
 
             {/* Right Action Buttons: Prominent Shop Now + Cart (Admin button removed per client request) */}
-            <div className="flex items-center space-x-2.5 sm:space-x-3">
+            <div className="flex items-center space-x-2.5 sm:space-x-3 shrink-0">
               {/* Prominent Shop Now CTA */}
               <button
                 type="button"

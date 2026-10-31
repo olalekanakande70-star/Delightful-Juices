@@ -85,26 +85,38 @@ export const HeroSliderManager: React.FC<HeroSliderManagerProps> = ({
     setEditingSlide(blank);
   };
 
-  const handleMoveSlide = (index: number, direction: -1 | 1) => {
+  const handleMoveSlide = async (index: number, direction: -1 | 1) => {
     const targetIdx = index + direction;
     if (targetIdx < 0 || targetIdx >= sortedSlides.length) return;
     const reordered = [...sortedSlides];
     const [moved] = reordered.splice(index, 1);
     reordered.splice(targetIdx, 0, moved);
     const updated = reordered.map((s, idx) => ({ ...s, displayOrder: idx + 1 }));
-    dataRepo.saveHeroSlides(updated);
-    onToast('Hero slide display order updated!');
+    const res = await dataRepo.saveHeroSlides(updated);
+    if (!res.synced) {
+      onToast(`Unable to update live slide order: ${res.error}`);
+    } else {
+      onToast('Hero slide display order published live!');
+    }
   };
 
-  const handleToggleActive = (slide: HeroSlide) => {
-    dataRepo.upsertHeroSlide({ ...slide, active: !slide.active });
-    onToast(`Slide "${slide.heading.slice(0, 28)}..." ${!slide.active ? 'enabled' : 'disabled'}.`);
+  const handleToggleActive = async (slide: HeroSlide) => {
+    const res = await dataRepo.upsertHeroSlide({ ...slide, active: !slide.active });
+    if (!res.synced) {
+      onToast(`Unable to update live slide status: ${res.error}`);
+    } else {
+      onToast(`Slide "${slide.heading.slice(0, 28)}..." ${!slide.active ? 'enabled' : 'disabled'} on live site.`);
+    }
   };
 
-  const handleDeleteConfirmed = (id: string) => {
-    dataRepo.deleteHeroSlide(id);
+  const handleDeleteConfirmed = async (id: string) => {
+    const res = await dataRepo.deleteHeroSlide(id);
     setConfirmDeleteId(null);
-    onToast('Hero slide deleted.');
+    if (!res.synced) {
+      onToast(`Unable to delete slide from live database: ${res.error}`);
+    } else {
+      onToast('Hero slide deleted from live database.');
+    }
   };
 
   const handleImageFileUpload = async (
@@ -127,50 +139,32 @@ export const HeroSliderManager: React.FC<HeroSliderManagerProps> = ({
     setUploadingField(field);
 
     try {
-      if (supabaseConnected) {
-        const ext = file.name.split('.').pop() || 'jpg';
-        const storagePath = `sliders/${editingSlide.id}-${field}-${Date.now()}.${ext}`;
-        const res = await supabaseService.uploadAsset('delightful_assets', storagePath, file);
-        if (res.url) {
-          setEditingSlide({
-            ...editingSlide,
-            [field === 'desktop' ? 'desktopImageUrl' : 'mobileImageUrl']: res.url,
-          });
-          setUploadingField(null);
-          onToast(
-            `${field === 'desktop' ? 'Desktop' : 'Mobile'} slider image uploaded to Supabase Storage!`
-          );
-          return;
-        }
+      const ext = file.name.split('.').pop() || 'jpg';
+      const storagePath = `sliders/${editingSlide.id}-${field}-${Date.now()}.${ext}`;
+      const res = await supabaseService.uploadAsset('delightful_assets', storagePath, file);
+      setUploadingField(null);
+
+      if (res.url) {
+        setEditingSlide({
+          ...editingSlide,
+          [field === 'desktop' ? 'desktopImageUrl' : 'mobileImageUrl']: res.url,
+        });
+        onToast(
+          `${field === 'desktop' ? 'Desktop' : 'Mobile'} slider image uploaded to live Supabase Storage!`
+        );
+        return;
       }
 
-      // Client data URL fallback when running in local mode or if bucket policy pending
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        setEditingSlide((prev) =>
-          prev
-            ? {
-                ...prev,
-                [field === 'desktop' ? 'desktopImageUrl' : 'mobileImageUrl']: dataUrl,
-              }
-            : null
-        );
-        setUploadingField(null);
-        onToast(`${field === 'desktop' ? 'Desktop' : 'Mobile'} slider image ready!`);
-      };
-      reader.onerror = () => {
-        setUploadingField(null);
-        setUploadError('Could not read selected image file.');
-      };
-      reader.readAsDataURL(file);
+      setUploadError(
+        `Live Supabase Storage upload failed (${res.error || 'Unknown error'}). Ensure the SQL migration has been run to initialize the public 'delightful_assets' bucket.`
+      );
     } catch (err: any) {
       setUploadingField(null);
-      setUploadError(err?.message || 'Failed to upload slider image.');
+      setUploadError(err?.message || 'Failed to upload slider image to live storage.');
     }
   };
 
-  const handleSaveSlideForm = (e: React.FormEvent) => {
+  const handleSaveSlideForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSlide) return;
     if (!editingSlide.heading.trim()) {
@@ -182,10 +176,23 @@ export const HeroSliderManager: React.FC<HeroSliderManagerProps> = ({
       return;
     }
 
-    dataRepo.upsertHeroSlide(editingSlide);
+    const res = await dataRepo.upsertHeroSlide(editingSlide);
+    if (!res.synced) {
+      setUploadError(
+        `Live Supabase database rejected the update: ${res.error}`
+      );
+      return;
+    }
+
     setEditingSlide(null);
     setIsNewSlide(false);
-    onToast(isNewSlide ? 'New hero slide published!' : 'Hero slide changes saved!');
+    onToast(
+      supabaseConnected || res.synced
+        ? 'Hero slide published to live Supabase database!'
+        : isNewSlide
+        ? 'New hero slide published!'
+        : 'Hero slide changes published!'
+    );
   };
 
   return (

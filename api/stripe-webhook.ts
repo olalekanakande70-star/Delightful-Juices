@@ -11,7 +11,7 @@ export default async function handler(req: any, res: any) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!stripeSecretKey) {
-    return res.status(400).json({ error: 'Stripe is not configured on the server.' });
+    return res.status(400).json({ error: 'Stripe is not configured on the live server.' });
   }
 
   const stripe = new Stripe(stripeSecretKey, {
@@ -20,51 +20,59 @@ export default async function handler(req: any, res: any) {
 
   let event: Stripe.Event;
 
-  // Verify webhook signature if secret provided
   if (webhookSecret) {
     const signature = req.headers['stripe-signature'];
+    if (!signature) {
+      return res.status(400).send('Webhook Error: Missing stripe-signature header.');
+    }
     try {
-      event = stripe.webhooks.constructEvent(
-        req.rawBody || JSON.stringify(req.body),
-        signature,
-        webhookSecret
-      );
+      const payload = req.rawBody || (Buffer.isBuffer(req.body) ? req.body : JSON.stringify(req.body));
+      event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
     } catch (err: any) {
       console.error('Webhook signature verification failed:', err.message);
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
   } else {
-    // If webhook secret is not set, use body directly (in development/test environments)
-    event = req.body as Stripe.Event;
+    return res.status(400).json({
+      error: 'STRIPE_WEBHOOK_SECRET is required in the live server environment to verify Stripe webhooks.',
+    });
   }
 
-  // Handle the checkout.session.completed event
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
     const orderNumber = session.metadata?.orderNumber;
-    const orderId = session.metadata?.orderId;
 
-    console.log(`Verified Stripe Payment for Order: ${orderNumber} (Session: ${session.id})`);
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-    // Update Supabase orders table if configured
-    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://abrgqtrobgorsaggooxv.supabase.co';
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (supabaseUrl && supabaseServiceKey) {
+    if (orderNumber && supabaseUrl && supabaseServiceKey) {
       try {
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
-        await supabase
+        const nowIso = new Date().toISOString();
+        const { error } = await supabase
           .from('orders')
           .update({
             status: 'preparing',
             payment_status: 'paid',
             stripe_session_id: session.id,
-            stripe_payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : undefined,
-            updated_at: new Date().toISOString(),
+            stripe_payment_intent_id:
+              typeof session.payment_intent === 'string' ? session.payment_intent : undefined,
+            updated_at: nowIso,
           })
           .eq('order_number', orderNumber);
+
+        // Fallback if optional Stripe metadata columns have not yet been added to orders
+        if (error) {
+          await supabase
+            .from('orders')
+            .update({
+              status: 'preparing',
+              updated_at: nowIso,
+            })
+            .eq('order_number', orderNumber);
+        }
       } catch (dbErr) {
-        console.error('Failed to update order status in database from webhook:', dbErr);
+        console.error('Failed to update order status in live database from webhook:', dbErr);
       }
     }
   }

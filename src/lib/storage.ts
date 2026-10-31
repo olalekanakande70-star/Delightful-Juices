@@ -24,18 +24,29 @@ import productGingerStudio from '../assets/images/product_ginger_elixir_17933436
 export const FALLBACK_BEVERAGE_IMAGE = productZoboStudio;
 export const ABOUT_ARTISANAL_IMAGE = aboutBotanicalsImg;
 
-const STORAGE_KEYS = {
-  PRODUCTS: 'delightful_juice_products_v1',
-  ORDERS: 'delightful_juice_orders_v1',
-  INQUIRIES: 'delightful_juice_inquiries_v1',
-  CONTENT: 'delightful_juice_content_v1',
-  NAV: 'delightful_juice_nav_v2',
-  LEGACY_NAV: 'delightful_juice_nav_v1',
-  HERO_SLIDES: 'delightful_juice_hero_slides_v1',
-  CMS_PAGES: 'delightful_juice_cms_pages_v1',
-  SUPABASE_CONFIG: 'delightful_juice_supabase_cfg_v1',
-  ADMIN_AUTH: 'delightful_juice_admin_session_v1',
-};
+const LEGACY_LOCAL_CACHE_KEYS = [
+  'delightful_juice_products_v1',
+  'delightful_juice_orders_v1',
+  'delightful_juice_inquiries_v1',
+  'delightful_juice_content_v1',
+  'delightful_juice_nav_v2',
+  'delightful_juice_nav_v1',
+  'delightful_juice_hero_slides_v1',
+  'delightful_juice_cms_pages_v1',
+  'delightful_juice_supabase_cfg_v1',
+  'delightful_juice_admin_session_v1',
+];
+
+function purgeLegacyLocalState(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    for (const key of LEGACY_LOCAL_CACHE_KEYS) {
+      localStorage.removeItem(key);
+    }
+  } catch {
+    // Ignore storage access restrictions
+  }
+}
 
 export const INITIAL_HERO_SLIDES: HeroSlide[] = [
   {
@@ -438,8 +449,7 @@ export const INITIAL_SITE_CONTENT: SiteContent = {
   },
   stripe: {
     enabled: true,
-    mode: 'test',
-    publishableKey: '',
+    mode: 'live',
     currency: 'USD',
     customerFacingName: 'Credit / Debit Card (Stripe)',
     description: 'Instant secure payment via Stripe with Visa, Mastercard, Amex, Apple Pay & Google Pay',
@@ -769,139 +779,9 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
   },
 ];
 
-export const INITIAL_ORDERS: Order[] = [
-  {
-    id: 'ord-1001',
-    orderNumber: 'DJ-84920',
-    customerName: 'Marcus Sterling',
-    customerEmail: 'marcus.s@example.com',
-    customerPhone: '(215) 555-0192',
-    deliveryMethod: 'local_delivery',
-    deliveryAddress: '142 S 4th St, Quakertown, PA 18951',
-    deliveryDate: 'Today',
-    deliveryTimeSlot: '2:00 PM - 4:00 PM',
-    notes: 'Please ring side doorbell, keep cold in cooler bag.',
-    items: [
-      {
-        productId: 'prod-zobo',
-        productName: 'Zobo (Hibiscus / Sorrel)',
-        size: '50cl',
-        sizeLabel: '16.9 oz Daily Refresh',
-        unitPrice: 7.5,
-        quantity: 2,
-        totalPrice: 15.0,
-        imageUrl: productZoboStudio,
-      },
-      {
-        productId: 'prod-organic-ginger',
-        productName: 'Pure Organic Ginger',
-        size: '50cl',
-        sizeLabel: '16.9 oz Standard Refresh',
-        unitPrice: 7.5,
-        quantity: 2,
-        totalPrice: 15.0,
-        imageUrl: productGingerStudio,
-      },
-      {
-        productId: 'prod-tigernut-milk',
-        productName: 'Tigernut Milk (Kunu Aya)',
-        size: '1L',
-        sizeLabel: '33.8 oz Family Sharing Jug',
-        unitPrice: 15.0,
-        quantity: 1,
-        totalPrice: 15.0,
-        imageUrl: 'https://images.unsplash.com/photo-1563227812-0ea4c22e6cc8?w=800&auto=format&fit=crop&q=80',
-      },
-    ],
-    subtotal: 45.0,
-    deliveryFee: 0.0,
-    total: 45.0,
-    paymentMethod: 'zelle',
-    status: 'preparing',
-    createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-  },
-  {
-    id: 'ord-1002',
-    orderNumber: 'DJ-84921',
-    customerName: 'Elena Rostova',
-    customerEmail: 'elena.rostova@gmail.com',
-    customerPhone: '(484) 555-8319',
-    deliveryMethod: 'pickup',
-    deliveryAddress: 'Pickup at 500 W Broad St, Quakertown',
-    deliveryDate: 'Tomorrow Morning',
-    deliveryTimeSlot: '10:00 AM',
-    notes: 'Heading to an office brunch, will pick up on way.',
-    items: [
-      {
-        productId: 'prod-celebration-bundle',
-        productName: 'Delightful 6-Pack Party Sampler',
-        size: 'Pack',
-        sizeLabel: '6 × 16.9 oz Fresh Bottles Variety Pack',
-        unitPrice: 38.0,
-        quantity: 1,
-        totalPrice: 38.0,
-        imageUrl: heroSlideTigernut,
-      },
-      {
-        productId: 'prod-ginger-pineapple',
-        productName: 'Ginger Pineapple',
-        size: '50cl',
-        sizeLabel: '16.9 oz Daily Refresh',
-        unitPrice: 7.5,
-        quantity: 1,
-        totalPrice: 7.5,
-        imageUrl: 'https://images.unsplash.com/photo-1525385133512-2f3bdd039054?w=800&auto=format&fit=crop&q=80',
-      },
-    ],
-    subtotal: 45.5,
-    deliveryFee: 0.0,
-    total: 45.5,
-    paymentMethod: 'whatsapp_order',
-    status: 'pending',
-    createdAt: new Date(Date.now() - 3600000 * 1).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 1).toISOString(),
-  },
-];
+export const INITIAL_ORDERS: Order[] = [];
 
-export const INITIAL_INQUIRIES: EventInquiry[] = [
-  {
-    id: 'inq-201',
-    fullName: 'Aisha & Tunde Adeleke',
-    email: 'tunde.adeleke@luxuryweddings.com',
-    phone: '(267) 555-9241',
-    eventType: 'Wedding Reception',
-    eventDate: '2026-11-20',
-    guestCount: 175,
-    eventLocation: 'The Grand View Estate, Bucks County, PA',
-    bottleSizesNeeded: ['35cl', '50cl'],
-    selectedFlavors: ['Zobo (Hibiscus / Sorrel)', 'Ginger Mango', 'Tigernut Milk (Kunu Aya)'],
-    customLabelingNeeded: true,
-    budgetRange: '$1,200 - $1,800',
-    message:
-      'We want custom branded Delightful Juices bottles featuring our wedding monogram for our welcome cocktail hour and dessert table. Please provide a quote for 250 bottles total with delivery and ice chiller bins.',
-    status: 'reviewed',
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-  },
-  {
-    id: 'inq-202',
-    fullName: 'David Miller',
-    email: 'dmiller@lehighhealthcorp.org',
-    phone: '(484) 555-3312',
-    eventType: 'Corporate Wellness Day',
-    eventDate: '2026-11-05',
-    guestCount: 80,
-    eventLocation: 'Bethlehem Corporate Center, PA',
-    bottleSizesNeeded: ['35cl'],
-    selectedFlavors: ['Pure Organic Ginger', 'Ginger Pineapple', 'Zobo (Hibiscus / Sorrel)'],
-    customLabelingNeeded: false,
-    budgetRange: '$500 - $800',
-    message:
-      'Looking for a natural, healthy beverage bar for our company health & wellness symposium. Need individual 11.8 oz bottles.',
-    status: 'new',
-    createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-  },
-];
+export const INITIAL_INQUIRIES: EventInquiry[] = [];
 
 /**
  * Ensures any product loaded from localStorage or Supabase has structured
@@ -976,50 +856,275 @@ function normalizeSiteContent(raw: SiteContent): SiteContent {
         ...(raw.branding?.aboutShowcase || {}),
       },
     },
+    stripe: {
+      ...INITIAL_SITE_CONTENT.stripe!,
+      ...(raw.stripe || {}),
+      mode: 'live',
+      publishableKey: undefined,
+    },
   };
 }
 
+const CANONICAL_CHILD_PARENTS: Record<string, string> = {
+  'nav-about-company': 'nav-about',
+  'nav-our-story': 'nav-about',
+  'nav-delivery-info': 'nav-about',
+  'nav-events-link': 'nav-services',
+  'nav-wholesale-link': 'nav-services',
+};
+
 /**
- * Checks if navigation list is purely legacy single-page hash anchors (#menu, #about, etc.)
- * If so, upgrades to multi-page routes while preserving any custom non-hash links.
+ * Self-healing navigation normalizer:
+ * 1. Purges legacy V1 single-page hash anchors (#menu, #events-catering, #wholesale, etc.) so they never double alongside multi-page routes.
+ * 2. Restores stripped parentId / isDropdown hierarchy if Supabase's legacy navigation_items table lacked those columns during seeding.
+ * 3. Deduplicates identical IDs, duplicate CMS auto-links, and duplicate same-level labels/URLs.
  */
 function normalizeNavItems(items: NavItem[]): NavItem[] {
   if (!Array.isArray(items) || items.length === 0) return INITIAL_NAV_ITEMS;
-  const allLegacyHashes = items.every((item) => item.href.startsWith('#'));
+
+  const allLegacyHashes = items.every((item) => !item?.href || item.href.trim().startsWith('#'));
   if (allLegacyHashes) {
     return INITIAL_NAV_ITEMS;
   }
-  return items
+
+  const hasMultiPageRoutes = items.some((item) => item?.href && item.href.trim().startsWith('/'));
+
+  // Step 1: Filter out all obsolete V1 hash anchors when multi-page routes exist
+  let working: NavItem[] = items
+    .filter((item) => {
+      if (!item || !item.id || !item.label) return false;
+      const hrefLower = (item.href || '').trim().toLowerCase();
+      if (hasMultiPageRoutes && hrefLower.startsWith('#')) {
+        return false;
+      }
+      return true;
+    })
     .map((item) => ({
       ...item,
-      parentId: item.parentId ?? null,
+      label: sanitizeBrandText(item.label.trim()),
+      href: (item.href || '/').trim(),
+      parentId: item.parentId ? String(item.parentId) : null,
       isDropdown: Boolean(item.isDropdown),
-    }))
-    .sort((a, b) => a.order - b.order);
+    }));
+
+  if (working.length === 0) return INITIAL_NAV_ITEMS;
+
+  // Step 2: Deduplicate by ID first (preferring canonical order)
+  const byId = new Map<string, NavItem>();
+  for (const item of working) {
+    if (!byId.has(item.id)) {
+      byId.set(item.id, item);
+    }
+  }
+  working = Array.from(byId.values());
+
+  // Step 3: Self-heal flattened dropdown hierarchy if parent_id / is_dropdown were lost in a legacy table
+  const hasNavAbout = working.some((i) => i.id === 'nav-about');
+  const hasNavServices = working.some((i) => i.id === 'nav-services');
+
+  const aboutGroupFlattened =
+    hasNavAbout &&
+    !working.find((i) => i.id === 'nav-about')?.isDropdown &&
+    working.some(
+      (i) =>
+        (i.id === 'nav-about-company' || i.id === 'nav-our-story' || i.id === 'nav-delivery-info') &&
+        !i.parentId
+    );
+
+  const servicesGroupFlattened =
+    hasNavServices &&
+    !working.find((i) => i.id === 'nav-services')?.isDropdown &&
+    working.some(
+      (i) => (i.id === 'nav-events-link' || i.id === 'nav-wholesale-link') && !i.parentId
+    );
+
+  if (aboutGroupFlattened || servicesGroupFlattened) {
+    const canonicalOrderMap = new Map<string, number>(
+      INITIAL_NAV_ITEMS.map((ci) => [ci.id, ci.order])
+    );
+    working = working.map((item) => {
+      if (aboutGroupFlattened && item.id === 'nav-about') {
+        return { ...item, parentId: null, isDropdown: true, order: canonicalOrderMap.get(item.id) ?? item.order };
+      }
+      if (servicesGroupFlattened && item.id === 'nav-services') {
+        return { ...item, parentId: null, isDropdown: true, order: canonicalOrderMap.get(item.id) ?? item.order };
+      }
+      const canonicalParent = CANONICAL_CHILD_PARENTS[item.id];
+      if (
+        canonicalParent &&
+        ((canonicalParent === 'nav-about' && aboutGroupFlattened) ||
+          (canonicalParent === 'nav-services' && servicesGroupFlattened))
+      ) {
+        return {
+          ...item,
+          parentId: canonicalParent,
+          isDropdown: false,
+          order: canonicalOrderMap.get(item.id) ?? item.order,
+        };
+      }
+      return item;
+    });
+  }
+
+  // Ensure valid parent references & mark any parent with children as isDropdown = true
+  const validIds = new Set(working.map((i) => i.id));
+  working = working.map((item) =>
+    item.parentId && !validIds.has(item.parentId) ? { ...item, parentId: null } : item
+  );
+  const activeParentIds = new Set(
+    working.filter((i) => i.parentId).map((i) => i.parentId as string)
+  );
+  working = working.map((item) =>
+    activeParentIds.has(item.id) ? { ...item, isDropdown: true, parentId: null } : item
+  );
+
+  // Step 4: Drop duplicate auto-generated nav-cms-* links whose href is already present in explicit nav items
+  const explicitHrefs = new Set(
+    working
+      .filter((i) => !i.id.startsWith('nav-cms-'))
+      .map((i) => i.href.replace(/\/+$/, '').toLowerCase() || '/')
+  );
+  working = working.filter((item) => {
+    if (!item.id.startsWith('nav-cms-')) return true;
+    const normHref = item.href.replace(/\/+$/, '').toLowerCase() || '/';
+    return !explicitHrefs.has(normHref);
+  });
+
+  // Step 5: Deduplicate identical label or duplicate non-dropdown href within the same parent level
+  // Sort so dropdown parents and canonical 'nav-*' items win over legacy numeric duplicates
+  working.sort((a, b) => {
+    const aPriority = a.isDropdown ? 0 : a.id.startsWith('nav-') ? 1 : 2;
+    const bPriority = b.isDropdown ? 0 : b.id.startsWith('nav-') ? 1 : 2;
+    if (aPriority !== bPriority) return aPriority - bPriority;
+    return a.order - b.order;
+  });
+
+  const seenLabelPerLevel = new Set<string>();
+  const seenHrefPerLevel = new Set<string>();
+  const deduped: NavItem[] = [];
+
+  for (const item of working) {
+    const levelKey = item.parentId || 'root';
+    const normLabel = `${levelKey}::label::${item.label.toLowerCase()}`;
+    const normHref = `${levelKey}::href::${item.href.replace(/\/+$/, '').toLowerCase() || '/'}`;
+
+    if (seenLabelPerLevel.has(normLabel)) continue;
+    // At the same level, don't allow a second non-dropdown link to repeat an already-present href
+    if (!item.isDropdown && seenHrefPerLevel.has(normHref)) continue;
+
+    seenLabelPerLevel.add(normLabel);
+    seenHrefPerLevel.add(normHref);
+    deduped.push(item);
+  }
+
+  return deduped.sort((a, b) => a.order - b.order);
+}
+
+export interface SyncWriteResult {
+  synced: boolean;
+  error?: string;
 }
 
 class DataRepository {
   private listeners: Set<() => void> = new Set();
+  private lastSyncAt = 0;
+
+  private products: Product[] = INITIAL_PRODUCTS.map(normalizeProduct);
+  private content: SiteContent = normalizeSiteContent(INITIAL_SITE_CONTENT);
+  private navItems: NavItem[] = normalizeNavItems(INITIAL_NAV_ITEMS);
+  private heroSlides: HeroSlide[] = [...INITIAL_HERO_SLIDES];
+  private cmsPages: CmsPage[] = [...INITIAL_CMS_PAGES];
+  private orders: Order[] = [];
+  private inquiries: EventInquiry[] = [];
 
   constructor() {
-    applyTheme(this.getContent());
-    this.syncFromSupabase();
+    purgeLegacyLocalState();
+    applyTheme(this.content);
+    this.bootstrapSync();
+
+    // Live cross-browser updates via Supabase Realtime when connected
+    supabaseService.subscribeRealtime(() => {
+      this.syncFromSupabase();
+    });
+
+    // Re-sync live protected tables (orders, inquiries, drafts) whenever admin auth changes
+    let prevUserId: string | null = null;
+    supabaseService.subscribeAuth((user, initialized) => {
+      const nextId = user?.id || null;
+      if (initialized && nextId !== prevUserId) {
+        prevUserId = nextId;
+        if (nextId) {
+          this.syncFromSupabase();
+        } else {
+          this.orders = [];
+          this.inquiries = [];
+          this.notify();
+        }
+      }
+    });
+
+    // Re-sync when user returns to browser tab so stale tabs refresh automatically
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && Date.now() - this.lastSyncAt > 12000) {
+          this.syncFromSupabase();
+        }
+      });
+    }
+  }
+
+  private async bootstrapSync() {
+    await supabaseService.ensurePublicConfig();
+    await this.syncFromSupabase();
+  }
+
+  private buildWriteResult(ok: boolean): SyncWriteResult {
+    if (!supabaseService.isConfigured()) {
+      return {
+        synced: false,
+        error: 'Live Supabase environment variables are not configured on the server.',
+      };
+    }
+    if (ok) {
+      return { synced: true };
+    }
+    const rawErr = supabaseService.getLastWriteError() || 'Database rejected write.';
+    const needsAuthHint =
+      !supabaseService.getCurrentUser() &&
+      (rawErr.toLowerCase().includes('row-level security') ||
+        rawErr.includes('42501') ||
+        rawErr.toLowerCase().includes('permission denied'))
+        ? ' Please sign in with your live Supabase Admin Email & Password.'
+        : '';
+    return {
+      synced: false,
+      error: `${rawErr}${needsAuthHint}`,
+    };
   }
 
   public async syncFromSupabase() {
-    if (!supabaseService.isConfigured()) return;
+    if (!supabaseService.isConfigured()) {
+      const discovered = await supabaseService.ensurePublicConfig();
+      if (!discovered) return;
+    }
+    this.lastSyncAt = Date.now();
+    const isAdminAuthenticated = Boolean(supabaseService.getCurrentUser());
+
     try {
-      // 1. Fetch remote products
+      // 1. Fetch live products
       const remoteProducts = await supabaseService.fetchProducts();
       if (remoteProducts && remoteProducts.length > 0) {
-        const cleaned = remoteProducts.map(normalizeProduct);
-        localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(cleaned));
+        this.products = remoteProducts.map(normalizeProduct);
+      } else if (remoteProducts && remoteProducts.length === 0 && isAdminAuthenticated) {
+        for (const prod of INITIAL_PRODUCTS) {
+          await supabaseService.upsertProduct(prod);
+        }
       }
 
-      // 2. Fetch remote site content
+      // 2. Fetch live site content
       const remoteContent = await supabaseService.fetchSiteContent();
       if (remoteContent) {
-        const cleanedContent = normalizeSiteContent({
+        this.content = normalizeSiteContent({
           ...INITIAL_SITE_CONTENT,
           ...remoteContent,
           branding: { ...INITIAL_SITE_CONTENT.branding!, ...(remoteContent.branding || {}) },
@@ -1027,49 +1132,80 @@ class DataRepository {
           typography: { ...INITIAL_SITE_CONTENT.typography!, ...(remoteContent.typography || {}) },
           stripe: { ...INITIAL_SITE_CONTENT.stripe!, ...(remoteContent.stripe || {}) },
         });
-        localStorage.setItem(STORAGE_KEYS.CONTENT, JSON.stringify(cleanedContent));
-        applyTheme(cleanedContent);
+        applyTheme(this.content);
+      } else if (isAdminAuthenticated) {
+        await supabaseService.upsertSiteContent(this.content);
       }
 
-      // 3. Fetch remote navigation
+      // 3. Fetch live navigation & self-heal any legacy duplicates / flattened dropdowns
       const remoteNav = await supabaseService.fetchNavigation();
       if (remoteNav && remoteNav.length > 0) {
         const normalizedNav = normalizeNavItems(remoteNav);
-        localStorage.setItem(STORAGE_KEYS.NAV, JSON.stringify(normalizedNav));
+        this.navItems = normalizedNav;
+
+        // If authenticated admin session is active and remote table had legacy hash rows or flattened rows, persist repaired tree to live Supabase
+        if (
+          isAdminAuthenticated &&
+          (remoteNav.length !== normalizedNav.length ||
+            remoteNav.some((r, idx) => r.parentId !== normalizedNav[idx]?.parentId))
+        ) {
+          supabaseService.saveNavigation(normalizedNav).catch(() => {});
+        }
+      } else if (remoteNav && remoteNav.length === 0 && isAdminAuthenticated) {
+        await supabaseService.saveNavigation(INITIAL_NAV_ITEMS);
       }
 
-      // 4. Fetch remote hero slides
+      // 4. Fetch live hero slides (auto-seed default slides into live Supabase when admin logs in if table is empty)
       const remoteSlides = await supabaseService.fetchHeroSlides();
       if (remoteSlides && remoteSlides.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.HERO_SLIDES, JSON.stringify(remoteSlides));
+        this.heroSlides = remoteSlides
+          .map((s) => ({
+            ...s,
+            heading: sanitizeBrandText(s.heading),
+            subheading: sanitizeBrandText(s.subheading),
+          }))
+          .sort((a, b) => a.displayOrder - b.displayOrder);
+      } else if (remoteSlides && remoteSlides.length === 0 && isAdminAuthenticated) {
+        const seededOk = await supabaseService.saveAllHeroSlides(INITIAL_HERO_SLIDES);
+        if (seededOk) {
+          this.heroSlides = [...INITIAL_HERO_SLIDES];
+        }
       }
 
-      // 5. Fetch remote CMS pages
+      // 5. Fetch live CMS pages (auto-seed default pages into live Supabase when admin logs in if table is empty)
       const remotePages = await supabaseService.fetchCmsPages();
       if (remotePages && remotePages.length > 0) {
-        // Merge seeded pages that don't exist remotely yet with remote pages
         const remoteSlugs = new Set(remotePages.map((p) => p.slug));
-        const merged = [
-          ...remotePages,
-          ...INITIAL_CMS_PAGES.filter((seedPage) => !remoteSlugs.has(seedPage.slug)),
-        ];
-        localStorage.setItem(STORAGE_KEYS.CMS_PAGES, JSON.stringify(merged));
+        const missingSeedPages = INITIAL_CMS_PAGES.filter((seedPage) => !remoteSlugs.has(seedPage.slug));
+        this.cmsPages = [...remotePages, ...missingSeedPages];
+        if (isAdminAuthenticated && missingSeedPages.length > 0) {
+          for (const pg of missingSeedPages) {
+            supabaseService.upsertCmsPage(pg).catch(() => {});
+          }
+        }
+      } else if (remotePages && remotePages.length === 0 && isAdminAuthenticated) {
+        for (const pg of INITIAL_CMS_PAGES) {
+          await supabaseService.upsertCmsPage(pg);
+        }
+        this.cmsPages = [...INITIAL_CMS_PAGES];
       }
 
-      // 6. Fetch remote orders & inquiries if available
-      const remoteOrders = await supabaseService.fetchOrders();
-      if (remoteOrders && remoteOrders.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(remoteOrders));
-      }
+      // 6. Fetch live orders & inquiries when authenticated (never fall back to fake demo records)
+      if (isAdminAuthenticated) {
+        const remoteOrders = await supabaseService.fetchOrders();
+        if (remoteOrders !== null) {
+          this.orders = remoteOrders;
+        }
 
-      const remoteInquiries = await supabaseService.fetchInquiries();
-      if (remoteInquiries && remoteInquiries.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.INQUIRIES, JSON.stringify(remoteInquiries));
+        const remoteInquiries = await supabaseService.fetchInquiries();
+        if (remoteInquiries !== null) {
+          this.inquiries = remoteInquiries;
+        }
       }
 
       this.notify();
     } catch (err) {
-      console.warn('Initial Supabase sync notice:', err);
+      console.warn('Live Supabase sync notice:', err);
     }
   }
 
@@ -1092,114 +1228,71 @@ class DataRepository {
 
   // --- PRODUCTS ---
   public getProducts(): Product[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map(normalizeProduct);
-        }
-      }
-    } catch (e) {
-      console.warn('Error reading products from storage:', e);
-    }
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(INITIAL_PRODUCTS));
-    return INITIAL_PRODUCTS;
+    return this.products;
   }
 
-  public saveProducts(products: Product[]): void {
+  public async saveProducts(products: Product[]): Promise<SyncWriteResult> {
     const cleaned = products.map(normalizeProduct);
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(cleaned));
+    this.products = cleaned;
     this.notify();
-    cleaned.forEach((p) => supabaseService.upsertProduct(p));
+    const results = await Promise.all(cleaned.map((p) => supabaseService.upsertProduct(p)));
+    return this.buildWriteResult(results.every(Boolean));
   }
 
-  public updateProduct(product: Product): void {
+  public async updateProduct(product: Product): Promise<SyncWriteResult> {
     const cleanedProduct = normalizeProduct(product);
-    const list = this.getProducts();
+    const list = [...this.products];
     const idx = list.findIndex((p) => p.id === cleanedProduct.id);
     if (idx >= 0) {
       list[idx] = cleanedProduct;
     } else {
       list.push(cleanedProduct);
     }
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(list));
+    this.products = list;
     this.notify();
-    supabaseService.upsertProduct(cleanedProduct);
+    const ok = await supabaseService.upsertProduct(cleanedProduct);
+    return this.buildWriteResult(ok);
   }
 
-  public deleteProduct(id: string): void {
-    const list = this.getProducts().filter((p) => p.id !== id);
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(list));
+  public async deleteProduct(id: string): Promise<SyncWriteResult> {
+    this.products = this.products.filter((p) => p.id !== id);
     this.notify();
-    supabaseService.deleteProduct(id);
+    const ok = await supabaseService.deleteProduct(id);
+    return this.buildWriteResult(ok);
   }
 
   // --- SITE CONTENT ---
   public getContent(): SiteContent {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.CONTENT);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return normalizeSiteContent({
-          ...INITIAL_SITE_CONTENT,
-          ...parsed,
-          branding: { ...INITIAL_SITE_CONTENT.branding, ...(parsed.branding || {}) },
-          colors: { ...INITIAL_SITE_CONTENT.colors, ...(parsed.colors || {}) },
-          typography: { ...INITIAL_SITE_CONTENT.typography, ...(parsed.typography || {}) },
-          stripe: { ...INITIAL_SITE_CONTENT.stripe, ...(parsed.stripe || {}) },
-        });
-      }
-    } catch (e) {
-      console.warn('Error reading content from storage:', e);
-    }
-    localStorage.setItem(STORAGE_KEYS.CONTENT, JSON.stringify(INITIAL_SITE_CONTENT));
-    return INITIAL_SITE_CONTENT;
+    return this.content;
   }
 
-  public saveContent(content: SiteContent): void {
+  public async saveContent(content: SiteContent): Promise<SyncWriteResult> {
     const cleaned = normalizeSiteContent(content);
-    localStorage.setItem(STORAGE_KEYS.CONTENT, JSON.stringify(cleaned));
+    this.content = cleaned;
     applyTheme(cleaned);
     this.notify();
-    supabaseService.upsertSiteContent(cleaned);
+    const ok = await supabaseService.upsertSiteContent(cleaned);
+    return this.buildWriteResult(ok);
   }
 
   // --- HERO SLIDES ---
   public getHeroSlides(): HeroSlide[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.HERO_SLIDES);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed
-            .map((s: HeroSlide) => ({
-              ...s,
-              heading: sanitizeBrandText(s.heading),
-              subheading: sanitizeBrandText(s.subheading),
-            }))
-            .sort((a: HeroSlide, b: HeroSlide) => a.displayOrder - b.displayOrder);
-        }
-      }
-    } catch (e) {
-      console.warn('Error reading hero slides from storage:', e);
-    }
-    localStorage.setItem(STORAGE_KEYS.HERO_SLIDES, JSON.stringify(INITIAL_HERO_SLIDES));
-    return INITIAL_HERO_SLIDES;
+    return [...this.heroSlides].sort((a, b) => a.displayOrder - b.displayOrder);
   }
 
-  public saveHeroSlides(slides: HeroSlide[]): void {
+  public async saveHeroSlides(slides: HeroSlide[]): Promise<SyncWriteResult> {
     const ordered = slides.map((s, idx) => ({
       ...s,
       displayOrder: idx + 1,
     }));
-    localStorage.setItem(STORAGE_KEYS.HERO_SLIDES, JSON.stringify(ordered));
+    this.heroSlides = ordered;
     this.notify();
-    supabaseService.saveAllHeroSlides(ordered);
+    const ok = await supabaseService.saveAllHeroSlides(ordered);
+    return this.buildWriteResult(ok);
   }
 
-  public upsertHeroSlide(slide: HeroSlide): void {
-    const list = this.getHeroSlides();
+  public async upsertHeroSlide(slide: HeroSlide): Promise<SyncWriteResult> {
+    const list = [...this.heroSlides];
     const idx = list.findIndex((s) => s.id === slide.id);
     if (idx >= 0) {
       list[idx] = slide;
@@ -1209,35 +1302,26 @@ class DataRepository {
     const ordered = list
       .sort((a, b) => a.displayOrder - b.displayOrder)
       .map((s, i) => ({ ...s, displayOrder: i + 1 }));
-    localStorage.setItem(STORAGE_KEYS.HERO_SLIDES, JSON.stringify(ordered));
+    this.heroSlides = ordered;
     this.notify();
-    supabaseService.upsertHeroSlide(slide);
+    const target = ordered.find((s) => s.id === slide.id) || slide;
+    const ok = await supabaseService.upsertHeroSlide(target);
+    return this.buildWriteResult(ok);
   }
 
-  public deleteHeroSlide(id: string): void {
-    const filtered = this.getHeroSlides()
+  public async deleteHeroSlide(id: string): Promise<SyncWriteResult> {
+    const filtered = this.heroSlides
       .filter((s) => s.id !== id)
       .map((s, i) => ({ ...s, displayOrder: i + 1 }));
-    localStorage.setItem(STORAGE_KEYS.HERO_SLIDES, JSON.stringify(filtered));
+    this.heroSlides = filtered;
     this.notify();
-    supabaseService.deleteHeroSlide(id);
+    const ok = await supabaseService.deleteHeroSlide(id);
+    return this.buildWriteResult(ok);
   }
 
   // --- DYNAMIC CMS PAGES ---
   public getCmsPages(): CmsPage[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.CMS_PAGES);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.warn('Error reading CMS pages from storage:', e);
-    }
-    localStorage.setItem(STORAGE_KEYS.CMS_PAGES, JSON.stringify(INITIAL_CMS_PAGES));
-    return INITIAL_CMS_PAGES;
+    return this.cmsPages;
   }
 
   public getPages(): CmsPage[] {
@@ -1246,8 +1330,7 @@ class DataRepository {
 
   public getPageBySlug(slug: string, includeDrafts = false): CmsPage | null {
     const normalizedSlug = slug.replace(/^\/+|\/+$/g, '').toLowerCase();
-    const pages = this.getCmsPages();
-    const match = pages.find(
+    const match = this.cmsPages.find(
       (p) => p.slug.replace(/^\/+|\/+$/g, '').toLowerCase() === normalizedSlug
     );
     if (!match) return null;
@@ -1255,7 +1338,7 @@ class DataRepository {
     return match;
   }
 
-  public saveCmsPage(page: CmsPage): void {
+  public async saveCmsPage(page: CmsPage): Promise<SyncWriteResult> {
     const cleanSlug = page.slug
       .trim()
       .toLowerCase()
@@ -1269,25 +1352,30 @@ class DataRepository {
       updatedAt: new Date().toISOString(),
     };
 
-    const pages = this.getCmsPages();
+    const pages = [...this.cmsPages];
     const idx = pages.findIndex((p) => p.id === updatedPage.id);
     if (idx >= 0) {
       pages[idx] = updatedPage;
     } else {
       pages.push(updatedPage);
     }
-    localStorage.setItem(STORAGE_KEYS.CMS_PAGES, JSON.stringify(pages));
-    supabaseService.upsertCmsPage(updatedPage);
+    this.cmsPages = pages;
+    const pageOk = await supabaseService.upsertCmsPage(updatedPage);
 
-    // Sync navigation link automatically if showInNav is configured
+    // Sync navigation link automatically ONLY if no explicit link for this slug already exists
     const navId = `nav-cms-${updatedPage.id}`;
     const currentNav = this.getNavItems();
     const existingNavIdx = currentNav.findIndex((n) => n.id === navId);
+    const alreadyCoveredByExplicitLink = currentNav.some(
+      (n) =>
+        n.id !== navId &&
+        (n.href.replace(/\/+$/, '').toLowerCase() || '/') === `/${cleanSlug}`
+    );
 
-    if (updatedPage.showInNav && updatedPage.status === 'published') {
+    if (updatedPage.showInNav && updatedPage.status === 'published' && !alreadyCoveredByExplicitLink) {
       const navEntry: NavItem = {
         id: navId,
-        label: updatedPage.title,
+        label: updatedPage.navLabel || updatedPage.title,
         href: `/${cleanSlug}`,
         visible: true,
         order:
@@ -1297,83 +1385,63 @@ class DataRepository {
         parentId: updatedPage.parentNavId || null,
         isDropdown: false,
       };
-      const nextNav =
+      const nextNav = normalizeNavItems(
         existingNavIdx >= 0
           ? currentNav.map((n, i) => (i === existingNavIdx ? navEntry : n))
-          : [...currentNav, navEntry];
-      this.saveNavItems(nextNav);
+          : [...currentNav, navEntry]
+      );
+      await this.saveNavItems(nextNav);
     } else if (existingNavIdx >= 0) {
-      const nextNav = currentNav.filter((n) => n.id !== navId);
-      localStorage.setItem(STORAGE_KEYS.NAV, JSON.stringify(nextNav));
-      supabaseService.deleteNavigationItem(navId);
+      this.navItems = currentNav.filter((n) => n.id !== navId);
+      await supabaseService.deleteNavigationItem(navId);
     }
 
     this.notify();
+    return this.buildWriteResult(pageOk);
   }
 
-  public deleteCmsPage(id: string): void {
-    const filtered = this.getCmsPages().filter((p) => p.id !== id);
-    localStorage.setItem(STORAGE_KEYS.CMS_PAGES, JSON.stringify(filtered));
-    supabaseService.deleteCmsPage(id);
+  public async deleteCmsPage(id: string): Promise<SyncWriteResult> {
+    this.cmsPages = this.cmsPages.filter((p) => p.id !== id);
+    const ok = await supabaseService.deleteCmsPage(id);
 
     const navId = `nav-cms-${id}`;
-    const currentNav = this.getNavItems();
-    if (currentNav.some((n) => n.id === navId)) {
-      const nextNav = currentNav.filter((n) => n.id !== navId);
-      localStorage.setItem(STORAGE_KEYS.NAV, JSON.stringify(nextNav));
-      supabaseService.deleteNavigationItem(navId);
+    if (this.navItems.some((n) => n.id === navId)) {
+      this.navItems = this.navItems.filter((n) => n.id !== navId);
+      await supabaseService.deleteNavigationItem(navId);
     }
 
     this.notify();
+    return this.buildWriteResult(ok);
   }
 
   // --- NAVIGATION ---
   public getNavItems(): NavItem[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.NAV);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return normalizeNavItems(parsed);
-        }
-      }
-    } catch (e) {
-      console.warn('Error reading nav from storage:', e);
-    }
-    localStorage.setItem(STORAGE_KEYS.NAV, JSON.stringify(INITIAL_NAV_ITEMS));
-    return INITIAL_NAV_ITEMS;
+    return this.navItems;
   }
 
-  public saveNavItems(items: NavItem[]): void {
-    localStorage.setItem(STORAGE_KEYS.NAV, JSON.stringify(items));
+  public async saveNavItems(items: NavItem[]): Promise<SyncWriteResult> {
+    const cleaned = normalizeNavItems(items);
+    this.navItems = cleaned;
     this.notify();
-    supabaseService.saveNavigation(items);
+    const ok = await supabaseService.saveNavigation(cleaned);
+    return this.buildWriteResult(ok);
   }
 
-  public deleteNavItem(id: string): void {
-    const next = this.getNavItems().filter((n) => n.id !== id && n.parentId !== id);
-    localStorage.setItem(STORAGE_KEYS.NAV, JSON.stringify(next));
+  public async deleteNavItem(id: string): Promise<SyncWriteResult> {
+    this.navItems = this.navItems.filter((n) => n.id !== id && n.parentId !== id);
     this.notify();
-    supabaseService.deleteNavigationItem(id);
+    const ok = await supabaseService.deleteNavigationItem(id);
+    return this.buildWriteResult(ok);
   }
 
   // --- ORDERS ---
   public getOrders(): Order[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.ORDERS);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch (e) {
-      console.warn('Error reading orders from storage:', e);
-    }
-    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(INITIAL_ORDERS));
-    return INITIAL_ORDERS;
+    return this.orders;
   }
 
-  public addOrder(order: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'updatedAt'>): Order {
-    const orders = this.getOrders();
+  public async createOrder(
+    order: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'updatedAt'>
+  ): Promise<Order> {
     const newOrder: Order = {
       ...order,
       id: 'ord-' + Date.now(),
@@ -1381,109 +1449,100 @@ class DataRepository {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    orders.unshift(newOrder);
-    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+    this.orders = [newOrder, ...this.orders];
     this.notify();
-    supabaseService.insertOrder(newOrder);
+    await supabaseService.ensurePublicConfig();
+    await supabaseService.insertOrder(newOrder);
     return newOrder;
   }
 
-  public updateOrderStatus(id: string, status: Order['status']): void {
-    const orders = this.getOrders();
-    const target = orders.find((o) => o.id === id);
+  public addOrder(order: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'updatedAt'>): Order {
+    const newOrder: Order = {
+      ...order,
+      id: 'ord-' + Date.now(),
+      orderNumber: 'DJ-' + Math.floor(10000 + Math.random() * 90000),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.orders = [newOrder, ...this.orders];
+    this.notify();
+    supabaseService.ensurePublicConfig().then(() => {
+      supabaseService.insertOrder(newOrder);
+    });
+    return newOrder;
+  }
+
+  public async updateOrderStatus(id: string, status: Order['status']): Promise<SyncWriteResult> {
+    const target = this.orders.find((o) => o.id === id);
     if (target) {
       target.status = status;
       target.updatedAt = new Date().toISOString();
-      localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
       this.notify();
-      supabaseService.updateOrderStatus(id, status);
     }
+    const ok = await supabaseService.updateOrderStatus(id, status);
+    return this.buildWriteResult(ok);
   }
 
-  public deleteOrder(id: string): void {
-    const orders = this.getOrders().filter((o) => o.id !== id);
-    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+  public async deleteOrder(id: string): Promise<SyncWriteResult> {
+    this.orders = this.orders.filter((o) => o.id !== id);
     this.notify();
+    const ok = await supabaseService.deleteOrder(id);
+    return this.buildWriteResult(ok);
   }
 
   // --- INQUIRIES ---
   public getInquiries(): EventInquiry[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.INQUIRIES);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch (e) {
-      console.warn('Error reading inquiries from storage:', e);
-    }
-    localStorage.setItem(STORAGE_KEYS.INQUIRIES, JSON.stringify(INITIAL_INQUIRIES));
-    return INITIAL_INQUIRIES;
+    return this.inquiries;
   }
 
   public addInquiry(inquiry: Omit<EventInquiry, 'id' | 'createdAt' | 'status'>): EventInquiry {
-    const inquiries = this.getInquiries();
     const newInquiry: EventInquiry = {
       ...inquiry,
       id: 'inq-' + Date.now(),
       status: 'new',
       createdAt: new Date().toISOString(),
     };
-    inquiries.unshift(newInquiry);
-    localStorage.setItem(STORAGE_KEYS.INQUIRIES, JSON.stringify(inquiries));
+    this.inquiries = [newInquiry, ...this.inquiries];
     this.notify();
-    supabaseService.insertInquiry(newInquiry);
+    supabaseService.ensurePublicConfig().then(() => {
+      supabaseService.insertInquiry(newInquiry);
+    });
     return newInquiry;
   }
 
-  public updateInquiryStatus(id: string, status: EventInquiry['status']): void {
-    const list = this.getInquiries();
-    const target = list.find((i) => i.id === id);
+  public async updateInquiryStatus(
+    id: string,
+    status: EventInquiry['status']
+  ): Promise<SyncWriteResult> {
+    const target = this.inquiries.find((i) => i.id === id);
     if (target) {
       target.status = status;
-      localStorage.setItem(STORAGE_KEYS.INQUIRIES, JSON.stringify(list));
       this.notify();
-      supabaseService.updateInquiryStatus(id, status);
     }
+    const ok = await supabaseService.updateInquiryStatus(id, status);
+    return this.buildWriteResult(ok);
   }
 
-  // --- SUPABASE CONFIG ---
+  // --- SUPABASE LIVE STATUS ---
   public getSupabaseConfig(): SupabaseConfig {
     return supabaseService.getConfig();
   }
 
-  public saveSupabaseConfig(cfg: SupabaseConfig): void {
-    supabaseService.saveConfig(cfg);
-    this.syncFromSupabase();
-    this.notify();
-  }
-
-  public async testSupabaseConnection(
-    url: string,
-    key: string
-  ): Promise<{ success: boolean; message: string; tablesFound: string[] }> {
-    const res = await supabaseService.testConnection(url, key);
+  public async testSupabaseConnection(): Promise<{
+    success: boolean;
+    message: string;
+    tablesFound: string[];
+  }> {
+    const res = await supabaseService.testConnection();
     if (res.success) {
       await this.syncFromSupabase();
     }
     return res;
   }
 
-  // --- ADMIN AUTH ---
+  // --- LIVE SUPABASE ADMIN AUTH ---
   public isAdminLoggedIn(): boolean {
-    const hasSupabaseUser = !!supabaseService.getCurrentUser();
-    const hasLocalAuth = localStorage.getItem(STORAGE_KEYS.ADMIN_AUTH) === 'authenticated';
-    return hasSupabaseUser || hasLocalAuth;
-  }
-
-  public adminLogin(pinOrPass: string): boolean {
-    const trimmed = pinOrPass.trim();
-    if (trimmed === 'delightful2026' || trimmed === 'admin123' || trimmed === 'puregoodness') {
-      localStorage.setItem(STORAGE_KEYS.ADMIN_AUTH, 'authenticated');
-      this.notify();
-      return true;
-    }
-    return false;
+    return Boolean(supabaseService.getCurrentUser());
   }
 
   public async adminLoginWithSupabase(
@@ -1492,7 +1551,6 @@ class DataRepository {
   ): Promise<{ success: boolean; error?: string }> {
     const res = await supabaseService.signInWithEmail(email, pass);
     if (res.success) {
-      localStorage.setItem(STORAGE_KEYS.ADMIN_AUTH, 'authenticated');
       await this.syncFromSupabase();
       this.notify();
       return { success: true };
@@ -1502,18 +1560,8 @@ class DataRepository {
 
   public async adminLogout(): Promise<void> {
     await supabaseService.signOut();
-    localStorage.removeItem(STORAGE_KEYS.ADMIN_AUTH);
-    this.notify();
-  }
-
-  public resetToDefaultSeed(): void {
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(INITIAL_PRODUCTS));
-    localStorage.setItem(STORAGE_KEYS.CONTENT, JSON.stringify(INITIAL_SITE_CONTENT));
-    localStorage.setItem(STORAGE_KEYS.NAV, JSON.stringify(INITIAL_NAV_ITEMS));
-    localStorage.setItem(STORAGE_KEYS.HERO_SLIDES, JSON.stringify(INITIAL_HERO_SLIDES));
-    localStorage.setItem(STORAGE_KEYS.CMS_PAGES, JSON.stringify(INITIAL_CMS_PAGES));
-    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(INITIAL_ORDERS));
-    localStorage.setItem(STORAGE_KEYS.INQUIRIES, JSON.stringify(INITIAL_INQUIRIES));
+    this.orders = [];
+    this.inquiries = [];
     this.notify();
   }
 }
@@ -1555,7 +1603,7 @@ CREATE TABLE IF NOT EXISTS public.products (
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS gallery_images JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS is_flyer_confirmed BOOLEAN DEFAULT true;
 
--- 2. Orders Table
+-- 2. Orders Table (Supports Stripe Card, Zelle, Cash on Delivery, Card at Pickup & WhatsApp)
 CREATE TABLE IF NOT EXISTS public.orders (
   id TEXT PRIMARY KEY,
   order_number TEXT UNIQUE NOT NULL,
@@ -1572,10 +1620,18 @@ CREATE TABLE IF NOT EXISTS public.orders (
   delivery_fee NUMERIC(10,2) DEFAULT 0.00,
   total NUMERIC(10,2) NOT NULL,
   payment_method TEXT NOT NULL,
+  payment_status TEXT DEFAULT 'pending',
+  stripe_session_id TEXT,
+  stripe_payment_intent_id TEXT,
   status TEXT DEFAULT 'pending',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.orders DROP CONSTRAINT IF EXISTS orders_payment_method_check;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'pending';
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS stripe_session_id TEXT;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS stripe_payment_intent_id TEXT;
 
 -- 3. Event & Catering Inquiries Table
 CREATE TABLE IF NOT EXISTS public.event_inquiries (
@@ -1622,13 +1678,13 @@ CREATE TABLE IF NOT EXISTS public.site_content (
   operating_hours TEXT NOT NULL,
   chat_button_label TEXT DEFAULT 'Chat with Kitchen',
   branding JSONB DEFAULT '{"logoText":"Delightful Juices","showLogoIcon":true}'::jsonb,
-  colors JSONB DEFAULT '{"pageBgColor":"#FFFFFF","primaryColor":"#1B4D2E","secondaryColor":"#E1AD01","accentColor":"#E1AD01","footerBgColor":"#12351F","cardBgColor":"#FFFFFF","buttonBgColor":"#1B4D2E","buttonTextColor":"#FFF8E7"}'::jsonb,
+  colors JSONB DEFAULT '{"pageBgColor":"#FFFFFF","headerBgColor":"#FFFFFF","primaryColor":"#1B4D2E","secondaryColor":"#E1AD01","accentColor":"#E1AD01","footerBgColor":"#12351F","cardBgColor":"#FFFFFF","textColor":"#1B4D2E","buttonBgColor":"#1B4D2E","buttonTextColor":"#FFF8E7"}'::jsonb,
   typography JSONB DEFAULT '{"headingFont":"Playfair Display, Georgia, serif","bodyFont":"Plus Jakarta Sans, sans-serif"}'::jsonb,
-  stripe JSONB DEFAULT '{"enabled":true,"mode":"test","currency":"USD","customerFacingName":"Credit / Debit Card (Stripe)"}'::jsonb,
+  stripe JSONB DEFAULT '{"enabled":true,"mode":"live","currency":"USD","customerFacingName":"Credit / Debit Card (Stripe)"}'::jsonb,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. Navigation Items Table (with Dropdown & Nested Links Support)
+-- 5. Navigation Items Table (with Dropdown & Nested Links Support + Duplicate Cleanup)
 CREATE TABLE IF NOT EXISTS public.navigation_items (
   id TEXT PRIMARY KEY,
   label TEXT NOT NULL,
@@ -1643,7 +1699,15 @@ CREATE TABLE IF NOT EXISTS public.navigation_items (
 ALTER TABLE public.navigation_items ADD COLUMN IF NOT EXISTS parent_id TEXT DEFAULT NULL;
 ALTER TABLE public.navigation_items ADD COLUMN IF NOT EXISTS is_dropdown BOOLEAN NOT NULL DEFAULT false;
 
--- 6. Hero Slider Table
+-- Remove obsolete single-page hash anchors that cause menu bar doubling alongside multi-page routes
+DELETE FROM public.navigation_items WHERE href LIKE '#%';
+
+-- Restore dropdown hierarchy if previously flattened by an older schema
+UPDATE public.navigation_items SET is_dropdown = true, parent_id = NULL WHERE id IN ('nav-about', 'nav-services');
+UPDATE public.navigation_items SET parent_id = 'nav-about', is_dropdown = false WHERE id IN ('nav-about-company', 'nav-our-story', 'nav-delivery-info');
+UPDATE public.navigation_items SET parent_id = 'nav-services', is_dropdown = false WHERE id IN ('nav-events-link', 'nav-wholesale-link');
+
+-- 6. Hero Slider Table (Supports both active and enabled flags seamlessly)
 CREATE TABLE IF NOT EXISTS public.hero_slides (
   id TEXT PRIMARY KEY,
   heading TEXT NOT NULL,
@@ -1658,24 +1722,36 @@ CREATE TABLE IF NOT EXISTS public.hero_slides (
   overlay_opacity NUMERIC(3,2) NOT NULL DEFAULT 0.50,
   display_order INTEGER NOT NULL DEFAULT 1,
   active BOOLEAN NOT NULL DEFAULT true,
+  enabled BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 7. Dynamic CMS Pages Table
+ALTER TABLE public.hero_slides ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE public.hero_slides ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT true;
+
+-- 7. Dynamic CMS Pages Table (Supports both parent_nav_id and nav_parent_id)
 CREATE TABLE IF NOT EXISTS public.cms_pages (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   slug TEXT UNIQUE NOT NULL,
   seo_title TEXT DEFAULT '',
   meta_description TEXT DEFAULT '',
-  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published')),
+  status TEXT NOT NULL DEFAULT 'published' CHECK (status IN ('draft', 'published')),
   show_in_nav BOOLEAN NOT NULL DEFAULT false,
   parent_nav_id TEXT DEFAULT NULL,
+  nav_parent_id TEXT DEFAULT NULL,
+  nav_label TEXT DEFAULT NULL,
+  is_system_route BOOLEAN NOT NULL DEFAULT false,
   sections JSONB NOT NULL DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.cms_pages ADD COLUMN IF NOT EXISTS parent_nav_id TEXT DEFAULT NULL;
+ALTER TABLE public.cms_pages ADD COLUMN IF NOT EXISTS nav_parent_id TEXT DEFAULT NULL;
+ALTER TABLE public.cms_pages ADD COLUMN IF NOT EXISTS nav_label TEXT DEFAULT NULL;
+ALTER TABLE public.cms_pages ADD COLUMN IF NOT EXISTS is_system_route BOOLEAN NOT NULL DEFAULT false;
 
 -- 8. Row Level Security (RLS) — Idempotent DROP POLICY IF EXISTS before CREATE POLICY
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
@@ -1691,7 +1767,7 @@ CREATE POLICY "Public read products" ON public.products FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Admin full products access" ON public.products;
 DROP POLICY IF EXISTS "Admin write products" ON public.products;
-CREATE POLICY "Admin full products access" ON public.products FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Admin full products access" ON public.products FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "Public insert orders" ON public.orders;
 DROP POLICY IF EXISTS "Public create orders" ON public.orders;
@@ -1699,7 +1775,7 @@ CREATE POLICY "Public insert orders" ON public.orders FOR INSERT WITH CHECK (tru
 
 DROP POLICY IF EXISTS "Admin full orders access" ON public.orders;
 DROP POLICY IF EXISTS "Admin manage orders" ON public.orders;
-CREATE POLICY "Admin full orders access" ON public.orders FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Admin full orders access" ON public.orders FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "Public insert inquiries" ON public.event_inquiries;
 DROP POLICY IF EXISTS "Public submit inquiries" ON public.event_inquiries;
@@ -1707,7 +1783,7 @@ CREATE POLICY "Public insert inquiries" ON public.event_inquiries FOR INSERT WIT
 
 DROP POLICY IF EXISTS "Admin full inquiries access" ON public.event_inquiries;
 DROP POLICY IF EXISTS "Admin manage inquiries" ON public.event_inquiries;
-CREATE POLICY "Admin full inquiries access" ON public.event_inquiries FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Admin full inquiries access" ON public.event_inquiries FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "Public read content" ON public.site_content;
 DROP POLICY IF EXISTS "Public read site content" ON public.site_content;
@@ -1715,25 +1791,25 @@ CREATE POLICY "Public read content" ON public.site_content FOR SELECT USING (tru
 
 DROP POLICY IF EXISTS "Admin full content access" ON public.site_content;
 DROP POLICY IF EXISTS "Admin manage site content" ON public.site_content;
-CREATE POLICY "Admin full content access" ON public.site_content FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Admin full content access" ON public.site_content FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "Public read navigation" ON public.navigation_items;
 CREATE POLICY "Public read navigation" ON public.navigation_items FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Admin manage navigation" ON public.navigation_items;
-CREATE POLICY "Admin manage navigation" ON public.navigation_items FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Admin manage navigation" ON public.navigation_items FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "Public read active hero slides" ON public.hero_slides;
-CREATE POLICY "Public read active hero slides" ON public.hero_slides FOR SELECT USING (active = true OR auth.role() = 'authenticated');
+CREATE POLICY "Public read active hero slides" ON public.hero_slides FOR SELECT USING ((active IS DISTINCT FROM false AND enabled IS DISTINCT FROM false) OR auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "Admin manage hero slides" ON public.hero_slides;
-CREATE POLICY "Admin manage hero slides" ON public.hero_slides FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Admin manage hero slides" ON public.hero_slides FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "Public read published cms pages" ON public.cms_pages;
 CREATE POLICY "Public read published cms pages" ON public.cms_pages FOR SELECT USING (status = 'published' OR auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "Admin manage cms pages" ON public.cms_pages;
-CREATE POLICY "Admin manage cms pages" ON public.cms_pages FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Admin manage cms pages" ON public.cms_pages FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 -- 9. Storage Bucket for Hero Sliders, Page Media, Logos & Product Photos
 INSERT INTO storage.buckets (id, name, public)
@@ -1746,7 +1822,7 @@ CREATE POLICY "Public Read Assets" ON storage.objects FOR SELECT USING (bucket_i
 DROP POLICY IF EXISTS "Authenticated Upload Assets" ON storage.objects;
 DROP POLICY IF EXISTS "Public Upload Assets" ON storage.objects;
 DROP POLICY IF EXISTS "Allow Assets Upload" ON storage.objects;
-CREATE POLICY "Authenticated Upload Assets" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'delightful_assets');
+CREATE POLICY "Allow Assets Upload" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'delightful_assets');
 
 DROP POLICY IF EXISTS "Allow Assets Update" ON storage.objects;
 CREATE POLICY "Allow Assets Update" ON storage.objects FOR UPDATE USING (bucket_id = 'delightful_assets');

@@ -1,25 +1,33 @@
-import type { Request, Response } from 'express';
 import Stripe from 'stripe';
 
 export default async function handler(req: any, res: any) {
-  // Support both Vercel Serverless Functions and Express
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-  const { orderId, orderNumber, items, customerEmail, customerName, deliveryFee, successUrl, cancelUrl, currency = 'usd' } = req.body || {};
+  const {
+    orderId,
+    orderNumber,
+    items,
+    customerEmail,
+    customerName,
+    deliveryFee,
+    successUrl,
+    cancelUrl,
+    currency = 'usd',
+  } = req.body || {};
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Invalid order items.' });
   }
 
-  // If Stripe Secret Key is missing, respond with clear diagnostic instructions
   if (!stripeSecretKey) {
     return res.status(400).json({
       error: 'STRIPE_NOT_CONFIGURED',
-      message: 'STRIPE_SECRET_KEY environment variable is not configured on the server. Please set STRIPE_SECRET_KEY in your Vercel Project Settings > Environment Variables.',
+      message:
+        'STRIPE_SECRET_KEY is not configured in the live server environment variables.',
     });
   }
 
@@ -28,13 +36,15 @@ export default async function handler(req: any, res: any) {
       apiVersion: '2025-02-24.acacia' as any,
     });
 
-    // Format line items
     const line_items = items.map((item: any) => ({
       price_data: {
-        currency: currency.toLowerCase(),
+        currency: String(currency).toLowerCase(),
         product_data: {
           name: `${item.productName} (${item.size})`,
-          images: item.imageUrl ? [item.imageUrl] : [],
+          images:
+            item.imageUrl && String(item.imageUrl).startsWith('http')
+              ? [item.imageUrl]
+              : [],
           description: `Handcrafted fresh bottle • Size: ${item.sizeLabel || item.size}`,
         },
         unit_amount: Math.round(Number(item.unitPrice) * 100),
@@ -42,11 +52,10 @@ export default async function handler(req: any, res: any) {
       quantity: item.quantity,
     }));
 
-    // If delivery fee applies, add as a line item
     if (deliveryFee && Number(deliveryFee) > 0) {
       line_items.push({
         price_data: {
-          currency: currency.toLowerCase(),
+          currency: String(currency).toLowerCase(),
           product_data: {
             name: 'Local Cold Delivery Fee',
             images: [],
@@ -58,7 +67,12 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    const host = req.headers.origin || req.headers.host ? `https://${req.headers.host}` : 'https://www.delightfuljuices.com';
+    const proto = req.headers['x-forwarded-proto'] || 'https';
+    const rawOrigin =
+      req.headers.origin ||
+      process.env.APP_URL ||
+      (req.headers.host ? `${proto}://${req.headers.host}` : 'https://www.delightfuljuices.com');
+    const host = String(rawOrigin).replace(/\/+$/, '');
 
     const sessionParams: any = {
       payment_method_types: ['card'],
@@ -71,8 +85,12 @@ export default async function handler(req: any, res: any) {
         orderNumber: orderNumber || '',
         customerName: customerName || '',
       },
-      success_url: successUrl || `${host}/?order_success=true&order_number=${orderNumber}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: cancelUrl || `${host}/?order_cancelled=true&order_number=${orderNumber}`,
+      success_url:
+        successUrl ||
+        `${host}/?order_success=true&order_number=${encodeURIComponent(orderNumber || '')}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:
+        cancelUrl ||
+        `${host}/?order_cancelled=true&order_number=${encodeURIComponent(orderNumber || '')}`,
     };
 
     const session = await stripe.checkout.sessions.create(sessionParams);

@@ -1,44 +1,19 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig, Plugin} from 'vite';
-
-function apiDevMiddleware(): Plugin {
-  return {
-    name: 'api-dev-middleware',
-    configureServer(server) {
-      server.middlewares.use(async (req, res, next) => {
-        if (req.url?.startsWith('/api/create-checkout-session')) {
-          let body = '';
-          req.on('data', (chunk) => { body += chunk; });
-          req.on('end', async () => {
-            try {
-              (req as any).body = body ? JSON.parse(body) : {};
-              const handler = (await import('./api/create-checkout-session.ts')).default;
-              await handler(req, res);
-            } catch (err: any) {
-              res.statusCode = 500;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ error: 'SERVER_ERROR', message: err.message }));
-            }
-          });
-          return;
-        }
-        next();
-      });
-    },
-  };
-}
+import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss(), apiDevMiddleware()],
+    plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
     },
     server: {
+      port: 3000,
+      host: '0.0.0.0',
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',

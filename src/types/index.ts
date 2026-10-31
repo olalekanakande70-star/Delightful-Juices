@@ -235,8 +235,8 @@ export interface TypographySettings {
 
 export interface StripePaymentSettings {
   enabled: boolean;
-  mode: 'test' | 'live';
-  publishableKey: string;
+  mode?: 'test' | 'live';
+  publishableKey?: string;
   currency: string;
   customerFacingName: string;
   description: string;
@@ -273,7 +273,6 @@ export interface SiteContent {
 
 export interface SupabaseConfig {
   url: string;
-  anonKey: string;
   connected: boolean;
   lastTestedAt?: string;
 }

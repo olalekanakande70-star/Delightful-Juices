@@ -10,34 +10,115 @@ import {
   CmsPage,
 } from '../types';
 
-export const DEFAULT_SUPABASE_URL = 'https://abrgqtrobgorsaggooxv.supabase.co';
-const STORAGE_CONFIG_KEY = 'delightful_juice_supabase_cfg_v1';
+const LEGACY_LOCAL_CREDENTIAL_KEYS = [
+  'delightful_juice_supabase_cfg_v1',
+  'delightful_juice_admin_session_v1',
+];
+
+export interface LiveServerStatus {
+  stripeConfigured: boolean;
+  stripeWebhookConfigured: boolean;
+}
 
 class SupabaseService {
   private client: SupabaseClient | null = null;
   private currentSession: Session | null = null;
   private currentUser: User | null = null;
-  private authListeners: Set<(user: User | null) => void> = new Set();
+  private authInitialized = false;
+  private authListeners: Set<(user: User | null, initialized: boolean) => void> = new Set();
+  private realtimeListeners: Set<() => void> = new Set();
+  private realtimeChannel: any = null;
+  private activeClientKey = '';
+  private runtimePublicConfig: {
+    url: string;
+    anonKey: string;
+    stripeConfigured: boolean;
+    stripeWebhookConfigured: boolean;
+  } | null = null;
+  private runtimeConfigPromise: Promise<boolean> | null = null;
+  private lastTestedAt: string | undefined = undefined;
+  private lastWriteError: string | null = null;
 
   constructor() {
+    this.purgeLegacyLocalCredentials();
     this.init();
   }
 
-  public init() {
-    const config = this.getConfig();
-    if (config.url && config.anonKey) {
+  private purgeLegacyLocalCredentials() {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    for (const key of LEGACY_LOCAL_CREDENTIAL_KEYS) {
       try {
-        this.client = createClient(config.url, config.anonKey, {
+        window.localStorage.removeItem(key);
+      } catch {
+        // ignore storage access issues
+      }
+    }
+  }
+
+  public getLastWriteError(): string | null {
+    return this.lastWriteError;
+  }
+
+  public getServerStatus(): LiveServerStatus {
+    return {
+      stripeConfigured: Boolean(this.runtimePublicConfig?.stripeConfigured),
+      stripeWebhookConfigured: Boolean(this.runtimePublicConfig?.stripeWebhookConfigured),
+    };
+  }
+
+  private recordError(context: string, error: any) {
+    if (!error) {
+      this.lastWriteError = null;
+      return;
+    }
+    const msg = error?.message || error?.details || String(error);
+    const code = error?.code ? ` (${error.code})` : '';
+    this.lastWriteError = `${context}: ${msg}${code}`;
+    console.warn(`[Supabase ${context}]`, error);
+  }
+
+  private getResolvedCredentials(): { url: string; anonKey: string } {
+    const envUrl = ((import.meta as any).env?.VITE_SUPABASE_URL || '').trim();
+    const envKey = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '').trim();
+    const runtimeUrl = (this.runtimePublicConfig?.url || '').trim();
+    const runtimeKey = (this.runtimePublicConfig?.anonKey || '').trim();
+
+    return {
+      url: envUrl || runtimeUrl,
+      anonKey: envKey || runtimeKey,
+    };
+  }
+
+  public init() {
+    const { url, anonKey } = this.getResolvedCredentials();
+    if (url && anonKey) {
+      const nextKey = `${url}::${anonKey}`;
+      if (this.client && this.activeClientKey === nextKey) {
+        return;
+      }
+      try {
+        if (this.realtimeChannel && this.client) {
+          try {
+            this.client.removeChannel(this.realtimeChannel);
+          } catch {
+            // ignore cleanup error
+          }
+          this.realtimeChannel = null;
+        }
+
+        this.client = createClient(url, anonKey, {
           auth: {
             persistSession: true,
             autoRefreshToken: true,
             detectSessionInUrl: true,
           },
         });
+        this.activeClientKey = nextKey;
 
         this.client.auth.onAuthStateChange((_event, session) => {
           this.currentSession = session;
           this.currentUser = session?.user || null;
+          this.authInitialized = true;
           this.notifyAuthListeners();
         });
 
@@ -46,51 +127,122 @@ class SupabaseService {
           .then(({ data: { session } }) => {
             this.currentSession = session;
             this.currentUser = session?.user || null;
+            this.authInitialized = true;
             this.notifyAuthListeners();
           })
           .catch((err) => {
             console.warn('Supabase getSession notice:', err);
+            this.authInitialized = true;
+            this.notifyAuthListeners();
           });
+
+        this.setupRealtimeSubscription();
       } catch (err) {
-        console.error('Failed to initialize Supabase client:', err);
+        console.error('Failed to initialize live Supabase client:', err);
         this.client = null;
+        this.activeClientKey = '';
+        this.authInitialized = true;
+        this.notifyAuthListeners();
       }
     } else {
       this.client = null;
+      this.activeClientKey = '';
     }
   }
 
-  public getConfig(): SupabaseConfig {
-    let storedConfig: Partial<SupabaseConfig> = {};
+  private setupRealtimeSubscription() {
+    if (!this.client) return;
     try {
-      const stored = localStorage.getItem(STORAGE_CONFIG_KEY);
-      if (stored) storedConfig = JSON.parse(stored);
+      this.realtimeChannel = this.client
+        .channel('delightful-public-cms-sync')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'hero_slides' }, () =>
+          this.notifyRealtimeListeners()
+        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () =>
+          this.notifyRealtimeListeners()
+        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'site_content' }, () =>
+          this.notifyRealtimeListeners()
+        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'navigation_items' }, () =>
+          this.notifyRealtimeListeners()
+        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'cms_pages' }, () =>
+          this.notifyRealtimeListeners()
+        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () =>
+          this.notifyRealtimeListeners()
+        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'event_inquiries' }, () =>
+          this.notifyRealtimeListeners()
+        )
+        .subscribe();
     } catch (e) {
-      console.warn(e);
+      console.warn('Realtime subscription notice:', e);
     }
+  }
 
-    const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL || '';
-    const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
-
-    const url = storedConfig.url || envUrl || DEFAULT_SUPABASE_URL;
-    const anonKey = storedConfig.anonKey || envKey || '';
-    const connected = !!(storedConfig.connected && url && anonKey);
-
-    return {
-      url,
-      anonKey,
-      connected,
-      lastTestedAt: storedConfig.lastTestedAt,
+  public subscribeRealtime(listener: () => void): () => void {
+    this.realtimeListeners.add(listener);
+    return () => {
+      this.realtimeListeners.delete(listener);
     };
   }
 
-  public saveConfig(config: SupabaseConfig) {
-    try {
-      localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(config));
-    } catch (e) {
-      console.warn(e);
+  private notifyRealtimeListeners() {
+    this.realtimeListeners.forEach((fn) => {
+      try {
+        fn();
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }
+
+  /**
+   * Discovers live Supabase & Stripe readiness from /api/public-config on the live server.
+   */
+  public async ensurePublicConfig(forceRefresh = false): Promise<boolean> {
+    if (!forceRefresh && this.runtimeConfigPromise) {
+      return this.runtimeConfigPromise;
     }
-    this.init();
+
+    this.runtimeConfigPromise = (async () => {
+      try {
+        const res = await fetch('/api/public-config', { method: 'GET' });
+        if (res.ok) {
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const data = await res.json();
+            this.runtimePublicConfig = {
+              url: data?.supabaseUrl || '',
+              anonKey: data?.supabaseAnonKey || '',
+              stripeConfigured: Boolean(data?.stripeConfigured),
+              stripeWebhookConfigured: Boolean(data?.stripeWebhookConfigured),
+            };
+            this.init();
+          }
+        }
+      } catch {
+        // Ignore network transient errors if Vite build-time env vars already initialized client
+      }
+      if (!this.isConfigured() && !this.authInitialized) {
+        this.authInitialized = true;
+        this.notifyAuthListeners();
+      }
+      return this.isConfigured();
+    })();
+
+    return this.runtimeConfigPromise;
+  }
+
+  public getConfig(): SupabaseConfig {
+    const { url, anonKey } = this.getResolvedCredentials();
+    return {
+      url,
+      connected: Boolean(url && anonKey),
+      lastTestedAt: this.lastTestedAt,
+    };
   }
 
   public getClient(): SupabaseClient | null {
@@ -101,14 +253,14 @@ class SupabaseService {
   }
 
   public isConfigured(): boolean {
-    const cfg = this.getConfig();
-    return !!(cfg.url && cfg.anonKey);
+    const { url, anonKey } = this.getResolvedCredentials();
+    return Boolean(url && anonKey);
   }
 
-  // --- AUTHENTICATION ---
-  public subscribeAuth(listener: (user: User | null) => void): () => void {
+  // --- AUTHENTICATION (STRICT LIVE SUPABASE AUTH ONLY) ---
+  public subscribeAuth(listener: (user: User | null, initialized: boolean) => void): () => void {
     this.authListeners.add(listener);
-    listener(this.currentUser);
+    listener(this.currentUser, this.authInitialized);
     return () => {
       this.authListeners.delete(listener);
     };
@@ -117,7 +269,7 @@ class SupabaseService {
   private notifyAuthListeners() {
     this.authListeners.forEach((fn) => {
       try {
-        fn(this.currentUser);
+        fn(this.currentUser, this.authInitialized);
       } catch (e) {
         console.error(e);
       }
@@ -128,21 +280,35 @@ class SupabaseService {
     return this.currentUser;
   }
 
+  public isAuthInitialized(): boolean {
+    return this.authInitialized;
+  }
+
   public async signInWithEmail(
     email: string,
     password: string
   ): Promise<{ success: boolean; error?: string; user?: User }> {
+    if (!this.getClient()) {
+      await this.ensurePublicConfig(true);
+    }
     const client = this.getClient();
     if (!client) {
-      return { success: false, error: 'Supabase client is not configured with URL and Anon key.' };
+      return {
+        success: false,
+        error: 'Live Supabase environment variables are not configured on the server.',
+      };
     }
     try {
-      const { data, error } = await client.auth.signInWithPassword({ email, password });
+      const { data, error } = await client.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
       if (error) {
         return { success: false, error: error.message };
       }
       this.currentUser = data.user;
       this.currentSession = data.session;
+      this.authInitialized = true;
       this.notifyAuthListeners();
       return { success: true, user: data.user || undefined };
     } catch (err: any) {
@@ -164,55 +330,58 @@ class SupabaseService {
     this.notifyAuthListeners();
   }
 
-  // --- TEST CONNECTION & TABLE INSPECTION ---
-  public async testConnection(
-    url: string,
-    anonKey: string
-  ): Promise<{ success: boolean; message: string; tablesFound: string[] }> {
-    if (!url || !anonKey) {
-      return { success: false, message: 'Both Supabase URL and Anon Key are required.', tablesFound: [] };
+  // --- VERIFY LIVE CONNECTION & TABLE INSPECTION ---
+  public async testConnection(): Promise<{
+    success: boolean;
+    message: string;
+    tablesFound: string[];
+  }> {
+    if (!this.getClient()) {
+      await this.ensurePublicConfig(true);
     }
+    const client = this.getClient();
+    if (!client) {
+      return {
+        success: false,
+        message: 'Live Supabase environment variables (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY) are not configured.',
+        tablesFound: [],
+      };
+    }
+
     try {
-      const testClient = createClient(url, anonKey);
       const tablesFound: string[] = [];
 
-      const { error: prodErr } = await testClient.from('products').select('id').limit(1);
+      const { error: prodErr } = await client.from('products').select('id').limit(1);
       if (!prodErr) tablesFound.push('products');
 
-      const { error: contentErr } = await testClient.from('site_content').select('key').limit(1);
+      const { error: contentErr } = await client.from('site_content').select('key').limit(1);
       if (!contentErr) tablesFound.push('site_content');
 
-      const { error: navErr } = await testClient.from('navigation_items').select('id').limit(1);
+      const { error: navErr } = await client.from('navigation_items').select('id').limit(1);
       if (!navErr) tablesFound.push('navigation_items');
 
-      const { error: slideErr } = await testClient.from('hero_slides').select('id').limit(1);
+      const { error: slideErr } = await client.from('hero_slides').select('id').limit(1);
       if (!slideErr) tablesFound.push('hero_slides');
 
-      const { error: pageErr } = await testClient.from('cms_pages').select('id').limit(1);
+      const { error: pageErr } = await client.from('cms_pages').select('id').limit(1);
       if (!pageErr) tablesFound.push('cms_pages');
 
-      const { error: ordErr } = await testClient.from('orders').select('id').limit(1);
+      const { error: ordErr } = await client.from('orders').select('id').limit(1);
       if (!ordErr || ordErr.code === 'PGRST116' || ordErr.message.includes('permission denied')) {
         tablesFound.push('orders');
       }
 
-      const { error: inqErr } = await testClient.from('event_inquiries').select('id').limit(1);
+      const { error: inqErr } = await client.from('event_inquiries').select('id').limit(1);
       if (!inqErr || inqErr.code === 'PGRST116' || inqErr.message.includes('permission denied')) {
         tablesFound.push('event_inquiries');
       }
 
-      this.client = testClient;
-      this.saveConfig({
-        url,
-        anonKey,
-        connected: true,
-        lastTestedAt: new Date().toISOString(),
-      });
+      this.lastTestedAt = new Date().toISOString();
 
       const msg =
         tablesFound.length > 0
-          ? `Connected to Supabase! Detected ${tablesFound.length} initialized tables (${tablesFound.join(', ')}).`
-          : `Connected to Supabase project, but tables are not yet initialized. Please run the SQL migration script from the Supabase tab.`;
+          ? `Live Supabase verified! Active tables (${tablesFound.length}/7): ${tablesFound.join(', ')}.`
+          : `Connected to live Supabase instance, but tables are not yet initialized. Run the SQL migration script below.`;
 
       return {
         success: true,
@@ -222,7 +391,7 @@ class SupabaseService {
     } catch (err: any) {
       return {
         success: false,
-        message: err.message || 'Failed to reach Supabase project. Please verify URL and Anon key.',
+        message: err.message || 'Failed to reach live Supabase database.',
         tablesFound: [],
       };
     }
@@ -238,7 +407,7 @@ class SupabaseService {
         .select('*')
         .order('display_order', { ascending: true });
 
-      if (error || !data || data.length === 0) return null;
+      if (error || !data) return null;
 
       return data.map((row: any) => ({
         id: row.id,
@@ -296,9 +465,10 @@ class SupabaseService {
         updated_at: new Date().toISOString(),
       };
       const { error } = await client.from('products').upsert(payload);
+      this.recordError('upsertProduct', error);
       return !error;
     } catch (err) {
-      console.warn('upsertProduct error:', err);
+      this.recordError('upsertProduct', err);
       return false;
     }
   }
@@ -308,9 +478,10 @@ class SupabaseService {
     if (!client) return false;
     try {
       const { error } = await client.from('products').delete().eq('id', id);
+      this.recordError('deleteProduct', error);
       return !error;
     } catch (err) {
-      console.warn('deleteProduct error:', err);
+      this.recordError('deleteProduct', err);
       return false;
     }
   }
@@ -323,7 +494,7 @@ class SupabaseService {
   ): Promise<{ url: string | null; error?: string }> {
     const client = this.getClient();
     if (!client) {
-      return { url: null, error: 'Supabase client is not connected.' };
+      return { url: null, error: 'Live Supabase client is not connected.' };
     }
     try {
       const { data, error } = await client.storage.from(bucket).upload(filePath, file, {
@@ -336,7 +507,7 @@ class SupabaseService {
       const { data: publicData } = client.storage.from(bucket).getPublicUrl(data.path);
       return { url: publicData.publicUrl };
     } catch (err: any) {
-      return { url: null, error: err.message || 'Failed to upload asset' };
+      return { url: null, error: err.message || 'Failed to upload asset to live storage' };
     }
   }
 
@@ -350,83 +521,125 @@ class SupabaseService {
         .select('*')
         .order('display_order', { ascending: true });
 
-      if (error || !data || data.length === 0) return null;
+      if (error || !data) return null;
 
-      return data.map((row: any) => ({
-        id: row.id,
-        heading: row.heading,
-        subheading: row.subheading,
-        kicker: row.kicker || undefined,
-        ctaLabel: row.cta_label || 'Shop Now',
-        ctaUrl: row.cta_url || '/shop',
-        secondaryCtaLabel: row.secondary_cta_label || undefined,
-        secondaryCtaUrl: row.secondary_cta_url || undefined,
-        desktopImageUrl: row.desktop_image_url,
-        mobileImageUrl: row.mobile_image_url || undefined,
-        overlayOpacity: Number(row.overlay_opacity) || 0.55,
-        displayOrder: Number(row.display_order) || 1,
-        active: row.enabled !== false,
-        enabled: row.enabled !== false,
-        updatedAt: row.updated_at,
-      }));
+      return data.map((row: any) => {
+        const isSlideActive =
+          row.active !== undefined ? row.active !== false : row.enabled !== false;
+        return {
+          id: row.id,
+          heading: row.heading,
+          subheading: row.subheading || '',
+          kicker: row.kicker || undefined,
+          ctaLabel: row.cta_label || 'Shop Now',
+          ctaUrl: row.cta_url || '/shop',
+          secondaryCtaLabel: row.secondary_cta_label || undefined,
+          secondaryCtaUrl: row.secondary_cta_url || undefined,
+          desktopImageUrl: row.desktop_image_url,
+          mobileImageUrl: row.mobile_image_url || undefined,
+          overlayOpacity: Number(row.overlay_opacity) || 0.55,
+          displayOrder: Number(row.display_order) || 1,
+          active: isSlideActive,
+          enabled: isSlideActive,
+          updatedAt: row.updated_at,
+        };
+      });
     } catch (err) {
       console.warn('fetchHeroSlides error:', err);
       return null;
     }
   }
 
-  public async upsertHeroSlide(slide: HeroSlide): Promise<boolean> {
+  private buildHeroSlideBaseRow(slide: HeroSlide) {
+    return {
+      id: slide.id,
+      heading: slide.heading,
+      subheading: slide.subheading || '',
+      kicker: slide.kicker || '',
+      cta_label: slide.ctaLabel || 'Shop Now',
+      cta_url: slide.ctaUrl || '/shop',
+      secondary_cta_label: slide.secondaryCtaLabel || '',
+      secondary_cta_url: slide.secondaryCtaUrl || '',
+      desktop_image_url: slide.desktopImageUrl,
+      mobile_image_url: slide.mobileImageUrl || '',
+      overlay_opacity: slide.overlayOpacity ?? 0.52,
+      display_order: slide.displayOrder,
+      updated_at: new Date().toISOString(),
+    };
+  }
+
+  private async upsertHeroRowsCompat(slides: HeroSlide[]): Promise<boolean> {
     const client = this.getClient();
     if (!client) return false;
-    try {
-      const payload = {
-        id: slide.id,
-        heading: slide.heading,
-        subheading: slide.subheading,
-        kicker: slide.kicker || null,
-        cta_label: slide.ctaLabel,
-        cta_url: slide.ctaUrl,
-        secondary_cta_label: slide.secondaryCtaLabel || null,
-        secondary_cta_url: slide.secondaryCtaUrl || null,
-        desktop_image_url: slide.desktopImageUrl,
-        mobile_image_url: slide.mobileImageUrl || null,
-        overlay_opacity: slide.overlayOpacity,
-        display_order: slide.displayOrder,
-        enabled: slide.active ?? slide.enabled ?? true,
-        updated_at: new Date().toISOString(),
+
+    const withBoth = slides.map((s) => {
+      const isAct = s.active ?? s.enabled ?? true;
+      return {
+        ...this.buildHeroSlideBaseRow(s),
+        active: isAct,
+        enabled: isAct,
       };
-      const { error } = await client.from('hero_slides').upsert(payload);
-      return !error;
+    });
+
+    const { error: bothErr } = await client.from('hero_slides').upsert(withBoth);
+    if (!bothErr) {
+      this.lastWriteError = null;
+      return true;
+    }
+
+    const msg = (bothErr.message || '').toLowerCase();
+    if (msg.includes('enabled') || bothErr.code === 'PGRST204') {
+      const withActiveOnly = slides.map((s) => ({
+        ...this.buildHeroSlideBaseRow(s),
+        active: s.active ?? s.enabled ?? true,
+      }));
+      const { error: activeErr } = await client.from('hero_slides').upsert(withActiveOnly);
+      if (!activeErr) {
+        this.lastWriteError = null;
+        return true;
+      }
+      const activeErrMsg = (activeErr.message || '').toLowerCase();
+      if (activeErrMsg.includes('active') || activeErr.code === 'PGRST204') {
+        const withEnabledOnly = slides.map((s) => ({
+          ...this.buildHeroSlideBaseRow(s),
+          enabled: s.active ?? s.enabled ?? true,
+        }));
+        const { error: enabledErr } = await client.from('hero_slides').upsert(withEnabledOnly);
+        this.recordError('hero_slides upsert', enabledErr);
+        return !enabledErr;
+      }
+      this.recordError('hero_slides upsert', activeErr);
+      return false;
+    }
+
+    if (msg.includes('active')) {
+      const withEnabledOnly = slides.map((s) => ({
+        ...this.buildHeroSlideBaseRow(s),
+        enabled: s.active ?? s.enabled ?? true,
+      }));
+      const { error: enabledErr } = await client.from('hero_slides').upsert(withEnabledOnly);
+      this.recordError('hero_slides upsert', enabledErr);
+      return !enabledErr;
+    }
+
+    this.recordError('hero_slides upsert', bothErr);
+    return false;
+  }
+
+  public async upsertHeroSlide(slide: HeroSlide): Promise<boolean> {
+    try {
+      return await this.upsertHeroRowsCompat([slide]);
     } catch (err) {
-      console.warn('upsertHeroSlide error:', err);
+      this.recordError('upsertHeroSlide', err);
       return false;
     }
   }
 
   public async saveAllHeroSlides(slides: HeroSlide[]): Promise<boolean> {
-    const client = this.getClient();
-    if (!client) return false;
     try {
-      const payload = slides.map((slide) => ({
-        id: slide.id,
-        heading: slide.heading,
-        subheading: slide.subheading,
-        kicker: slide.kicker || null,
-        cta_label: slide.ctaLabel,
-        cta_url: slide.ctaUrl,
-        secondary_cta_label: slide.secondaryCtaLabel || null,
-        secondary_cta_url: slide.secondaryCtaUrl || null,
-        desktop_image_url: slide.desktopImageUrl,
-        mobile_image_url: slide.mobileImageUrl || null,
-        overlay_opacity: slide.overlayOpacity,
-        display_order: slide.displayOrder,
-        enabled: slide.active ?? slide.enabled ?? true,
-        updated_at: new Date().toISOString(),
-      }));
-      const { error } = await client.from('hero_slides').upsert(payload);
-      return !error;
+      return await this.upsertHeroRowsCompat(slides);
     } catch (err) {
-      console.warn('saveAllHeroSlides error:', err);
+      this.recordError('saveAllHeroSlides', err);
       return false;
     }
   }
@@ -436,9 +649,10 @@ class SupabaseService {
     if (!client) return false;
     try {
       const { error } = await client.from('hero_slides').delete().eq('id', id);
+      this.recordError('deleteHeroSlide', error);
       return !error;
     } catch (err) {
-      console.warn('deleteHeroSlide error:', err);
+      this.recordError('deleteHeroSlide', err);
       return false;
     }
   }
@@ -453,24 +667,27 @@ class SupabaseService {
         .select('*')
         .order('created_at', { ascending: true });
 
-      if (error || !data || data.length === 0) return null;
+      if (error || !data) return null;
 
-      return data.map((row: any) => ({
-        id: row.id,
-        title: row.title,
-        slug: row.slug,
-        status: row.status === 'draft' ? 'draft' : 'published',
-        seoTitle: row.seo_title || undefined,
-        metaDescription: row.meta_description || undefined,
-        showInNav: !!row.show_in_nav,
-        parentNavId: row.nav_parent_id || null,
-        navParentId: row.nav_parent_id || null,
-        navLabel: row.nav_label || undefined,
-        isSystemRoute: !!row.is_system_route,
-        sections: Array.isArray(row.sections) ? row.sections : [],
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      }));
+      return data.map((row: any) => {
+        const parentNav = row.parent_nav_id ?? row.nav_parent_id ?? null;
+        return {
+          id: row.id,
+          title: row.title,
+          slug: row.slug,
+          status: row.status === 'draft' ? 'draft' : 'published',
+          seoTitle: row.seo_title || undefined,
+          metaDescription: row.meta_description || undefined,
+          showInNav: !!row.show_in_nav,
+          parentNavId: parentNav,
+          navParentId: parentNav,
+          navLabel: row.nav_label || undefined,
+          isSystemRoute: !!row.is_system_route,
+          sections: Array.isArray(row.sections) ? row.sections : [],
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+        };
+      });
     } catch (err) {
       console.warn('fetchCmsPages error:', err);
       return null;
@@ -481,25 +698,47 @@ class SupabaseService {
     const client = this.getClient();
     if (!client) return false;
     try {
-      const payload = {
+      const parentVal = page.parentNavId ?? page.navParentId ?? null;
+      const basePayload = {
         id: page.id,
         title: page.title,
         slug: page.slug,
         status: page.status,
-        seo_title: page.seoTitle || null,
-        meta_description: page.metaDescription || null,
+        seo_title: page.seoTitle || '',
+        meta_description: page.metaDescription || '',
         show_in_nav: page.showInNav,
-        nav_parent_id: page.parentNavId ?? page.navParentId ?? null,
-        nav_label: page.navLabel || null,
-        is_system_route: !!page.isSystemRoute,
         sections: page.sections,
         created_at: page.createdAt || new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      const { error } = await client.from('cms_pages').upsert(payload);
-      return !error;
+
+      const fullPayload = {
+        ...basePayload,
+        nav_parent_id: parentVal,
+        nav_label: page.navLabel || null,
+        is_system_route: !!page.isSystemRoute,
+      };
+
+      const { error } = await client.from('cms_pages').upsert(fullPayload);
+      if (!error) {
+        this.lastWriteError = null;
+        return true;
+      }
+
+      if (error.code === 'PGRST204' || (error.message || '').includes('column')) {
+        const altPayload = {
+          ...basePayload,
+          parent_nav_id: parentVal,
+        };
+        const { error: altErr } = await client.from('cms_pages').upsert(altPayload);
+        this.recordError('upsertCmsPage', altErr);
+        return !altErr;
+      }
+
+      this.recordError('upsertCmsPage', error);
+      return false;
     } catch (err) {
-      console.warn('upsertCmsPage error:', err);
+      this.recordError('upsertCmsPage', err);
       return false;
     }
   }
@@ -509,9 +748,10 @@ class SupabaseService {
     if (!client) return false;
     try {
       const { error } = await client.from('cms_pages').delete().eq('id', id);
+      this.recordError('deleteCmsPage', error);
       return !error;
     } catch (err) {
-      console.warn('deleteCmsPage error:', err);
+      this.recordError('deleteCmsPage', err);
       return false;
     }
   }
@@ -544,6 +784,9 @@ class SupabaseService {
         deliveryFee: Number(row.delivery_fee),
         total: Number(row.total),
         paymentMethod: row.payment_method,
+        paymentStatus: row.payment_status || undefined,
+        stripeSessionId: row.stripe_session_id || undefined,
+        stripePaymentIntentId: row.stripe_payment_intent_id || undefined,
         status: row.status,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -555,32 +798,52 @@ class SupabaseService {
   }
 
   public async insertOrder(order: Order): Promise<boolean> {
+    if (!this.getClient()) {
+      await this.ensurePublicConfig();
+    }
     const client = this.getClient();
     if (!client) return false;
     try {
-      const { error } = await client.from('orders').insert([
-        {
-          id: order.id,
-          order_number: order.orderNumber,
-          customer_name: order.customerName,
-          customer_email: order.customerEmail,
-          customer_phone: order.customerPhone,
-          delivery_method: order.deliveryMethod,
-          delivery_address: order.deliveryAddress,
-          delivery_date: order.deliveryDate,
-          delivery_time_slot: order.deliveryTimeSlot,
-          notes: order.notes,
-          items: order.items,
-          subtotal: order.subtotal,
-          delivery_fee: order.deliveryFee,
-          total: order.total,
-          payment_method: order.paymentMethod,
-          status: order.status,
-          created_at: order.createdAt,
-          updated_at: order.updatedAt,
-        },
-      ]);
-      return !error;
+      const baseRow = {
+        id: order.id,
+        order_number: order.orderNumber,
+        customer_name: order.customerName,
+        customer_email: order.customerEmail,
+        customer_phone: order.customerPhone,
+        delivery_method: order.deliveryMethod,
+        delivery_address: order.deliveryAddress,
+        delivery_date: order.deliveryDate,
+        delivery_time_slot: order.deliveryTimeSlot,
+        notes: order.notes,
+        items: order.items,
+        subtotal: order.subtotal,
+        delivery_fee: order.deliveryFee,
+        total: order.total,
+        payment_method: order.paymentMethod,
+        status: order.status,
+        created_at: order.createdAt,
+        updated_at: order.updatedAt,
+      };
+
+      const { error } = await client.from('orders').insert([baseRow]);
+      if (!error) return true;
+
+      // Compatibility fallback if legacy orders_payment_method_check constraint hasn't been dropped yet
+      if (
+        order.paymentMethod === 'stripe_card' &&
+        (error.code === '23514' || (error.message || '').includes('payment_method'))
+      ) {
+        const compatRow = {
+          ...baseRow,
+          payment_method: 'card_at_pickup',
+          notes: order.notes ? `${order.notes} [Stripe Card]` : '[Stripe Card]',
+        };
+        const { error: retryErr } = await client.from('orders').insert([compatRow]);
+        return !retryErr;
+      }
+
+      console.warn('insertOrder error:', error);
+      return false;
     } catch (err) {
       console.warn('insertOrder error:', err);
       return false;
@@ -595,9 +858,23 @@ class SupabaseService {
         .from('orders')
         .update({ status, updated_at: new Date().toISOString() })
         .eq('id', id);
+      this.recordError('updateOrderStatus', error);
       return !error;
     } catch (err) {
-      console.warn('updateOrderStatus error:', err);
+      this.recordError('updateOrderStatus', err);
+      return false;
+    }
+  }
+
+  public async deleteOrder(id: string): Promise<boolean> {
+    const client = this.getClient();
+    if (!client) return false;
+    try {
+      const { error } = await client.from('orders').delete().eq('id', id);
+      this.recordError('deleteOrder', error);
+      return !error;
+    } catch (err) {
+      this.recordError('deleteOrder', err);
       return false;
     }
   }
@@ -638,6 +915,9 @@ class SupabaseService {
   }
 
   public async insertInquiry(inquiry: EventInquiry): Promise<boolean> {
+    if (!this.getClient()) {
+      await this.ensurePublicConfig();
+    }
     const client = this.getClient();
     if (!client) return false;
     try {
@@ -675,9 +955,10 @@ class SupabaseService {
         .from('event_inquiries')
         .update({ status })
         .eq('id', id);
+      this.recordError('updateInquiryStatus', error);
       return !error;
     } catch (err) {
-      console.warn('updateInquiryStatus error:', err);
+      this.recordError('updateInquiryStatus', err);
       return false;
     }
   }
@@ -717,7 +998,7 @@ class SupabaseService {
         standardDeliveryFee: Number(data.standard_delivery_fee) || 4.99,
         pickupAddress: data.pickup_address,
         operatingHours: data.operating_hours,
-        chatButtonLabel: data.chat_button_label || 'Chat with us',
+        chatButtonLabel: data.chat_button_label || 'Chat with Kitchen',
         branding: data.branding || undefined,
         colors: data.colors || undefined,
         typography: data.typography || undefined,
@@ -764,9 +1045,10 @@ class SupabaseService {
         updated_at: new Date().toISOString(),
       };
       const { error } = await client.from('site_content').upsert(payload);
+      this.recordError('upsertSiteContent', error);
       return !error;
     } catch (err) {
-      console.warn('upsertSiteContent error:', err);
+      this.recordError('upsertSiteContent', err);
       return false;
     }
   }
@@ -781,7 +1063,7 @@ class SupabaseService {
         .select('*')
         .order('order_index', { ascending: true });
 
-      if (error || !data || data.length === 0) return null;
+      if (error || !data) return null;
 
       return data.map((row: any) => ({
         id: row.id,
@@ -812,9 +1094,17 @@ class SupabaseService {
         is_dropdown: !!item.isDropdown,
         updated_at: new Date().toISOString(),
       }));
+
+      let upsertOk = false;
       const { error } = await client.from('navigation_items').upsert(payload);
-      if (error) {
-        // Fallback if parent_id / is_dropdown columns not migrated yet
+      if (!error) {
+        upsertOk = true;
+        this.lastWriteError = null;
+      } else if (
+        error.code === 'PGRST204' ||
+        (error.message || '').includes('parent_id') ||
+        (error.message || '').includes('is_dropdown')
+      ) {
         const legacyPayload = items.map((item) => ({
           id: item.id,
           label: item.label,
@@ -824,11 +1114,29 @@ class SupabaseService {
           updated_at: new Date().toISOString(),
         }));
         const { error: legacyErr } = await client.from('navigation_items').upsert(legacyPayload);
-        return !legacyErr;
+        this.recordError('saveNavigation', legacyErr);
+        upsertOk = !legacyErr;
+      } else {
+        this.recordError('saveNavigation', error);
+        return false;
       }
-      return true;
+
+      if (upsertOk && items.length > 0) {
+        const keepIds = new Set(items.map((i) => i.id));
+        const { data: existingRows } = await client.from('navigation_items').select('id');
+        if (existingRows && existingRows.length > 0) {
+          const staleIds = existingRows
+            .map((r: any) => String(r.id))
+            .filter((existingId) => !keepIds.has(existingId));
+          if (staleIds.length > 0) {
+            await client.from('navigation_items').delete().in('id', staleIds);
+          }
+        }
+      }
+
+      return upsertOk;
     } catch (err) {
-      console.warn('saveNavigation error:', err);
+      this.recordError('saveNavigation', err);
       return false;
     }
   }
@@ -838,9 +1146,10 @@ class SupabaseService {
     if (!client) return false;
     try {
       const { error } = await client.from('navigation_items').delete().eq('id', id);
+      this.recordError('deleteNavigationItem', error);
       return !error;
     } catch (err) {
-      console.warn('deleteNavigationItem error:', err);
+      this.recordError('deleteNavigationItem', err);
       return false;
     }
   }

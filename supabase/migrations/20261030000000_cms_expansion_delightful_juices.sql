@@ -5,24 +5,28 @@
 -- Safe to run multiple times without resetting or altering existing orders/products.
 -- ==============================================================================
 
--- 1. HERO SLIDES TABLE
+-- 1. HERO SLIDES TABLE (Supports both active and enabled flags seamlessly)
 CREATE TABLE IF NOT EXISTS public.hero_slides (
   id TEXT PRIMARY KEY,
   heading TEXT NOT NULL,
-  subheading TEXT NOT NULL,
-  kicker TEXT,
+  subheading TEXT NOT NULL DEFAULT '',
+  kicker TEXT DEFAULT '',
   cta_label TEXT NOT NULL DEFAULT 'Shop Now',
   cta_url TEXT NOT NULL DEFAULT '/shop',
-  secondary_cta_label TEXT,
-  secondary_cta_url TEXT,
+  secondary_cta_label TEXT DEFAULT '',
+  secondary_cta_url TEXT DEFAULT '',
   desktop_image_url TEXT NOT NULL,
-  mobile_image_url TEXT,
+  mobile_image_url TEXT DEFAULT '',
   overlay_opacity NUMERIC(3,2) NOT NULL DEFAULT 0.55,
   display_order INTEGER NOT NULL DEFAULT 1,
+  active BOOLEAN NOT NULL DEFAULT true,
   enabled BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.hero_slides ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE public.hero_slides ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT true;
 
 CREATE INDEX IF NOT EXISTS idx_hero_slides_order ON public.hero_slides(display_order);
 CREATE INDEX IF NOT EXISTS idx_hero_slides_enabled ON public.hero_slides(enabled);
@@ -33,16 +37,22 @@ CREATE TABLE IF NOT EXISTS public.cms_pages (
   title TEXT NOT NULL,
   slug TEXT UNIQUE NOT NULL,
   status TEXT NOT NULL DEFAULT 'published' CHECK (status IN ('published', 'draft')),
-  seo_title TEXT,
-  meta_description TEXT,
-  show_in_nav BOOLEAN NOT NULL DEFAULT true,
-  nav_parent_id TEXT,
-  nav_label TEXT,
+  seo_title TEXT DEFAULT '',
+  meta_description TEXT DEFAULT '',
+  show_in_nav BOOLEAN NOT NULL DEFAULT false,
+  parent_nav_id TEXT DEFAULT NULL,
+  nav_parent_id TEXT DEFAULT NULL,
+  nav_label TEXT DEFAULT NULL,
   is_system_route BOOLEAN NOT NULL DEFAULT false,
   sections JSONB NOT NULL DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.cms_pages ADD COLUMN IF NOT EXISTS parent_nav_id TEXT DEFAULT NULL;
+ALTER TABLE public.cms_pages ADD COLUMN IF NOT EXISTS nav_parent_id TEXT DEFAULT NULL;
+ALTER TABLE public.cms_pages ADD COLUMN IF NOT EXISTS nav_label TEXT DEFAULT NULL;
+ALTER TABLE public.cms_pages ADD COLUMN IF NOT EXISTS is_system_route BOOLEAN NOT NULL DEFAULT false;
 
 CREATE INDEX IF NOT EXISTS idx_cms_pages_slug ON public.cms_pages(slug);
 CREATE INDEX IF NOT EXISTS idx_cms_pages_status ON public.cms_pages(status);
@@ -54,13 +64,21 @@ CREATE TABLE IF NOT EXISTS public.navigation_items (
   href TEXT NOT NULL,
   visible BOOLEAN NOT NULL DEFAULT true,
   order_index INTEGER NOT NULL DEFAULT 1,
-  parent_id TEXT,
+  parent_id TEXT DEFAULT NULL,
   is_dropdown BOOLEAN NOT NULL DEFAULT false,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-ALTER TABLE public.navigation_items ADD COLUMN IF NOT EXISTS parent_id TEXT;
+ALTER TABLE public.navigation_items ADD COLUMN IF NOT EXISTS parent_id TEXT DEFAULT NULL;
 ALTER TABLE public.navigation_items ADD COLUMN IF NOT EXISTS is_dropdown BOOLEAN NOT NULL DEFAULT false;
+
+-- Remove obsolete single-page hash anchors that cause menu bar doubling alongside multi-page routes
+DELETE FROM public.navigation_items WHERE href LIKE '#%';
+
+-- Restore dropdown hierarchy if previously flattened by an older schema
+UPDATE public.navigation_items SET is_dropdown = true, parent_id = NULL WHERE id IN ('nav-about', 'nav-services');
+UPDATE public.navigation_items SET parent_id = 'nav-about', is_dropdown = false WHERE id IN ('nav-about-company', 'nav-our-story', 'nav-delivery-info');
+UPDATE public.navigation_items SET parent_id = 'nav-services', is_dropdown = false WHERE id IN ('nav-events-link', 'nav-wholesale-link');
 
 CREATE INDEX IF NOT EXISTS idx_nav_parent ON public.navigation_items(parent_id);
 
@@ -73,7 +91,7 @@ ALTER TABLE public.navigation_items ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public read active hero slides" ON public.hero_slides;
 CREATE POLICY "Public read active hero slides"
   ON public.hero_slides FOR SELECT
-  USING (enabled = true OR auth.role() = 'authenticated');
+  USING ((active IS DISTINCT FROM false AND enabled IS DISTINCT FROM false) OR auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "Admin manage hero slides" ON public.hero_slides;
 CREATE POLICY "Admin manage hero slides"
@@ -148,3 +166,10 @@ DROP POLICY IF EXISTS "Allow Assets Update" ON storage.objects;
 CREATE POLICY "Allow Assets Update"
   ON storage.objects FOR UPDATE
   USING (bucket_id = 'delightful_assets');
+
+-- 7. ENSURE ORDERS TABLE SUPPORTS LIVE STRIPE CHECKOUT & WEBHOOK RECONCILIATION
+ALTER TABLE public.orders DROP CONSTRAINT IF EXISTS orders_payment_method_check;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'pending';
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS stripe_session_id TEXT;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS stripe_payment_intent_id TEXT;
+

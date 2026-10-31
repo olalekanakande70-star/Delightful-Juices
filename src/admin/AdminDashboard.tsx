@@ -84,7 +84,7 @@ export const CURATED_PRODUCT_PHOTOS = [
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavigate }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => dataRepo.isAdminLoggedIn());
-  const [loginPass, setLoginPass] = useState('');
+  const [isAuthReady, setIsAuthReady] = useState<boolean>(() => supabaseService.isAuthInitialized());
   const [loginError, setLoginError] = useState('');
 
   const [activeTab, setActiveTab] = useState<
@@ -100,6 +100,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
   const [cmsPages, setCmsPages] = useState<CmsPage[]>([]);
   const [supabaseCfg, setSupabaseCfg] = useState<SupabaseConfig>(dataRepo.getSupabaseConfig());
+  const [supabaseUserEmail, setSupabaseUserEmail] = useState<string | null>(
+    () => supabaseService.getCurrentUser()?.email || null
+  );
+  const [serverStatus, setServerStatus] = useState(() => supabaseService.getServerStatus());
+  const [isRefreshingLive, setIsRefreshingLive] = useState(false);
 
   // Modals & form state
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -109,14 +114,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
   const [syncStatusMsg, setSyncStatusMsg] = useState<{ text: string; success: boolean } | null>(null);
   const [isTestingSupabase, setIsTestingSupabase] = useState(false);
   const [saveSuccessNotice, setSaveSuccessNotice] = useState<string | null>(null);
-  const [confirmResetSeed, setConfirmResetSeed] = useState(false);
   const [confirmDeleteProdId, setConfirmDeleteProdId] = useState<string | null>(null);
 
   // Stripe test endpoint state
   const [isTestingStripe, setIsTestingStripe] = useState(false);
   const [stripeTestResult, setStripeTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  // Subscribe to storage changes
+  // Subscribe to live repository & Supabase Auth changes
   useEffect(() => {
     const refreshData = () => {
       setProducts(dataRepo.getProducts());
@@ -127,19 +131,52 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
       setHeroSlides(dataRepo.getHeroSlides());
       setCmsPages(dataRepo.getPages());
       setSupabaseCfg(dataRepo.getSupabaseConfig());
+      setServerStatus(supabaseService.getServerStatus());
     };
     refreshData();
+
+    supabaseService.ensurePublicConfig(true).then(() => {
+      setSupabaseCfg(dataRepo.getSupabaseConfig());
+      setServerStatus(supabaseService.getServerStatus());
+    });
+
     const unsubscribe = dataRepo.subscribe(refreshData);
-    return () => unsubscribe();
+    const unsubscribeAuth = supabaseService.subscribeAuth((user, initialized) => {
+      setSupabaseUserEmail(user?.email || null);
+      setIsAuthenticated(Boolean(user));
+      setIsAuthReady(initialized);
+    });
+    return () => {
+      unsubscribe();
+      unsubscribeAuth();
+    };
   }, []);
 
   const showToast = (msg: string) => {
     setSaveSuccessNotice(msg);
-    setTimeout(() => setSaveSuccessNotice(null), 3000);
+    setTimeout(() => setSaveSuccessNotice(null), 4200);
   };
 
-  const handleLogout = () => {
-    dataRepo.adminLogout();
+  const handlePersistContent = async (targetContent: SiteContent, successMessage: string) => {
+    const res = await dataRepo.saveContent(targetContent);
+    if (res.synced) {
+      showToast(successMessage);
+    } else {
+      showToast(`Unable to save to live database: ${res.error}`);
+    }
+  };
+
+  const handleRefreshLiveData = async () => {
+    setIsRefreshingLive(true);
+    await supabaseService.ensurePublicConfig(true);
+    await dataRepo.syncFromSupabase();
+    setServerStatus(supabaseService.getServerStatus());
+    setIsRefreshingLive(false);
+    showToast('Synced latest records from live Supabase database!');
+  };
+
+  const handleLogout = async () => {
+    await dataRepo.adminLogout();
     setIsAuthenticated(false);
   };
 
@@ -149,13 +186,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
   const newInquiriesCount = inquiries.filter((i) => i.status === 'new').length;
 
   // Product save handler
-  const handleSaveProduct = (e: React.FormEvent) => {
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct) return;
-    dataRepo.updateProduct(editingProduct);
+    const res = await dataRepo.updateProduct(editingProduct);
+    if (!res.synced) {
+      showToast(`Could not publish "${editingProduct.name}" to live database: ${res.error}`);
+      return;
+    }
+    const savedName = editingProduct.name;
     setEditingProduct(null);
     setIsAddingProduct(false);
-    showToast(`Drink "${editingProduct.name}" saved successfully!`);
+    showToast(`Drink "${savedName}" published to live database!`);
   };
 
   const handleNewProductInit = () => {
@@ -190,7 +232,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
     setIsAddingProduct(true);
   };
 
-  // Upload Logo file handler
+  // Upload Logo file handler (strictly live Supabase Storage)
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>, isMobile = false) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -200,38 +242,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
       return;
     }
 
-    // Attempt Supabase storage upload if connected
-    if (supabaseCfg.connected) {
-      const ext = file.name.split('.').pop() || 'png';
-      const path = `logos/${Date.now()}-${isMobile ? 'mobile' : 'desktop'}.${ext}`;
-      const res = await supabaseService.uploadAsset('delightful_assets', path, file);
-      if (res.url) {
-        const updatedBranding: BrandSettings = {
-          ...(content.branding || { logoText: 'Delightful Juices', showLogoIcon: true }),
-          [isMobile ? 'mobileLogoUrl' : 'logoUrl']: res.url,
-        };
-        const updatedContent = { ...content, branding: updatedBranding };
-        setContent(updatedContent);
-        dataRepo.saveContent(updatedContent);
-        showToast('Logo uploaded to Supabase Storage and saved!');
-        return;
-      }
-    }
-
-    // High fidelity data URL fallback for instant client persistence
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
+    const ext = file.name.split('.').pop() || 'png';
+    const path = `logos/${Date.now()}-${isMobile ? 'mobile' : 'desktop'}.${ext}`;
+    const res = await supabaseService.uploadAsset('delightful_assets', path, file);
+    if (res.url) {
       const updatedBranding: BrandSettings = {
         ...(content.branding || { logoText: 'Delightful Juices', showLogoIcon: true }),
-        [isMobile ? 'mobileLogoUrl' : 'logoUrl']: dataUrl,
+        [isMobile ? 'mobileLogoUrl' : 'logoUrl']: res.url,
       };
       const updatedContent = { ...content, branding: updatedBranding };
       setContent(updatedContent);
-      dataRepo.saveContent(updatedContent);
-      showToast('Logo updated and saved persistently!');
-    };
-    reader.readAsDataURL(file);
+      await handlePersistContent(updatedContent, 'Logo uploaded to live Supabase Storage and published!');
+    } else {
+      showToast(`Logo upload failed: ${res.error || 'Ensure delightful_assets bucket is active in Supabase.'}`);
+    }
   };
 
   const currentShowcase: AboutShowcaseSettings = {
@@ -254,7 +278,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
     };
     setContent(updatedContent);
     if (autoSave) {
-      dataRepo.saveContent(updatedContent);
+      handlePersistContent(updatedContent, 'Showcase updated in live Supabase database!');
     }
   };
 
@@ -270,27 +294,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
       return;
     }
 
-    if (supabaseCfg.connected) {
-      const ext = file.name.split('.').pop() || 'jpg';
-      const path = `about/${targetField}-${Date.now()}.${ext}`;
-      const res = await supabaseService.uploadAsset('delightful_assets', path, file);
-      if (res.url) {
-        updateAboutShowcase({ [targetField]: res.url }, true);
-        showToast('Showcase image uploaded to Supabase Storage and saved!');
-        return;
-      }
+    const ext = file.name.split('.').pop() || 'jpg';
+    const path = `about/${targetField}-${Date.now()}.${ext}`;
+    const res = await supabaseService.uploadAsset('delightful_assets', path, file);
+    if (res.url) {
+      updateAboutShowcase({ [targetField]: res.url }, true);
+    } else {
+      showToast(`Showcase image upload failed: ${res.error || 'Check Supabase Storage policies.'}`);
     }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      updateAboutShowcase({ [targetField]: dataUrl }, true);
-      showToast('Showcase image updated and saved persistently!');
-    };
-    reader.readAsDataURL(file);
   };
 
-  // Upload Product Image file handler
+  // Upload Product Image file handler (strictly live Supabase Storage)
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isGallery = false) => {
     const file = e.target.files?.[0];
     if (!file || !editingProduct) return;
@@ -300,41 +314,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
       return;
     }
 
-    if (supabaseCfg.connected) {
-      const ext = file.name.split('.').pop() || 'jpg';
-      const path = `products/${editingProduct.slug || 'drink'}-${Date.now()}.${ext}`;
-      const res = await supabaseService.uploadAsset('delightful_assets', path, file);
-      if (res.url) {
-        if (isGallery) {
-          const current = editingProduct.galleryImages || [];
-          setEditingProduct({ ...editingProduct, galleryImages: [...current, res.url] });
-        } else {
-          setEditingProduct({ ...editingProduct, imageUrl: res.url });
-        }
-        showToast('Product image uploaded to Supabase Storage!');
-        return;
-      }
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
+    const ext = file.name.split('.').pop() || 'jpg';
+    const path = `products/${editingProduct.slug || 'drink'}-${Date.now()}.${ext}`;
+    const res = await supabaseService.uploadAsset('delightful_assets', path, file);
+    if (res.url) {
       if (isGallery) {
         const current = editingProduct.galleryImages || [];
-        setEditingProduct({ ...editingProduct, galleryImages: [...current, dataUrl] });
+        setEditingProduct({ ...editingProduct, galleryImages: [...current, res.url] });
       } else {
-        setEditingProduct({ ...editingProduct, imageUrl: dataUrl });
+        setEditingProduct({ ...editingProduct, imageUrl: res.url });
       }
-      showToast('Image updated!');
-    };
-    reader.readAsDataURL(file);
+      showToast('Product image uploaded to live Supabase Storage!');
+    } else {
+      showToast(`Product image upload failed: ${res.error || 'Check Supabase Storage policies.'}`);
+    }
   };
 
-  // Test Supabase Connection
+  // Test Live Supabase Connection
   const handleTestSupabase = async () => {
     setIsTestingSupabase(true);
     setSyncStatusMsg(null);
-    const res = await dataRepo.testSupabaseConnection(supabaseCfg.url, supabaseCfg.anonKey);
+    const res = await dataRepo.testSupabaseConnection();
     setIsTestingSupabase(false);
     setSyncStatusMsg({
       text: res.message,
@@ -348,7 +348,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
     setTimeout(() => setCopiedSql(false), 2500);
   };
 
-  const [loginMethod, setLoginMethod] = useState<'supabase' | 'pin'>('supabase');
   const [supabaseEmail, setSupabaseEmail] = useState('');
   const [supabasePass, setSupabasePass] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -366,37 +365,59 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
     if (res.success) {
       setIsAuthenticated(true);
     } else {
-      setLoginError(res.error || 'Failed to authenticate via Supabase Auth.');
+      setLoginError(res.error || 'Failed to authenticate via live Supabase Auth.');
     }
   };
 
-  const handlePinLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (dataRepo.adminLogin(loginPass)) {
-      setIsAuthenticated(true);
-      setLoginError('');
-    } else {
-      setLoginError('Invalid Administrator Key. Please enter "admin123" or "delightful2026"');
-    }
-  };
-
-  // 1-Click Seed Supabase Tables
+  // 1-Click Sync & Repair Live Supabase Tables
   const handleSeedSupabase = async () => {
+    if (!supabaseUserEmail) {
+      setSeedResult(
+        'Action needed: Please sign in with your Supabase Admin Email & Password so Row Level Security authorizes live database writes.'
+      );
+      return;
+    }
+
     setIsSeeding(true);
     setSeedResult(null);
     try {
+      const failedTables: string[] = [];
+
+      let prodOk = true;
       for (const p of products) {
-        await supabaseService.upsertProduct(p);
+        const ok = await supabaseService.upsertProduct(p);
+        if (!ok) prodOk = false;
       }
-      await supabaseService.upsertSiteContent(content);
-      await supabaseService.saveNavigation(navItems);
-      await supabaseService.saveAllHeroSlides(heroSlides);
+      if (!prodOk) failedTables.push('products');
+
+      const contentOk = await supabaseService.upsertSiteContent(content);
+      if (!contentOk) failedTables.push('site_content');
+
+      const navOk = await supabaseService.saveNavigation(navItems);
+      if (!navOk) failedTables.push('navigation_items');
+
+      const slidesOk = await supabaseService.saveAllHeroSlides(heroSlides);
+      if (!slidesOk) failedTables.push('hero_slides');
+
+      let pagesOk = true;
       for (const pg of cmsPages) {
-        await supabaseService.upsertCmsPage(pg);
+        const ok = await supabaseService.upsertCmsPage(pg);
+        if (!ok) pagesOk = false;
       }
+      if (!pagesOk) failedTables.push('cms_pages');
 
       setIsSeeding(false);
-      setSeedResult('Successfully seeded drinks, site copy, navigation menus, hero slides, and CMS pages into your Supabase project!');
+      if (failedTables.length === 0) {
+        setSeedResult(
+          'Successfully synced all drinks, site copy, clean dropdown navigation, hero slides, and CMS pages to your live Supabase database!'
+        );
+      } else {
+        setSeedResult(
+          `Partial sync: failed on [${failedTables.join(', ')}] — ${
+            supabaseService.getLastWriteError() || 'Please copy and run the updated Schema Migration SQL below.'
+          }`
+        );
+      }
       await handleTestSupabase();
     } catch (err: any) {
       setIsSeeding(false);
@@ -447,7 +468,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
     }
   };
 
-  // Login Screen if not authenticated
+  // Wait briefly for live Supabase Auth session check before showing login prompt
+  if (!isAuthReady) {
+    return (
+      <div className="fixed inset-0 z-50 bg-[#12351F] flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl border-4 border-[#E1AD01] text-center space-y-4">
+          <RefreshCw className="w-8 h-8 text-[#1B4D2E] animate-spin mx-auto" />
+          <div className="font-display font-bold text-lg text-[#1B4D2E]">
+            Verifying Live Admin Session...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Live Supabase Auth Login Screen if not authenticated
   if (!isAuthenticated) {
     return (
       <div className="fixed inset-0 z-50 bg-[#12351F] flex items-center justify-center p-4">
@@ -461,146 +496,64 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
               Delightful Juices Admin
             </h2>
             <p className="text-xs text-[#1B4D2E]/70 mt-1">
-              Authorized business portal for Oluyemi B. Ajibolade
+              Live Cloud CMS &amp; Store Management Portal
             </p>
           </div>
 
-          {/* Login Mode Switcher */}
-          <div className="grid grid-cols-2 gap-2 bg-[#FFF8E7] p-1 rounded-xl border border-[#1B4D2E]/15 text-xs font-bold">
-            <button
-              type="button"
-              onClick={() => {
-                setLoginMethod('supabase');
-                setLoginError('');
-              }}
-              className={`py-2 px-3 rounded-lg transition-all cursor-pointer ${
-                loginMethod === 'supabase'
-                  ? 'bg-[#1B4D2E] text-white shadow-xs'
-                  : 'text-[#1B4D2E]/70 hover:text-[#1B4D2E]'
-              }`}
-            >
-              Supabase Auth
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setLoginMethod('pin');
-                setLoginError('');
-              }}
-              className={`py-2 px-3 rounded-lg transition-all cursor-pointer ${
-                loginMethod === 'pin'
-                  ? 'bg-[#1B4D2E] text-white shadow-xs'
-                  : 'text-[#1B4D2E]/70 hover:text-[#1B4D2E]'
-              }`}
-            >
-              Master Key
-            </button>
-          </div>
+          <form onSubmit={handleSupabaseLogin} className="space-y-4 text-left">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
+                Administrator Email
+              </label>
+              <input
+                type="email"
+                required
+                value={supabaseEmail}
+                onChange={(e) => setSupabaseEmail(e.target.value)}
+                placeholder="admin@delightfuljuices.com"
+                className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E] focus:ring-2 focus:ring-[#E1AD01] focus:outline-hidden"
+              />
+            </div>
 
-          {loginMethod === 'supabase' ? (
-            <form onSubmit={handleSupabaseLogin} className="space-y-4 text-left">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
-                  Administrator Email
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={supabaseEmail}
-                  onChange={(e) => setSupabaseEmail(e.target.value)}
-                  placeholder="olalekanakande70@gmail.com"
-                  className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E] focus:ring-2 focus:ring-[#E1AD01] focus:outline-hidden"
-                />
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
+                Password
+              </label>
+              <input
+                type="password"
+                required
+                value={supabasePass}
+                onChange={(e) => setSupabasePass(e.target.value)}
+                placeholder="Enter your Supabase Auth password"
+                className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E] focus:ring-2 focus:ring-[#E1AD01] focus:outline-hidden"
+              />
+            </div>
+
+            {loginError && (
+              <div className="p-3 rounded-xl bg-red-50 text-red-700 text-xs font-semibold flex items-center space-x-1.5">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{loginError}</span>
               </div>
+            )}
 
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={supabasePass}
-                  onChange={(e) => setSupabasePass(e.target.value)}
-                  placeholder="Enter Supabase password"
-                  className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E] focus:ring-2 focus:ring-[#E1AD01] focus:outline-hidden"
-                />
-              </div>
+            <div className="pt-2 flex items-center space-x-3">
+              <button
+                type="submit"
+                disabled={isLoggingIn}
+                className="flex-1 bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-3 px-4 rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer"
+              >
+                {isLoggingIn ? 'Signing In...' : 'Sign In to Live Portal'}
+              </button>
 
-              {loginError && (
-                <div className="p-3 rounded-xl bg-red-50 text-red-700 text-xs font-semibold flex items-center space-x-1.5">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{loginError}</span>
-                </div>
-              )}
-
-              <div className="pt-2 flex items-center space-x-3">
-                <button
-                  type="submit"
-                  disabled={isLoggingIn}
-                  className="flex-1 bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-3 px-4 rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer"
-                >
-                  {isLoggingIn ? 'Verifying with Supabase...' : 'Sign In with Supabase'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl text-xs transition-colors cursor-pointer"
-                >
-                  Exit
-                </button>
-              </div>
-
-              <p className="text-[11px] text-gray-500 text-center">
-                Need quick access? Click <strong>Master Key</strong> tab above.
-              </p>
-            </form>
-          ) : (
-            <form onSubmit={handlePinLogin} className="space-y-4 text-left">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
-                  Admin Master PIN or Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={loginPass}
-                  onChange={(e) => setLoginPass(e.target.value)}
-                  placeholder="Enter admin password (e.g. admin123)"
-                  className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-3 text-sm text-[#1B4D2E] focus:ring-2 focus:ring-[#E1AD01] focus:outline-hidden"
-                />
-                <div className="text-[11px] text-[#1B4D2E]/60 mt-1">
-                  Default credentials: <span className="font-mono font-bold text-[#1B4D2E]">admin123</span> or <span className="font-mono font-bold text-[#1B4D2E]">delightful2026</span>
-                </div>
-              </div>
-
-              {loginError && (
-                <div className="p-3 rounded-xl bg-red-50 text-red-700 text-xs font-semibold flex items-center space-x-1.5">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{loginError}</span>
-                </div>
-              )}
-
-              <div className="pt-2 flex items-center space-x-3">
-                <button
-                  type="submit"
-                  className="flex-1 bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-3 px-4 rounded-xl text-sm shadow-md transition-all cursor-pointer"
-                >
-                  Sign In to Dashboard
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl text-xs transition-colors cursor-pointer"
-                >
-                  Exit
-                </button>
-              </div>
-            </form>
-          )}
-
+              <button
+                type="button"
+                onClick={onClose}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                Exit
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     );
@@ -627,23 +580,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
             <div className="font-display font-extrabold text-base text-[#FFF8E7] flex items-center space-x-2">
               <span>Delightful Juices Admin</span>
               <span className="text-[10px] bg-[#E1AD01] text-[#1B4D2E] font-black px-2 py-0.5 rounded-full uppercase">
-                CMS v3.0
+                Live CMS
               </span>
             </div>
             <div className="text-[10px] text-[#FFF8E7]/70">
-              Quakertown Kitchen Operations • C.E.O. {content.ceoName}
+              {supabaseUserEmail ? `Signed in as ${supabaseUserEmail}` : `Quakertown Kitchen Operations • C.E.O. ${content.ceoName}`}
             </div>
           </div>
         </div>
 
         <div className="flex items-center space-x-3">
-          {/* Supabase status indicator */}
+          {/* Live Supabase status indicator */}
           <div 
             onClick={() => setActiveTab('supabase')} 
             className="hidden md:flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold cursor-pointer border border-white/20 bg-white/10 hover:bg-white/20"
           >
-            <span className={`w-2 h-2 rounded-full ${supabaseCfg.connected ? 'bg-emerald-400' : 'bg-[#E1AD01]'}`} />
-            <span>{supabaseCfg.connected ? 'Supabase Connected' : 'Local Storage Mode'}</span>
+            <span className={`w-2 h-2 rounded-full ${supabaseCfg.connected ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+            <span>{supabaseCfg.connected ? 'Live Cloud Connected' : 'Connecting...'}</span>
           </div>
 
           <button
@@ -847,39 +800,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
           </nav>
 
           <div className="p-3 md:p-4 border-t border-[#1B4D2E]/10 space-y-2">
-            {confirmResetSeed ? (
-              <div className="space-y-1.5 bg-red-50 p-2 rounded-xl border border-red-200">
-                <span className="block text-[10px] font-bold text-red-800 text-center">
-                  Reset local factory seed?
-                </span>
-                <div className="flex items-center justify-center gap-1.5">
-                  <button
-                    onClick={() => {
-                      dataRepo.resetToDefaultSeed();
-                      setConfirmResetSeed(false);
-                      showToast('Data restored to initial factory seed!');
-                    }}
-                    className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-md cursor-pointer"
-                  >
-                    Yes
-                  </button>
-                  <button
-                    onClick={() => setConfirmResetSeed(false)}
-                    className="bg-white text-gray-700 border text-[10px] font-bold px-2.5 py-1 rounded-md cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setConfirmResetSeed(true)}
-                className="w-full flex items-center justify-center space-x-1.5 py-2 px-2 text-[11px] font-semibold text-[#1B4D2E]/70 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Reset Factory Seed</span>
-              </button>
-            )}
+            <button
+              onClick={handleRefreshLiveData}
+              disabled={isRefreshingLive}
+              className="w-full flex items-center justify-center space-x-1.5 py-2 px-2 text-[11px] font-semibold text-[#1B4D2E]/80 hover:text-[#1B4D2E] hover:bg-[#FFF8E7] rounded-lg transition-colors cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingLive ? 'animate-spin' : ''}`} />
+              <span className="hidden md:inline">
+                {isRefreshingLive ? 'Syncing Live DB...' : 'Refresh Live Data'}
+              </span>
+            </button>
           </div>
         </aside>
 
@@ -1088,19 +1018,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                     </div>
                   </div>
 
-                  {/* Supabase Status Tile */}
+                  {/* Live Cloud Database Tile */}
                   <div className="bg-white p-5 rounded-3xl border border-[#1B4D2E]/10 shadow-xs text-xs space-y-2">
-                    <div className="font-bold text-[#1B4D2E]">Storage & Cloud Sync</div>
+                    <div className="font-bold text-[#1B4D2E]">Live Cloud Database Sync</div>
                     <p className="text-gray-600 text-[11px]">
                       {supabaseCfg.connected
-                        ? 'Connected to live Supabase Postgres database. Public writes and orders sync automatically.'
-                        : 'Using Local Storage engine with instant persistence. Connect your Supabase project in the Supabase tab.'}
+                        ? 'Connected directly to your live Supabase Postgres & Storage instance. All storefront changes, orders, and inquiries sync across every visitor in real time.'
+                        : 'Connecting to live Supabase database...'}
                     </p>
                     <button
                       onClick={() => setActiveTab('supabase')}
                       className="text-xs font-bold text-[#1B4D2E] underline cursor-pointer"
                     >
-                      Configure Supabase Database
+                      Inspect Live Database Status
                     </button>
                   </div>
                 </div>
@@ -1239,8 +1169,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                         };
                         const updated = { ...content, branding: updatedBranding };
                         setContent(updated);
-                        dataRepo.saveContent(updated);
-                        showToast('Default stylized logo restored!');
+                        handlePersistContent(updated, 'Default stylized logo restored on live site!');
                       }}
                       className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold py-2.5 px-3.5 rounded-xl flex items-center space-x-1.5 transition-colors cursor-pointer"
                     >
@@ -1336,8 +1265,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                 <div className="pt-4 border-t border-gray-100 flex justify-end">
                   <button
                     onClick={() => {
-                      dataRepo.saveContent(content);
-                      showToast('Branding settings saved persistently!');
+                      handlePersistContent(content, 'Branding settings published to live site!');
                     }}
                     className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-3 px-6 rounded-xl text-xs flex items-center space-x-2 shadow-md cursor-pointer"
                   >
@@ -1473,8 +1401,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                       };
                       setContent(updated);
                       applyTheme(updated);
-                      dataRepo.saveContent(updated);
-                      showToast('Palette restored to default brand colors!');
+                      handlePersistContent(updated, 'Palette restored to default brand colors on live site!');
                     }}
                     className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold py-2 px-3 rounded-xl flex items-center space-x-1.5 transition-colors cursor-pointer"
                   >
@@ -1773,9 +1700,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                 <div className="pt-4 border-t border-gray-100 flex justify-end">
                   <button
                     onClick={() => {
-                      dataRepo.saveContent(content);
                       applyTheme(content);
-                      showToast('Appearance palette applied and saved persistently!');
+                      handlePersistContent(content, 'Appearance palette applied and published to live site!');
                     }}
                     className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-3 px-6 rounded-xl text-xs flex items-center space-x-2 shadow-md cursor-pointer"
                   >
@@ -1792,64 +1718,68 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
             <div className="space-y-6 max-w-4xl">
               <div>
                 <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-[#1B4D2E]">
-                  Stripe Payment Integration
+                  Live Stripe Payment Integration
                 </h2>
                 <p className="text-xs sm:text-sm text-[#1B4D2E]/70">
-                  Allow customers to pay instantly with credit cards, Apple Pay, and Google Pay via Stripe
+                  Manage live card checkout, Apple Pay, and Google Pay powered by server-side Stripe Checkout Sessions &amp; Webhooks
                 </p>
               </div>
 
-              {/* Status Banner & Submit Later Notice */}
+              {/* Live Server & Checkout Status Banner */}
               <div className="space-y-3">
-                <div 
+                <div
                   className={`p-5 rounded-3xl border flex items-start space-x-4 ${
-                    content.stripe?.enabled
+                    content.stripe?.enabled && serverStatus.stripeConfigured
                       ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                      : content.stripe?.enabled
+                      ? 'bg-amber-50 border-amber-300 text-amber-900'
                       : 'bg-gray-50 border-gray-300 text-gray-800'
                   }`}
                 >
                   <CreditCard className="w-6 h-6 shrink-0 mt-0.5 text-[#1B4D2E]" />
-                  <div className="space-y-1 text-xs">
-                    <div className="flex items-center space-x-2">
+                  <div className="space-y-1 text-xs flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-extrabold text-sm">
-                        {content.stripe?.enabled ? 'Stripe Checkout is Active' : 'Stripe Checkout is Disabled'}
+                        {content.stripe?.enabled
+                          ? 'Stripe Card Checkout is Enabled at Storefront'
+                          : 'Stripe Card Checkout is Disabled'}
                       </span>
-                      {(!content.stripe?.publishableKey || content.stripe.publishableKey.trim() === '') && (
-                        <span className="bg-amber-100 text-amber-900 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-amber-300">
-                          Keys Pending Submission
+                      <span
+                        className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                          serverStatus.stripeConfigured
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            : 'bg-amber-100 text-amber-900 border-amber-300'
+                        }`}
+                      >
+                        {serverStatus.stripeConfigured
+                          ? 'STRIPE_SECRET_KEY Detected on Server'
+                          : 'STRIPE_SECRET_KEY Not Set on Server Yet'}
+                      </span>
+                      {serverStatus.stripeWebhookConfigured && (
+                        <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-300">
+                          Webhook Active
                         </span>
                       )}
                     </div>
                     <p>
                       {content.stripe?.enabled
-                        ? `Customers can choose "${content.stripe.customerFacingName || 'Credit / Debit Card (Stripe)'}" at checkout in ${content.stripe.mode || 'test'} mode.`
-                        : 'Card checkout is currently hidden from customers. Enable the toggle below whenever you wish to activate.'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Submitting Keys Later Callout */}
-                <div className="p-4 bg-sky-50 rounded-2xl border border-sky-200 text-sky-950 text-xs flex items-start space-x-3">
-                  <HelpCircle className="w-5 h-5 text-sky-600 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <div className="font-bold text-sky-900">
-                      Submitting Keys Later? Everything Works Seamlessly!
-                    </div>
-                    <p className="text-[11px] text-sky-800 leading-relaxed">
-                      You can submit your Stripe keys at any time after generating them in your Stripe dashboard. In the meantime, your store safely takes orders via <strong>Zelle Transfer</strong>, <strong>Kitchen Pickup</strong>, and <strong>Direct WhatsApp</strong> without losing a single customer. Whenever your Stripe keys are ready, simply paste your Publishable Key below and set your <code className="bg-sky-100 px-1 py-0.5 rounded font-mono text-[10px]">STRIPE_SECRET_KEY</code> in Vercel.
+                        ? `Customers see "${content.stripe.customerFacingName || 'Credit / Debit Card (Stripe)'}" in the live checkout modal. All secret keys are read securely from server environment variables.`
+                        : 'Card checkout is currently hidden from customers. Enable the toggle below whenever you wish to accept online card payments.'}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Stripe Settings Form */}
+              {/* Stripe Storefront Presentation Settings */}
               <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#1B4D2E]/10 shadow-sm space-y-5">
                 <div className="flex items-center justify-between pb-3 border-b">
                   <div>
                     <h3 className="font-display font-bold text-lg text-[#1B4D2E]">
-                      Card Processing Settings
+                      Storefront Card Checkout Settings
                     </h3>
-                    <p className="text-xs text-gray-500">Configure Stripe checkout credentials and modes</p>
+                    <p className="text-xs text-gray-500">
+                      Configure currency and customer-facing labels for live Stripe Checkout
+                    </p>
                   </div>
 
                   <label className="flex items-center space-x-2 cursor-pointer">
@@ -1859,8 +1789,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                       onChange={(e) => {
                         const updated: StripePaymentSettings = {
                           ...(content.stripe || {
-                            mode: 'test',
-                            publishableKey: '',
+                            mode: 'live',
                             currency: 'USD',
                             customerFacingName: 'Credit / Debit Card (Stripe)',
                             description: 'Instant secure checkout with Visa, Mastercard, Amex, Apple Pay & Google Pay',
@@ -1875,91 +1804,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                   </label>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Mode */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
-                      Processing Mode
-                    </label>
-                    <select
-                      value={content.stripe?.mode || 'test'}
-                      onChange={(e) => {
-                        const updated: StripePaymentSettings = {
-                          ...(content.stripe || {
-                            enabled: true,
-                            publishableKey: '',
-                            currency: 'USD',
-                            customerFacingName: 'Credit / Debit Card (Stripe)',
-                            description: '',
-                          }),
-                          mode: e.target.value as 'test' | 'live',
-                        };
-                        setContent({ ...content, stripe: updated });
-                      }}
-                      className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E] font-bold"
-                    >
-                      <option value="test">Test Mode (pk_test_...)</option>
-                      <option value="live">Live Production (pk_live_...)</option>
-                    </select>
-                  </div>
-
-                  {/* Currency */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
-                      Currency
-                    </label>
-                    <select
-                      value={content.stripe?.currency || 'USD'}
-                      onChange={(e) => {
-                        const updated: StripePaymentSettings = {
-                          ...(content.stripe || {
-                            enabled: true,
-                            mode: 'test',
-                            publishableKey: '',
-                            customerFacingName: 'Credit / Debit Card (Stripe)',
-                            description: '',
-                          }),
-                          currency: e.target.value,
-                        };
-                        setContent({ ...content, stripe: updated });
-                      }}
-                      className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E] font-bold"
-                    >
-                      <option value="USD">USD ($ - United States Dollar)</option>
-                      <option value="CAD">CAD ($ - Canadian Dollar)</option>
-                      <option value="GBP">GBP (£ - British Pound)</option>
-                      <option value="EUR">EUR (€ - Euro)</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Publishable Key */}
+                {/* Currency */}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
-                    Stripe Publishable Key
+                    Settlement Currency
                   </label>
-                  <input
-                    type="text"
-                    value={content.stripe?.publishableKey || ''}
+                  <select
+                    value={content.stripe?.currency || 'USD'}
                     onChange={(e) => {
                       const updated: StripePaymentSettings = {
                         ...(content.stripe || {
                           enabled: true,
-                          mode: 'test',
-                          currency: 'USD',
+                          mode: 'live',
                           customerFacingName: 'Credit / Debit Card (Stripe)',
                           description: '',
                         }),
-                        publishableKey: e.target.value,
+                        currency: e.target.value,
                       };
                       setContent({ ...content, stripe: updated });
                     }}
-                    placeholder="pk_test_... or pk_live_..."
-                    className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E] font-mono"
-                  />
-                  <span className="text-[10px] text-gray-500 mt-1 block">
-                    Available in your Stripe Dashboard &gt; Developers &gt; API Keys.
-                  </span>
+                    className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E] font-bold"
+                  >
+                    <option value="USD">USD ($ - United States Dollar)</option>
+                    <option value="CAD">CAD ($ - Canadian Dollar)</option>
+                    <option value="GBP">GBP (£ - British Pound)</option>
+                    <option value="EUR">EUR (€ - Euro)</option>
+                  </select>
                 </div>
 
                 {/* Customer-Facing Label */}
@@ -1974,8 +1844,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                       const updated: StripePaymentSettings = {
                         ...(content.stripe || {
                           enabled: true,
-                          mode: 'test',
-                          publishableKey: '',
+                          mode: 'live',
                           currency: 'USD',
                           description: '',
                         }),
@@ -1999,8 +1868,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                       const updated: StripePaymentSettings = {
                         ...(content.stripe || {
                           enabled: true,
-                          mode: 'test',
-                          publishableKey: '',
+                          mode: 'live',
                           currency: 'USD',
                           customerFacingName: 'Credit / Debit Card (Stripe)',
                         }),
@@ -2012,19 +1880,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                   />
                 </div>
 
-                {/* Server Secret Key Instructions */}
-                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-xs space-y-2 text-amber-900">
+                {/* Live Server Environment Variable Reference (No Secrets or Key Inputs in UI) */}
+                <div className="p-4 bg-[#FFF8E7] rounded-2xl border border-[#1B4D2E]/15 text-xs space-y-2 text-[#1B4D2E]">
                   <div className="font-bold flex items-center space-x-1.5">
-                    <ShieldCheck className="w-4 h-4 text-amber-700" />
-                    <span>Important: Setting STRIPE_SECRET_KEY on Vercel</span>
+                    <ShieldCheck className="w-4 h-4 text-[#1B4D2E]" />
+                    <span>Live Server Environment Variables</span>
                   </div>
-                  <p className="text-[11px] leading-relaxed">
-                    Stripe secret keys (<span className="font-mono font-bold">sk_test_...</span> or <span className="font-mono font-bold">sk_live_...</span>) must never be placed in frontend code. 
-                    In your Vercel Project Dashboard, navigate to <strong>Settings &gt; Environment Variables</strong> and add:
+                  <p className="text-[11px] text-[#1B4D2E]/80 leading-relaxed">
+                    All payment credentials stay strictly on the server (never stored in browser storage or client code). Configure your live keys in your hosting provider&apos;s Environment Variables:
                   </p>
-                  <div className="bg-white/80 p-2.5 rounded-xl font-mono text-[11px] border border-amber-300">
-                    <div><strong>STRIPE_SECRET_KEY</strong> = sk_test_51... or sk_live_...</div>
-                    <div className="text-gray-500 mt-1"><strong>STRIPE_WEBHOOK_SECRET</strong> = whsec_... (optional for webhooks)</div>
+                  <div className="bg-white p-2.5 rounded-xl font-mono text-[11px] border border-[#1B4D2E]/15 space-y-1">
+                    <div>
+                      <strong>STRIPE_SECRET_KEY</strong> — Server secret key used by <code className="font-mono">/api/create-checkout-session</code>
+                    </div>
+                    <div className="text-gray-600">
+                      <strong>STRIPE_WEBHOOK_SECRET</strong> — Webhook signing secret verified by <code className="font-mono">/api/stripe-webhook</code>
+                    </div>
                   </div>
                 </div>
 
@@ -2037,13 +1908,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                     className="bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center space-x-2 transition-colors cursor-pointer"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isTestingStripe ? 'animate-spin' : ''}`} />
-                    <span>{isTestingStripe ? 'Pinging /api/create-checkout-session...' : 'Test Stripe Server API Endpoint'}</span>
+                    <span>{isTestingStripe ? 'Verifying Live Stripe API...' : 'Verify Live Stripe Server Endpoint'}</span>
                   </button>
 
                   <button
                     onClick={() => {
-                      dataRepo.saveContent(content);
-                      showToast('Stripe settings saved persistently!');
+                      handlePersistContent(content, 'Stripe checkout settings published to live site!');
                     }}
                     className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-3 px-6 rounded-xl text-xs flex items-center space-x-2 shadow-md cursor-pointer"
                   >
@@ -2055,13 +1925,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                 {stripeTestResult && (
                   <div
                     className={`p-3.5 rounded-xl text-xs flex items-start space-x-2 ${
-                      stripeTestResult.success ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'
+                      stripeTestResult.success ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-amber-50 text-amber-900 border border-amber-200'
                     }`}
                   >
                     {stripeTestResult.success ? (
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     ) : (
-                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                      <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                     )}
                     <span>{stripeTestResult.message}</span>
                   </div>
@@ -2524,8 +2394,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                   <button
                     type="button"
                     onClick={() => {
-                      dataRepo.saveContent(content);
-                      showToast('Craft Showcase & Website Content saved!');
+                      handlePersistContent(content, 'Craft Showcase & Website Content published to live site!');
                     }}
                     className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-2.5 px-5 rounded-xl text-xs flex items-center space-x-2 shadow-xs cursor-pointer self-start sm:self-auto"
                   >
@@ -3024,8 +2893,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                 <div className="pt-4 flex justify-end">
                   <button
                     onClick={() => {
-                      dataRepo.saveContent(content);
-                      showToast('Website Content changes saved persistently!');
+                      handlePersistContent(content, 'Website Content published to live database!');
                     }}
                     className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-3 px-6 rounded-xl text-xs flex items-center space-x-2 shadow-md cursor-pointer"
                   >
@@ -3079,14 +2947,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
             <div className="space-y-6 max-w-4xl">
               <div>
                 <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-[#1B4D2E]">
-                  Supabase Integration & Database Schema
+                  Live Supabase Cloud Database &amp; Schema
                 </h2>
                 <p className="text-xs sm:text-sm text-[#1B4D2E]/70">
-                  Connect your live Supabase project for persistent cloud tables, orders, and authentication
+                  Monitor your live Supabase connection, synchronize CMS tables, and inspect the production SQL migration
                 </p>
               </div>
 
-              {/* Status Banner */}
+              {/* Live Connection Status Card */}
               <div
                 className={`p-5 rounded-3xl border flex items-start space-x-4 ${
                   supabaseCfg.connected
@@ -3095,60 +2963,73 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                 }`}
               >
                 <Database className="w-6 h-6 shrink-0 mt-0.5" />
-                <div className="space-y-1 text-xs">
+                <div className="space-y-1 text-xs flex-1">
                   <div className="font-extrabold text-sm">
-                    {supabaseCfg.connected ? 'Connected to Supabase Project' : 'Ready for Supabase Connection'}
+                    {supabaseCfg.connected
+                      ? 'Connected to Live Supabase Instance'
+                      : 'Waiting for Live Supabase Environment Variables'}
                   </div>
                   <p>
                     {supabaseCfg.connected
-                      ? `Active client connected to ${supabaseCfg.url}. Orders, inquiries, branding, and drinks sync with your project tables.`
-                      : `The website currently uses browser-local persistent storage. Enter your Supabase Project URL and Anon Public Key below to link your database.`}
+                      ? `Connected directly to ${supabaseCfg.url} via server environment configuration. All products, hero sliders, CMS pages, customer orders, and inquiries read and write directly to your live database.`
+                      : 'Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your deployment environment variables.'}
                   </p>
                 </div>
               </div>
 
-              {/* Supabase Credentials Form */}
+              {/* Live Diagnostics & Table Sync Controls (No Manual API Key Inputs) */}
               <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#1B4D2E]/10 shadow-sm space-y-4">
-                <h3 className="font-display font-bold text-lg text-[#1B4D2E]">
-                  Supabase Project Credentials
-                </h3>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
-                    Supabase Project URL
-                  </label>
-                  <input
-                    type="url"
-                    value={supabaseCfg.url}
-                    onChange={(e) => setSupabaseCfg({ ...supabaseCfg, url: e.target.value })}
-                    placeholder="https://abrgqtrobgorsaggooxv.supabase.co"
-                    className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E] font-mono"
-                  />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="font-display font-bold text-lg text-[#1B4D2E]">
+                      Live Cloud Connection &amp; Table Health
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      Credentials are managed securely via server environment variables
+                    </p>
+                  </div>
+                  {supabaseUserEmail && (
+                    <span className="inline-flex items-center space-x-1.5 text-[11px] font-bold bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Authenticated as {supabaseUserEmail}</span>
+                    </span>
+                  )}
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
-                    Supabase Anon Public API Key
-                  </label>
-                  <input
-                    type="password"
-                    value={supabaseCfg.anonKey}
-                    onChange={(e) => setSupabaseCfg({ ...supabaseCfg, anonKey: e.target.value })}
-                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                    className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E] font-mono"
-                  />
-                  <span className="text-[10px] text-gray-500 mt-1 block">
-                    Use the publishable 'anon' key (never paste your service role key in frontend code).
-                  </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="p-3.5 rounded-2xl bg-[#FFF8E7] border border-[#1B4D2E]/15">
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-[#1B4D2E]/65">
+                      Live Project Endpoint
+                    </span>
+                    <span className="font-mono font-bold text-[#1B4D2E] break-all mt-0.5 block">
+                      {supabaseCfg.url || 'Not configured'}
+                    </span>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-[#FFF8E7] border border-[#1B4D2E]/15">
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-[#1B4D2E]/65">
+                      Realtime &amp; Auth Session
+                    </span>
+                    <span className="font-bold text-emerald-800 mt-0.5 block">
+                      {supabaseUserEmail
+                        ? `Active (${supabaseUserEmail})`
+                        : 'Awaiting Supabase Auth Sign-In'}
+                    </span>
+                  </div>
                 </div>
 
                 {syncStatusMsg && (
                   <div
                     className={`p-4 rounded-2xl text-xs flex items-start space-x-2 ${
-                      syncStatusMsg.success ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'
+                      syncStatusMsg.success
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        : 'bg-red-50 text-red-800 border border-red-200'
                     }`}
                   >
-                    {syncStatusMsg.success ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> : <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />}
+                    {syncStatusMsg.success ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                    )}
                     <span>{syncStatusMsg.text}</span>
                   </div>
                 )}
@@ -3160,7 +3041,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                     className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold text-xs py-3 px-5 rounded-xl shadow-xs transition-colors flex items-center space-x-2 cursor-pointer"
                   >
                     <Database className="w-4 h-4 text-[#E1AD01]" />
-                    <span>{isTestingSupabase ? 'Testing Connection...' : 'Test Connection & Inspect Tables'}</span>
+                    <span>
+                      {isTestingSupabase
+                        ? 'Verifying Live Tables...'
+                        : 'Verify Live Connection & Tables'}
+                    </span>
                   </button>
 
                   <button
@@ -3169,13 +3054,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                     className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs py-3 px-5 rounded-xl shadow-xs transition-colors flex items-center space-x-2 cursor-pointer"
                   >
                     <Sparkles className="w-4 h-4" />
-                    <span>{isSeeding ? 'Seeding Tables...' : '1-Click Seed Supabase Tables'}</span>
+                    <span>
+                      {isSeeding
+                        ? 'Syncing Live Tables...'
+                        : '1-Click Sync & Repair Live Tables'}
+                    </span>
                   </button>
                 </div>
 
                 {seedResult && (
-                  <div className="p-3 bg-emerald-50 text-emerald-800 rounded-xl text-xs font-semibold flex items-center space-x-2 border border-emerald-200">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div
+                    className={`p-3 rounded-xl text-xs font-semibold flex items-start space-x-2 border ${
+                      seedResult.startsWith('Successfully')
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : 'bg-amber-50 text-amber-900 border-amber-300'
+                    }`}
+                  >
+                    {seedResult.startsWith('Successfully') ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                    )}
                     <span>{seedResult}</span>
                   </div>
                 )}

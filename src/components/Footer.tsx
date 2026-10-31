@@ -10,14 +10,26 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ content, navItems, onNavigate }) => {
+  const [logoImgError, setLogoImgError] = React.useState(false);
   const currentYear = new Date().getFullYear();
   const brandTitle = sanitizeBrandText(
     content.branding?.logoText || content.businessName || 'Delightful Juices'
   );
 
-  // Deduplicate visible links for quick exploration
+  React.useEffect(() => {
+    setLogoImgError(false);
+  }, [content.branding?.logoUrl]);
+
+  // Deduplicate visible links by href for quick exploration
+  const seenFooterHrefs = new Set<string>();
   const footerLinks = navItems
-    .filter((i) => i.visible && i.href && !i.isDropdown)
+    .filter((i) => {
+      if (!i.visible || !i.href || i.isDropdown) return false;
+      const key = i.href.replace(/\/+$/, '').toLowerCase() || '/';
+      if (seenFooterHrefs.has(key)) return false;
+      seenFooterHrefs.add(key);
+      return true;
+    })
     .slice(0, 8);
 
   return (
@@ -32,10 +44,11 @@ export const Footer: React.FC<FooterProps> = ({ content, navItems, onNavigate })
               className="flex items-center space-x-3 text-left cursor-pointer"
             >
               {content.branding?.showLogoIcon !== false &&
-                (content.branding?.logoUrl ? (
+                (content.branding?.logoUrl && !logoImgError ? (
                   <img
                     src={content.branding.logoUrl}
                     alt={brandTitle}
+                    onError={() => setLogoImgError(true)}
                     className="h-11 sm:h-12 w-auto max-w-[160px] sm:max-w-[200px] object-contain shrink-0"
                   />
                 ) : (

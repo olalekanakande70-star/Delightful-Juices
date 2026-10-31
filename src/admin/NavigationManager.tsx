@@ -89,15 +89,19 @@ export const NavigationManager: React.FC<NavigationManagerProps> = ({
     });
   };
 
-  const handleToggleVisible = (item: NavItem) => {
+  const handleToggleVisible = async (item: NavItem) => {
     const updated = navItems.map((n) =>
       n.id === item.id ? { ...n, visible: !n.visible } : n
     );
-    dataRepo.saveNavItems(updated);
-    onToast(`"${item.label}" ${!item.visible ? 'shown' : 'hidden'} in navigation.`);
+    const res = await dataRepo.saveNavItems(updated);
+    if (!res.synced) {
+      onToast(`Unable to update live navigation: ${res.error}`);
+    } else {
+      onToast(`"${item.label}" ${!item.visible ? 'shown' : 'hidden'} in live navigation.`);
+    }
   };
 
-  const handleMoveSibling = (item: NavItem, dir: -1 | 1) => {
+  const handleMoveSibling = async (item: NavItem, dir: -1 | 1) => {
     const siblings = navItems
       .filter((n) => (n.parentId || null) === (item.parentId || null))
       .sort((a, b) => a.order - b.order);
@@ -115,11 +119,15 @@ export const NavigationManager: React.FC<NavigationManagerProps> = ({
     const nextAll = navItems.map((n) =>
       orderMap.has(n.id) ? { ...n, order: orderMap.get(n.id)! } : n
     );
-    dataRepo.saveNavItems(nextAll);
-    onToast('Navigation order updated!');
+    const res = await dataRepo.saveNavItems(nextAll);
+    if (!res.synced) {
+      onToast(`Unable to reorder live navigation: ${res.error}`);
+    } else {
+      onToast('Live navigation order updated!');
+    }
   };
 
-  const handleSaveItem = (e: React.FormEvent) => {
+  const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem || !editingItem.label.trim()) return;
 
@@ -135,10 +143,14 @@ export const NavigationManager: React.FC<NavigationManagerProps> = ({
       );
     }
 
-    dataRepo.saveNavItems(nextList);
+    const res = await dataRepo.saveNavItems(nextList);
+    if (!res.synced) {
+      onToast(`Unable to save live navigation: ${res.error}`);
+      return;
+    }
     setEditingItem(null);
     setIsNew(false);
-    onToast('Navigation menu saved!');
+    onToast(isNew ? 'New navigation item published live!' : 'Navigation menu published live!');
   };
 
   return (
@@ -263,10 +275,14 @@ export const NavigationManager: React.FC<NavigationManagerProps> = ({
                     <div className="flex items-center space-x-1 bg-red-50 border border-red-200 px-2 py-0.5 rounded-lg">
                       <button
                         type="button"
-                        onClick={() => {
-                          dataRepo.deleteNavItem(item.id);
+                        onClick={async () => {
+                          const res = await dataRepo.deleteNavItem(item.id);
                           setConfirmDeleteId(null);
-                          onToast(`Removed "${item.label}" from navigation.`);
+                          if (!res.synced) {
+                            onToast(`Unable to delete from live navigation: ${res.error}`);
+                          } else {
+                            onToast(`Removed "${item.label}" from live navigation.`);
+                          }
                         }}
                         className="text-[10px] font-bold bg-red-600 text-white px-2 py-0.5 rounded cursor-pointer"
                       >
@@ -347,9 +363,13 @@ export const NavigationManager: React.FC<NavigationManagerProps> = ({
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            dataRepo.deleteNavItem(child.id);
-                            onToast(`Removed submenu link "${child.label}".`);
+                          onClick={async () => {
+                            const res = await dataRepo.deleteNavItem(child.id);
+                            if (!res.synced) {
+                              onToast(`Unable to delete submenu link: ${res.error}`);
+                            } else {
+                              onToast(`Removed submenu link "${child.label}" from live navigation.`);
+                            }
                           }}
                           className="p-1 rounded text-red-500 hover:bg-red-50 cursor-pointer"
                         >
