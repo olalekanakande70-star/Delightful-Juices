@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Product, SiteContent, SizeOption } from '../types';
 import { useCart } from '../context/CartContext';
-import { FALLBACK_BEVERAGE_IMAGE } from '../lib/storage';
 import {
   getCustomerSizeDisplay,
   getCustomerSizeFullLabel,
@@ -38,10 +37,12 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   );
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
-  const [activeImage, setActiveImage] = useState<string>(product.imageUrl);
+  const [activeImage, setActiveImage] = useState<string>(product.imageUrl || '');
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
-    setActiveImage(product.imageUrl);
+    setActiveImage(product.imageUrl || '');
+    setImgError(false);
     setSelectedSize(product.sizes[1] || product.sizes[0]);
     setQuantity(1);
     setJustAdded(false);
@@ -120,17 +121,21 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             {/* Left Column: Product Images & Gallery */}
             <div className="lg:col-span-6 space-y-4">
               <div className="relative aspect-4/3 sm:aspect-square rounded-3xl overflow-hidden bg-[#FFF8E7] border border-[#1B4D2E]/10 shadow-xs">
-                <img
-                  src={activeImage || FALLBACK_BEVERAGE_IMAGE}
-                  alt={sanitizeBrandAndUnitsText(product.name)}
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    if (target.src !== FALLBACK_BEVERAGE_IMAGE) {
-                      target.src = FALLBACK_BEVERAGE_IMAGE;
-                    }
-                  }}
-                  className="w-full h-full object-cover transition-all duration-300"
-                />
+                {activeImage && !imgError ? (
+                  <img
+                    src={activeImage}
+                    alt={sanitizeBrandAndUnitsText(product.name)}
+                    onError={() => setImgError(true)}
+                    className="w-full h-full object-cover transition-all duration-300"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-[#12351F] to-[#1B4D2E] flex flex-col items-center justify-center p-8 text-center">
+                    <Sparkles className="w-8 h-8 text-[#E1AD01] mb-3" />
+                    <span className="font-display font-bold text-xl text-[#FFF8E7]">
+                      {sanitizeBrandAndUnitsText(product.name)}
+                    </span>
+                  </div>
+                )}
 
                 {(!product.inStock || product.badge) && (
                   <div className="absolute top-4 left-4 flex flex-col gap-1.5 items-start">
@@ -156,7 +161,10 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                       <button
                         key={idx}
                         type="button"
-                        onClick={() => setActiveImage(img)}
+                        onClick={() => {
+                          setImgError(false);
+                          setActiveImage(img);
+                        }}
                         className={`w-20 h-20 rounded-2xl overflow-hidden border-2 shrink-0 transition-all cursor-pointer bg-[#FFF8E7] ${
                           isActive
                             ? 'border-[#1B4D2E] ring-2 ring-[#E1AD01]/60 scale-[1.02]'
@@ -167,9 +175,6 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                         <img
                           src={img}
                           alt=""
-                          onError={(e) => {
-                            e.currentTarget.src = FALLBACK_BEVERAGE_IMAGE;
-                          }}
                           className="w-full h-full object-cover"
                         />
                       </button>

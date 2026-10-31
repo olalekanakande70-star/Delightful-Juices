@@ -18,9 +18,7 @@ import {
 import {
   dataRepo,
   SUPABASE_SQL_MIGRATION,
-  ABOUT_ARTISANAL_IMAGE,
   DEFAULT_ABOUT_SHOWCASE,
-  FALLBACK_BEVERAGE_IMAGE,
 } from '../lib/storage';
 import { supabaseService } from '../lib/supabaseClient';
 import { applyTheme, DEFAULT_COLORS, DEFAULT_TYPOGRAPHY } from '../lib/theme';
@@ -70,17 +68,6 @@ interface AdminDashboardProps {
   onClose: () => void;
   onNavigate?: (href: string) => void;
 }
-
-export const CURATED_PRODUCT_PHOTOS = [
-  { label: 'Zobo Ruby Hibiscus', url: 'https://images.unsplash.com/photo-1556881286-fc6915169721?w=800&auto=format&fit=crop&q=80' },
-  { label: 'Fresh Ginger Root Press', url: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80' },
-  { label: 'Golden Mango Ginger', url: 'https://images.unsplash.com/photo-1546173159-315724a31696?w=800&auto=format&fit=crop&q=80' },
-  { label: 'Pineapple Citrus Splash', url: 'https://images.unsplash.com/photo-1525385133512-2f3bdd039054?w=800&auto=format&fit=crop&q=80' },
-  { label: 'Floral Lychee Nectar', url: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=800&auto=format&fit=crop&q=80' },
-  { label: 'Tigernut Plant Milk', url: 'https://images.unsplash.com/photo-1563227812-0ea4c22e6cc8?w=800&auto=format&fit=crop&q=80' },
-  { label: 'Artisanal 6-Pack Carrier', url: 'https://images.unsplash.com/photo-1622484216853-4dc9b8e8f804?w=800&auto=format&fit=crop&q=80' },
-  { label: 'Cold-Pressed Green Herbs', url: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?w=800&auto=format&fit=crop&q=80' },
-];
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavigate }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => dataRepo.isAdminLoggedIn());
@@ -218,7 +205,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
         { size: '16.9 oz', label: '16.9 oz Daily Refresh', price: 7.50, quantityValue: 16.9, unit: 'oz' },
         { size: '33.8 oz', label: '33.8 oz Family Jug', price: 14.00, quantityValue: 33.8, unit: 'oz' },
       ],
-      imageUrl: 'https://images.unsplash.com/photo-1556881286-fc6915169721?w=800&auto=format&fit=crop&q=80',
+      imageUrl: '',
       galleryImages: [],
       inStock: true,
       featured: false,
@@ -1982,11 +1969,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                         <tr key={p.id} className="hover:bg-[#FFF8E7]/40">
                           <td className="p-4">
                             <div className="flex items-center space-x-3">
-                              <img
-                                src={p.imageUrl}
-                                alt={p.name}
-                                className="w-14 h-14 rounded-2xl object-cover bg-gray-100 shadow-xs shrink-0"
-                              />
+                              {p.imageUrl ? (
+                                <img
+                                  src={p.imageUrl}
+                                  alt={p.name}
+                                  className="w-14 h-14 rounded-2xl object-cover bg-gray-100 shadow-xs shrink-0"
+                                />
+                              ) : (
+                                <div className="w-14 h-14 rounded-2xl bg-[#12351F] text-[#E1AD01] flex items-center justify-center shrink-0">
+                                  <ImageIcon className="w-5 h-5" />
+                                </div>
+                              )}
                               <div>
                                 <div className="font-bold text-sm text-[#1B4D2E]">{p.name}</div>
                                 <div className="text-[11px] text-gray-500 line-clamp-1">{p.tagline}</div>
@@ -2411,15 +2404,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                     </span>
                     <div className="bg-[#FFF8E7] p-6 sm:p-7 rounded-3xl border border-[#1B4D2E]/15">
                       <div className="relative mx-auto max-w-[300px]">
-                        <div className="aspect-4/5 rounded-3xl overflow-hidden shadow-xl border-4 border-white bg-[#1B4D2E]/10">
-                          <img
-                            src={currentShowcase.imageUrl?.trim() ? currentShowcase.imageUrl : ABOUT_ARTISANAL_IMAGE}
-                            alt={currentShowcase.imageAlt || 'Craft showcase preview'}
-                            onError={(e) => {
-                              e.currentTarget.src = FALLBACK_BEVERAGE_IMAGE;
-                            }}
-                            className="w-full h-full object-cover"
-                          />
+                        <div className="aspect-4/5 rounded-3xl overflow-hidden shadow-xl border-4 border-white bg-[#12351F]">
+                          {currentShowcase.imageUrl?.trim() ? (
+                            <img
+                              src={currentShowcase.imageUrl}
+                              alt={currentShowcase.imageAlt || 'Craft showcase preview'}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-[#0E2918] via-[#1B4D2E] to-[#12351F] p-6 flex flex-col justify-center items-center text-center text-[#FFF8E7] space-y-2">
+                              <Sparkles className="w-6 h-6 text-[#E1AD01]" />
+                              <span className="font-display font-bold text-base">
+                                Whole Botanical Craft
+                              </span>
+                              <span className="text-[11px] text-[#FFF8E7]/75">
+                                Upload a showcase photo to replace this botanical panel
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         {currentShowcase.showBadge !== false && currentShowcase.badgeText?.trim() && (
@@ -2478,12 +2480,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                             type="button"
                             onClick={() => {
                               updateAboutShowcase({ imageUrl: '' }, true);
-                              showToast('Restored default craft showcase photo.');
+                              showToast('Cleared custom showcase photo.');
                             }}
                             className="text-[11px] font-bold text-[#1B4D2E]/75 hover:text-[#1B4D2E] inline-flex items-center space-x-1 cursor-pointer"
                           >
                             <RotateCcw className="w-3 h-3" />
-                            <span>Restore Default Photo</span>
+                            <span>Clear Photo</span>
                           </button>
                         )}
                       </div>
@@ -3201,23 +3203,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
 
                 {/* Main Product Image */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  <img
-                    src={editingProduct.imageUrl}
-                    alt={editingProduct.name}
-                    className="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-xs shrink-0"
-                  />
+                  {editingProduct.imageUrl ? (
+                    <img
+                      src={editingProduct.imageUrl}
+                      alt={editingProduct.name}
+                      className="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-xs shrink-0"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-xl bg-[#12351F] text-[#E1AD01] border-2 border-white shadow-xs flex items-center justify-center shrink-0">
+                      <ImageIcon className="w-6 h-6" />
+                    </div>
+                  )}
                   <div className="flex-1 space-y-1 w-full">
                     <input
                       type="url"
                       value={editingProduct.imageUrl}
                       onChange={(e) => setEditingProduct({ ...editingProduct, imageUrl: e.target.value })}
-                      placeholder="Primary image URL (e.g. Unsplash or Supabase)"
+                      placeholder="Upload from device to Supabase Storage or paste live URL"
                       className="w-full bg-white border rounded-xl px-3 py-2 text-xs text-[#1B4D2E]"
                     />
                     <div className="flex items-center space-x-2">
-                      <label className="bg-white hover:bg-gray-100 text-gray-800 border font-bold text-[11px] py-1.5 px-3 rounded-lg flex items-center space-x-1.5 cursor-pointer">
-                        <Upload className="w-3 h-3 text-[#1B4D2E]" />
-                        <span>Upload File</span>
+                      <label className="bg-[#1B4D2E] hover:bg-[#143822] text-white font-bold text-[11px] py-1.5 px-3 rounded-lg flex items-center space-x-1.5 cursor-pointer">
+                        <Upload className="w-3 h-3 text-[#E1AD01]" />
+                        <span>Upload to Supabase Storage</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -3227,27 +3235,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                       </label>
                       <span className="text-[10px] text-gray-500">PNG, JPG, WebP supported</span>
                     </div>
-                  </div>
-                </div>
-
-                {/* Curated Beverage Photo Library Presets */}
-                <div>
-                  <span className="text-[10px] font-bold text-[#1B4D2E]/80 block mb-1">
-                    Quick Pick From Curated High-Res Beverage Library:
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {CURATED_PRODUCT_PHOTOS.map((preset) => (
-                      <button
-                        key={preset.label}
-                        type="button"
-                        onClick={() => {
-                          setEditingProduct({ ...editingProduct, imageUrl: preset.url });
-                        }}
-                        className="text-[10px] bg-white hover:bg-emerald-50 text-[#1B4D2E] border border-gray-200 px-2 py-1 rounded-md font-medium transition-colors cursor-pointer"
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
                   </div>
                 </div>
 

@@ -18,6 +18,7 @@ interface ShopPageProps {
   content: SiteContent;
   onOpenDetails: (product: Product) => void;
   onNavigate: (href: string) => void;
+  isLoading?: boolean;
 }
 
 export const ShopPage: React.FC<ShopPageProps> = ({
@@ -25,6 +26,7 @@ export const ShopPage: React.FC<ShopPageProps> = ({
   content,
   onOpenDetails,
   onNavigate,
+  isLoading = false,
 }) => {
   const { totalCount, subtotal, setIsCartOpen } = useCart();
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -217,7 +219,30 @@ export const ShopPage: React.FC<ShopPageProps> = ({
         </div>
 
         {/* Product Grid */}
-        {filteredAndSorted.length > 0 ? (
+        {isLoading && products.length === 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8" aria-busy="true">
+            {[0, 1, 2, 3, 4, 5].map((idx) => (
+              <div
+                key={idx}
+                className="bg-white rounded-3xl overflow-hidden border border-[#1B4D2E]/10 shadow-xs animate-pulse"
+              >
+                <div className="aspect-4/3 bg-[#1B4D2E]/10" />
+                <div className="p-5 space-y-4">
+                  <div className="flex justify-between gap-3">
+                    <div className="h-5 w-2/3 bg-[#1B4D2E]/15 rounded-lg" />
+                    <div className="h-5 w-14 bg-[#1B4D2E]/15 rounded-lg" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <div className="h-8 bg-[#FFF8E7] rounded-xl" />
+                    <div className="h-8 bg-[#FFF8E7] rounded-xl" />
+                    <div className="h-8 bg-[#FFF8E7] rounded-xl" />
+                  </div>
+                  <div className="h-10 bg-[#1B4D2E]/15 rounded-xl" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredAndSorted.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {filteredAndSorted.map((product) => (
               <ProductCard

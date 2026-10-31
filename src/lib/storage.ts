@@ -14,15 +14,27 @@ import { supabaseService } from './supabaseClient';
 import { applyTheme } from './theme';
 import { parseSizeString, sanitizeBrandText } from './units';
 
-import heroSlideZobo from '../assets/images/hero_zobo_hibiscus_craft_1793343611489.jpg';
-import heroSlideGinger from '../assets/images/hero_ginger_tropical_elixirs_1793343613276.jpg';
-import heroSlideTigernut from '../assets/images/hero_tigernut_catering_spread_1793343615121.jpg';
-import aboutBotanicalsImg from '../assets/images/about_artisanal_botanicals_1793343616189.jpg';
-import productZoboStudio from '../assets/images/product_zobo_bottle_1793343617852.jpg';
-import productGingerStudio from '../assets/images/product_ginger_elixir_1793343618737.jpg';
-
-export const FALLBACK_BEVERAGE_IMAGE = productZoboStudio;
-export const ABOUT_ARTISANAL_IMAGE = aboutBotanicalsImg;
+/**
+ * Strips any legacy bundled local asset path or stock Unsplash placeholder URL
+ * so only genuine live Supabase images (Storage URLs, data URLs, or custom live URLs) render.
+ */
+export function sanitizeLiveImageUrl(url?: string | null): string {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  if (
+    trimmed.startsWith('/src/assets/') ||
+    trimmed.startsWith('src/assets/') ||
+    trimmed.startsWith('/assets/hero_') ||
+    trimmed.startsWith('/assets/product_') ||
+    trimmed.startsWith('/assets/about_') ||
+    trimmed.includes('assets/images/') ||
+    trimmed.includes('images.unsplash.com')
+  ) {
+    return '';
+  }
+  return trimmed;
+}
 
 const LEGACY_LOCAL_CACHE_KEYS = [
   'delightful_juice_products_v1',
@@ -59,7 +71,7 @@ export const INITIAL_HERO_SLIDES: HeroSlide[] = [
     ctaUrl: '/shop',
     secondaryCtaLabel: 'Events & Catering',
     secondaryCtaUrl: '/events-catering',
-    desktopImageUrl: heroSlideZobo,
+    desktopImageUrl: '',
     mobileImageUrl: '',
     overlayOpacity: 0.52,
     displayOrder: 1,
@@ -75,7 +87,7 @@ export const INITIAL_HERO_SLIDES: HeroSlide[] = [
     ctaUrl: '/shop',
     secondaryCtaLabel: 'Our Signature Promise',
     secondaryCtaUrl: '/our-story',
-    desktopImageUrl: heroSlideGinger,
+    desktopImageUrl: '',
     mobileImageUrl: '',
     overlayOpacity: 0.50,
     displayOrder: 2,
@@ -91,7 +103,7 @@ export const INITIAL_HERO_SLIDES: HeroSlide[] = [
     ctaUrl: '/events-catering',
     secondaryCtaLabel: 'Shop Variety Packs',
     secondaryCtaUrl: '/shop',
-    desktopImageUrl: heroSlideTigernut,
+    desktopImageUrl: '',
     mobileImageUrl: '',
     overlayOpacity: 0.54,
     displayOrder: 3,
@@ -99,31 +111,10 @@ export const INITIAL_HERO_SLIDES: HeroSlide[] = [
   },
 ];
 
-function isLegacyBundledHeroAsset(url?: string): boolean {
-  if (!url) return false;
-  const trimmed = url.trim();
-  if (!trimmed) return false;
-  return (
-    trimmed.startsWith('/src/assets/') ||
-    trimmed.startsWith('/assets/hero_') ||
-    trimmed === heroSlideZobo ||
-    trimmed === heroSlideGinger ||
-    trimmed === heroSlideTigernut
-  );
-}
-
 function normalizeHeroSlide(slide: HeroSlide): HeroSlide {
-  const desktopUrl = (slide.desktopImageUrl || '').trim();
-  const rawMobileUrl = (slide.mobileImageUrl || '').trim();
-  const desktopIsRemote = /^https?:\/\//i.test(desktopUrl);
-
-  // Clear stale seeded local asset path on mobile when desktop image was updated to a live cloud URL
-  const cleanedMobileUrl =
-    (desktopIsRemote && isLegacyBundledHeroAsset(rawMobileUrl)) ||
-    rawMobileUrl.startsWith('/src/assets/') ||
-    rawMobileUrl === desktopUrl
-      ? ''
-      : rawMobileUrl;
+  const desktopUrl = sanitizeLiveImageUrl(slide.desktopImageUrl);
+  const rawMobileUrl = sanitizeLiveImageUrl(slide.mobileImageUrl);
+  const cleanedMobileUrl = rawMobileUrl === desktopUrl ? '' : rawMobileUrl;
 
   return {
     ...slide,
@@ -164,10 +155,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       { size: '50cl', label: '16.9 oz Daily Refresh', price: 7.5, quantityValue: 50, unit: 'cl' },
       { size: '1L', label: '33.8 oz Family Sharing Jug', price: 14.0, quantityValue: 1, unit: 'L' },
     ],
-    imageUrl: productZoboStudio,
-    galleryImages: [
-      'https://images.unsplash.com/photo-1556881286-fc6915169721?w=800&auto=format&fit=crop&q=80',
-    ],
+    imageUrl: '',
+    galleryImages: [],
     inStock: true,
     featured: true,
     badge: 'Customer #1 Favorite',
@@ -204,10 +193,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       { size: '50cl', label: '16.9 oz Standard Refresh', price: 7.5, quantityValue: 50, unit: 'cl' },
       { size: '1L', label: '33.8 oz Family Sharing Jug', price: 14.0, quantityValue: 1, unit: 'L' },
     ],
-    imageUrl: productGingerStudio,
-    galleryImages: [
-      'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80',
-    ],
+    imageUrl: '',
+    galleryImages: [],
     inStock: true,
     featured: true,
     badge: 'Immunity Powerhouse',
@@ -244,7 +231,7 @@ export const INITIAL_PRODUCTS: Product[] = [
       { size: '50cl', label: '16.9 oz Daily Refresh', price: 7.5, quantityValue: 50, unit: 'cl' },
       { size: '1L', label: '33.8 oz Family Sharing Jug', price: 14.0, quantityValue: 1, unit: 'L' },
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1546173159-315724a31696?w=800&auto=format&fit=crop&q=80',
+    imageUrl: '',
     inStock: true,
     featured: true,
     badge: 'Best Tropical Blend',
@@ -281,7 +268,7 @@ export const INITIAL_PRODUCTS: Product[] = [
       { size: '50cl', label: '16.9 oz Daily Refresh', price: 7.5, quantityValue: 50, unit: 'cl' },
       { size: '1L', label: '33.8 oz Family Sharing Jug', price: 14.0, quantityValue: 1, unit: 'L' },
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1525385133512-2f3bdd039054?w=800&auto=format&fit=crop&q=80',
+    imageUrl: '',
     inStock: true,
     featured: true,
     badge: 'Top Refreshment',
@@ -318,7 +305,7 @@ export const INITIAL_PRODUCTS: Product[] = [
       { size: '50cl', label: '16.9 oz Daily Refresh', price: 7.5, quantityValue: 50, unit: 'cl' },
       { size: '1L', label: '33.8 oz Family Sharing Jug', price: 14.0, quantityValue: 1, unit: 'L' },
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=800&auto=format&fit=crop&q=80',
+    imageUrl: '',
     inStock: true,
     featured: false,
     badge: 'Exotic Artisan Pick',
@@ -355,7 +342,7 @@ export const INITIAL_PRODUCTS: Product[] = [
       { size: '50cl', label: '16.9 oz Standard Bottle', price: 8.0, quantityValue: 50, unit: 'cl' },
       { size: '1L', label: '33.8 oz Family Sharing Jug', price: 15.0, quantityValue: 1, unit: 'L' },
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1563227812-0ea4c22e6cc8?w=800&auto=format&fit=crop&q=80',
+    imageUrl: '',
     inStock: true,
     featured: true,
     badge: '100% Dairy-Free Superfood',
@@ -395,10 +382,8 @@ export const INITIAL_PRODUCTS: Product[] = [
         packBottleUnit: 'cl',
       },
     ],
-    imageUrl: heroSlideTigernut,
-    galleryImages: [
-      'https://images.unsplash.com/photo-1622484216853-4dc9b8e8f804?w=800&auto=format&fit=crop&q=80',
-    ],
+    imageUrl: '',
+    galleryImages: [],
     inStock: true,
     featured: true,
     badge: 'Popular Gift & Party Pack',
@@ -571,7 +556,7 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
         heading: 'Crafted from Passion, Heritage & Whole Botanicals',
         subheading:
           'Hand-blended in Quakertown, Pennsylvania by C.E.O. Oluyemi B. Ajibolade—honoring West African botanical traditions and pure cold-pressed nutrition.',
-        imageUrl: heroSlideZobo,
+        imageUrl: '',
         buttonLabel: 'Shop Fresh Juices',
         buttonUrl: '/shop',
         secondaryButtonLabel: 'Contact Our Kitchen',
@@ -585,7 +570,7 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
         heading: 'Nourishing Everyday Refreshment Without Compromise',
         body:
           'Delightful Juices creates refreshing and nourishing drinks made from carefully selected natural ingredients, whole fruits, roots, herbs, and spices.\n\nOur goal is simple: to make everyday refreshment more enjoyable while offering delicious, healthful beverages made with ingredients your family can trust. From our signature ruby-red Zobo (Hibiscus) and fiery Organic Ginger Elixirs to our velvety dairy-free Tigernut Milk (Kunu Aya), every bottle is prepared in small batches at 500 W Broad St, Quakertown, PA.\n\nUnder the leadership of Founder & C.E.O. Oluyemi B. Ajibolade, we never use artificial preservatives, synthetic dyes, or high-fructose corn syrups—just honest botanical vitality in convenient 11.8 oz, 16.9 oz, and 33.8 oz bottles.',
-        imageUrl: aboutBotanicalsImg,
+        imageUrl: '',
         imagePosition: 'left',
         buttonLabel: 'Explore the Shop',
         buttonUrl: '/shop',
@@ -634,7 +619,7 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
         heading: 'Pure Botanical Integrity in Every Single Bottle.',
         subheading:
           'Why hundreds of families and event hosts trust Delightful Juices for pure, preservative-free hydration.',
-        imageUrl: heroSlideGinger,
+        imageUrl: '',
         buttonLabel: 'Shop Cold-Pressed Juices',
         buttonUrl: '/shop',
         theme: 'dark',
@@ -646,7 +631,7 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
         heading: 'Whole Roots, Calyces & Tubers—Never Concentrates',
         body:
           'Unlike mass-produced shelf beverages that rely on pasteurized flavor syrups and synthetic coloring, Delightful Juices begins every morning with whole botanicals.\n\nWe steep whole organic hibiscus flowers with aromatic cloves and ripe pineapple peels for our Zobo, cold-press fresh ginger rhizomes to protect active gingerols, and stone-blend soaked tigernuts with soft Medjool dates for naturally prebiotic plant milk.',
-        imageUrl: aboutBotanicalsImg,
+        imageUrl: '',
         imagePosition: 'right',
         buttonLabel: 'Order Fresh Batch',
         buttonUrl: '/shop',
@@ -658,11 +643,7 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
         kicker: 'INSIDE OUR CRAFT',
         heading: 'Vibrant Colors Drawn Straight from Nature',
         subheading: 'Ruby hibiscus, golden mango-ginger, and creamy chufa tigernut.',
-        galleryImages: [
-          { url: productZoboStudio, caption: 'Signature Ruby Zobo (Hibiscus & Cloves)' },
-          { url: productGingerStudio, caption: 'Cold-Pressed Organic Ginger & Citrus' },
-          { url: heroSlideTigernut, caption: 'Velvety Tigernut Milk & Event Spreads' },
-        ],
+        galleryImages: [],
         theme: 'cream',
       },
       {
@@ -697,7 +678,7 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
         heading: 'Freshness Guidelines, Bottle Sizes & Local Delivery',
         subheading:
           'Everything you need to know about how Delightful Juices prepares, chills, and delivers your order.',
-        imageUrl: heroSlideTigernut,
+        imageUrl: '',
         buttonLabel: 'Start Your Order',
         buttonUrl: '/shop',
         theme: 'dark',
@@ -739,7 +720,7 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
         heading: 'Bespoke Juice Catering & Custom Monogrammed Bottles',
         subheading:
           'Treat your guests to chilled Zobo, Ginger Mango, and Tigernut Milk in 11.8 oz, 16.9 oz, or 33.8 oz bottles tailored to your celebration.',
-        imageUrl: heroSlideTigernut,
+        imageUrl: '',
         buttonLabel: 'Shop Ready-Made Packs',
         buttonUrl: '/shop',
         theme: 'dark',
@@ -771,7 +752,7 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
         heading: 'Stock Delightful Juices in Your Store, Café, or Office',
         subheading:
           'High-margin, fast-moving natural beverages delivered fresh weekly from our Quakertown commercial kitchen.',
-        imageUrl: heroSlideGinger,
+        imageUrl: '',
         buttonLabel: 'Contact Wholesale Team',
         buttonUrl: '/contact-us',
         secondaryButtonLabel: 'Browse Retail Flavors',
@@ -841,12 +822,10 @@ function normalizeProduct(p: Product): Product {
     };
   });
 
-  // Replace broken Unsplash URL on 6-pack if present
-  const brokenUnsplashBundle = 'photo-1622484216853-4dc9b8e8f804';
-  const safeImageUrl =
-    !p.imageUrl || p.imageUrl.includes(brokenUnsplashBundle)
-      ? heroSlideTigernut
-      : p.imageUrl;
+  const safeImageUrl = sanitizeLiveImageUrl(p.imageUrl);
+  const safeGallery = (p.galleryImages || [])
+    .map((img) => sanitizeLiveImageUrl(img))
+    .filter(Boolean);
 
   return {
     ...p,
@@ -856,11 +835,28 @@ function normalizeProduct(p: Product): Product {
     ingredients: (p.ingredients || []).map((ing) => sanitizeBrandText(ing)),
     sizes: normalizedSizes,
     imageUrl: safeImageUrl,
+    galleryImages: safeGallery,
+  };
+}
+
+function normalizeCmsPage(page: CmsPage): CmsPage {
+  return {
+    ...page,
+    sections: (page.sections || []).map((sec) => ({
+      ...sec,
+      imageUrl: sanitizeLiveImageUrl(sec.imageUrl),
+      galleryImages: (sec.galleryImages || [])
+        .map((g) => ({
+          ...g,
+          url: sanitizeLiveImageUrl(g.url),
+        }))
+        .filter((g) => Boolean(g.url)),
+    })),
   };
 }
 
 /**
- * Ensures SiteContent replaces legacy DelightOil references and upgrades default Delightful Juice -> Delightful Juices.
+ * Ensures SiteContent replaces legacy DelightOil references and strips any stale local/stock image paths.
  */
 function normalizeSiteContent(raw: SiteContent): SiteContent {
   const cleanName =
@@ -874,6 +870,11 @@ function normalizeSiteContent(raw: SiteContent): SiteContent {
       ? 'Delightful Juices'
       : rawLogoText;
 
+  const mergedShowcase: AboutShowcaseSettings = {
+    ...DEFAULT_ABOUT_SHOWCASE,
+    ...(raw.branding?.aboutShowcase || {}),
+  };
+
   return {
     ...raw,
     businessName: cleanName,
@@ -885,10 +886,13 @@ function normalizeSiteContent(raw: SiteContent): SiteContent {
     branding: {
       ...INITIAL_SITE_CONTENT.branding!,
       ...(raw.branding || {}),
+      logoUrl: sanitizeLiveImageUrl(raw.branding?.logoUrl),
+      mobileLogoUrl: sanitizeLiveImageUrl(raw.branding?.mobileLogoUrl),
       logoText: cleanLogoText,
       aboutShowcase: {
-        ...DEFAULT_ABOUT_SHOWCASE,
-        ...(raw.branding?.aboutShowcase || {}),
+        ...mergedShowcase,
+        imageUrl: sanitizeLiveImageUrl(mergedShowcase.imageUrl),
+        ceoAvatarUrl: sanitizeLiveImageUrl(mergedShowcase.ceoAvatarUrl),
       },
     },
     stripe: {
@@ -1064,13 +1068,15 @@ class DataRepository {
   private listeners: Set<() => void> = new Set();
   private lastSyncAt = 0;
 
-  private products: Product[] = INITIAL_PRODUCTS.map(normalizeProduct);
+  // Start empty until live Supabase responds so stale hardcoded/local images NEVER flash before live Supabase records load
+  private products: Product[] = [];
+  private productsLoaded = false;
   private content: SiteContent = normalizeSiteContent(INITIAL_SITE_CONTENT);
   private navItems: NavItem[] = normalizeNavItems(INITIAL_NAV_ITEMS);
-  // Start empty until live Supabase responds so old bundled hero images never flash before live slides load
   private heroSlides: HeroSlide[] = [];
   private heroSlidesLoaded = false;
-  private cmsPages: CmsPage[] = [...INITIAL_CMS_PAGES];
+  private cmsPages: CmsPage[] = [];
+  private cmsPagesLoaded = false;
   private orders: Order[] = [];
   private inquiries: EventInquiry[] = [];
 
@@ -1121,9 +1127,9 @@ class DataRepository {
     if (discovered) {
       await this.syncFromSupabase();
     } else {
-      // Fallback only if live Supabase is completely unconfigured
-      this.heroSlides = [...INITIAL_HERO_SLIDES];
       this.heroSlidesLoaded = true;
+      this.productsLoaded = true;
+      this.cmsPagesLoaded = true;
       this.notify();
     }
   }
@@ -1160,11 +1166,15 @@ class DataRepository {
       this.heroSlides = normalized;
       this.heroSlidesLoaded = true;
 
-      // Persist cleaned mobile_image_url to live Supabase if any slide held a stale dev asset path
+      // Persist cleaned image URLs to live Supabase if any slide held a stale dev asset path
       if (isAdminAuthenticated) {
         for (const raw of remoteSlides) {
           const clean = normalized.find((n) => n.id === raw.id);
-          if (clean && (raw.mobileImageUrl || '') !== (clean.mobileImageUrl || '')) {
+          if (
+            clean &&
+            ((raw.desktopImageUrl || '') !== (clean.desktopImageUrl || '') ||
+              (raw.mobileImageUrl || '') !== (clean.mobileImageUrl || ''))
+          ) {
             supabaseService.upsertHeroSlide(clean).catch(() => {});
           }
         }
@@ -1173,30 +1183,48 @@ class DataRepository {
     }
 
     if (remoteSlides && remoteSlides.length === 0) {
-      this.heroSlides = [...INITIAL_HERO_SLIDES];
+      this.heroSlides = [];
       this.heroSlidesLoaded = true;
+      return;
+    }
+
+    this.heroSlidesLoaded = true;
+  }
+
+  private applyRemoteProducts(remoteProducts: Product[] | null, isAdminAuthenticated: boolean) {
+    if (remoteProducts && remoteProducts.length > 0) {
+      const normalized = remoteProducts.map(normalizeProduct);
+      this.products = normalized;
+      this.productsLoaded = true;
+
       if (isAdminAuthenticated) {
-        supabaseService.saveAllHeroSlides(INITIAL_HERO_SLIDES).catch(() => {});
+        for (const raw of remoteProducts) {
+          const clean = normalized.find((n) => n.id === raw.id);
+          if (clean && (raw.imageUrl || '') !== (clean.imageUrl || '')) {
+            supabaseService.upsertProduct(clean).catch(() => {});
+          }
+        }
       }
       return;
     }
 
-    // Network error fallback only if nothing has been loaded yet
-    if (this.heroSlides.length === 0) {
-      this.heroSlides = [...INITIAL_HERO_SLIDES];
+    if (remoteProducts && remoteProducts.length === 0) {
+      this.products = [];
+      this.productsLoaded = true;
+      return;
     }
-    this.heroSlidesLoaded = true;
+
+    this.productsLoaded = true;
   }
 
   public async syncFromSupabase() {
     if (!supabaseService.isConfigured()) {
       const discovered = await supabaseService.ensurePublicConfig();
       if (!discovered) {
-        if (!this.heroSlidesLoaded) {
-          this.heroSlides = [...INITIAL_HERO_SLIDES];
-          this.heroSlidesLoaded = true;
-          this.notify();
-        }
+        this.heroSlidesLoaded = true;
+        this.productsLoaded = true;
+        this.cmsPagesLoaded = true;
+        this.notify();
         return;
       }
     }
@@ -1204,31 +1232,28 @@ class DataRepository {
     const isAdminAuthenticated = Boolean(supabaseService.getCurrentUser());
 
     try {
-      // Kick off hero slides immediately and notify as soon as it resolves so the hero banner paints without waiting on other tables
+      // Kick off hero slides and products immediately in parallel and notify as each resolves
       const heroSlidesPromise = supabaseService.fetchHeroSlides().then((remoteSlides) => {
         this.applyRemoteHeroSlides(remoteSlides, isAdminAuthenticated);
         this.notify();
         return remoteSlides;
       });
 
-      const [remoteProducts, remoteContent, remoteNav, remotePages] = await Promise.all([
-        supabaseService.fetchProducts(),
+      const productsPromise = supabaseService.fetchProducts().then((remoteProducts) => {
+        this.applyRemoteProducts(remoteProducts, isAdminAuthenticated);
+        this.notify();
+        return remoteProducts;
+      });
+
+      const [remoteContent, remoteNav, remotePages] = await Promise.all([
         supabaseService.fetchSiteContent(),
         supabaseService.fetchNavigation(),
         supabaseService.fetchCmsPages(),
         heroSlidesPromise,
+        productsPromise,
       ]);
 
-      // 1. Apply live products
-      if (remoteProducts && remoteProducts.length > 0) {
-        this.products = remoteProducts.map(normalizeProduct);
-      } else if (remoteProducts && remoteProducts.length === 0 && isAdminAuthenticated) {
-        for (const prod of INITIAL_PRODUCTS) {
-          await supabaseService.upsertProduct(prod);
-        }
-      }
-
-      // 2. Apply live site content
+      // 1. Apply live site content
       if (remoteContent) {
         this.content = normalizeSiteContent({
           ...INITIAL_SITE_CONTENT,
@@ -1243,7 +1268,7 @@ class DataRepository {
         await supabaseService.upsertSiteContent(this.content);
       }
 
-      // 3. Apply live navigation & self-heal any legacy duplicates / flattened dropdowns
+      // 2. Apply live navigation & self-heal any legacy duplicates / flattened dropdowns
       if (remoteNav && remoteNav.length > 0) {
         const normalizedNav = normalizeNavItems(remoteNav);
         this.navItems = normalizedNav;
@@ -1259,24 +1284,38 @@ class DataRepository {
         await supabaseService.saveNavigation(INITIAL_NAV_ITEMS);
       }
 
-      // 4. Apply live CMS pages
+      // 3. Apply live CMS pages (sanitizing any legacy local asset paths from sections)
       if (remotePages && remotePages.length > 0) {
-        const remoteSlugs = new Set(remotePages.map((p) => p.slug));
+        const cleanedRemotePages = remotePages.map(normalizeCmsPage);
+        const remoteSlugs = new Set(cleanedRemotePages.map((p) => p.slug));
         const missingSeedPages = INITIAL_CMS_PAGES.filter((seedPage) => !remoteSlugs.has(seedPage.slug));
-        this.cmsPages = [...remotePages, ...missingSeedPages];
-        if (isAdminAuthenticated && missingSeedPages.length > 0) {
+        this.cmsPages = [...cleanedRemotePages, ...missingSeedPages];
+        this.cmsPagesLoaded = true;
+
+        if (isAdminAuthenticated) {
+          for (const rawPage of remotePages) {
+            const cleanedPage = cleanedRemotePages.find((p) => p.id === rawPage.id);
+            if (cleanedPage && JSON.stringify(rawPage.sections) !== JSON.stringify(cleanedPage.sections)) {
+              supabaseService.upsertCmsPage(cleanedPage).catch(() => {});
+            }
+          }
           for (const pg of missingSeedPages) {
             supabaseService.upsertCmsPage(pg).catch(() => {});
           }
         }
-      } else if (remotePages && remotePages.length === 0 && isAdminAuthenticated) {
-        for (const pg of INITIAL_CMS_PAGES) {
-          await supabaseService.upsertCmsPage(pg);
-        }
+      } else if (remotePages && remotePages.length === 0) {
         this.cmsPages = [...INITIAL_CMS_PAGES];
+        this.cmsPagesLoaded = true;
+        if (isAdminAuthenticated) {
+          for (const pg of INITIAL_CMS_PAGES) {
+            await supabaseService.upsertCmsPage(pg);
+          }
+        }
+      } else {
+        this.cmsPagesLoaded = true;
       }
 
-      // 5. Fetch live orders & inquiries in parallel when authenticated
+      // 4. Fetch live orders & inquiries in parallel when authenticated
       if (isAdminAuthenticated) {
         const [remoteOrders, remoteInquiries] = await Promise.all([
           supabaseService.fetchOrders(),
@@ -1293,10 +1332,10 @@ class DataRepository {
       this.notify();
     } catch (err) {
       console.warn('Live Supabase sync notice:', err);
-      if (!this.heroSlidesLoaded) {
-        this.heroSlidesLoaded = true;
-        this.notify();
-      }
+      this.heroSlidesLoaded = true;
+      this.productsLoaded = true;
+      this.cmsPagesLoaded = true;
+      this.notify();
     }
   }
 
@@ -1318,6 +1357,10 @@ class DataRepository {
   }
 
   // --- PRODUCTS ---
+  public isProductsLoaded(): boolean {
+    return this.productsLoaded;
+  }
+
   public getProducts(): Product[] {
     return this.products;
   }
@@ -1325,6 +1368,7 @@ class DataRepository {
   public async saveProducts(products: Product[]): Promise<SyncWriteResult> {
     const cleaned = products.map(normalizeProduct);
     this.products = cleaned;
+    this.productsLoaded = true;
     this.notify();
     const results = await Promise.all(cleaned.map((p) => supabaseService.upsertProduct(p)));
     return this.buildWriteResult(results.every(Boolean));
@@ -1421,6 +1465,10 @@ class DataRepository {
   }
 
   // --- DYNAMIC CMS PAGES ---
+  public isCmsPagesLoaded(): boolean {
+    return this.cmsPagesLoaded;
+  }
+
   public getCmsPages(): CmsPage[] {
     return this.cmsPages;
   }
@@ -1447,11 +1495,11 @@ class DataRepository {
       .replace(/[^a-z0-9-_]/g, '-')
       .replace(/-+/g, '-');
 
-    const updatedPage: CmsPage = {
+    const updatedPage: CmsPage = normalizeCmsPage({
       ...page,
       slug: cleanSlug,
       updatedAt: new Date().toISOString(),
-    };
+    });
 
     const pages = [...this.cmsPages];
     const idx = pages.findIndex((p) => p.id === updatedPage.id);
@@ -1461,6 +1509,7 @@ class DataRepository {
       pages.push(updatedPage);
     }
     this.cmsPages = pages;
+    this.cmsPagesLoaded = true;
     const pageOk = await supabaseService.upsertCmsPage(updatedPage);
 
     // Sync navigation link automatically ONLY if no explicit link for this slug already exists

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { HeroSlide, SiteContent, CmsPage } from '../types';
-import { dataRepo, FALLBACK_BEVERAGE_IMAGE, INITIAL_HERO_SLIDES } from '../lib/storage';
+import { dataRepo } from '../lib/storage';
 import { supabaseService } from '../lib/supabaseClient';
 import { HeroSlider } from '../components/HeroSlider';
 import {
@@ -74,7 +74,7 @@ export const HeroSliderManager: React.FC<HeroSliderManagerProps> = ({
       ctaUrl: '/shop',
       secondaryCtaLabel: 'Our Story',
       secondaryCtaUrl: '/about-us',
-      desktopImageUrl: INITIAL_HERO_SLIDES[0]?.desktopImageUrl || FALLBACK_BEVERAGE_IMAGE,
+      desktopImageUrl: '',
       mobileImageUrl: '',
       overlayOpacity: 0.52,
       displayOrder: nextOrder,
@@ -279,15 +279,16 @@ export const HeroSliderManager: React.FC<HeroSliderManagerProps> = ({
           >
             {/* Thumbnail + Info */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1 min-w-0">
-              <div className="relative w-full sm:w-44 aspect-16/9 rounded-2xl overflow-hidden bg-[#12351F] border border-[#1B4D2E]/15 shrink-0">
-                <img
-                  src={slide.desktopImageUrl || FALLBACK_BEVERAGE_IMAGE}
-                  alt={slide.heading}
-                  onError={(e) => {
-                    e.currentTarget.src = FALLBACK_BEVERAGE_IMAGE;
-                  }}
-                  className="w-full h-full object-cover"
-                />
+              <div className="relative w-full sm:w-44 aspect-16/9 rounded-2xl overflow-hidden bg-[#12351F] border border-[#1B4D2E]/15 shrink-0 flex items-center justify-center">
+                {slide.desktopImageUrl ? (
+                  <img
+                    src={slide.desktopImageUrl}
+                    alt={slide.heading}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <ImageIcon className="w-6 h-6 text-[#E1AD01]/70" />
+                )}
                 <span className="absolute top-2 left-2 bg-black/70 text-[#E1AD01] text-[10px] font-black px-2 py-0.5 rounded-md">
                   Slide #{idx + 1}
                 </span>
@@ -444,24 +445,15 @@ export const HeroSliderManager: React.FC<HeroSliderManagerProps> = ({
             </div>
 
             {/* Live Single-Slide Visual Preview */}
-            <div className="rounded-2xl overflow-hidden border border-[#1B4D2E]/20 relative aspect-21/9 bg-[#12351F]">
-              <img
-                src={editingSlide.desktopImageUrl || FALLBACK_BEVERAGE_IMAGE}
-                alt="Slide preview"
-                onError={(e) => {
-                  e.currentTarget.src = FALLBACK_BEVERAGE_IMAGE;
-                }}
-                className="w-full h-full object-cover"
-              />
-              <div
-                className="absolute inset-0 flex items-center p-6"
-                style={{
-                  background: `linear-gradient(105deg, rgba(14,41,24,${Math.min(
-                    0.92,
-                    editingSlide.overlayOpacity + 0.24
-                  )}) 0%, rgba(18,53,31,${editingSlide.overlayOpacity}) 60%, rgba(18,53,31,0.25) 100%)`,
-                }}
-              >
+            <div className="rounded-2xl overflow-hidden border border-[#1B4D2E]/20 relative aspect-21/9 bg-gradient-to-br from-[#0E2918] via-[#12351F] to-[#1B4D2E]">
+              {editingSlide.desktopImageUrl && (
+                <img
+                  src={editingSlide.desktopImageUrl}
+                  alt="Slide preview"
+                  className="w-full h-full object-cover"
+                />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0E2918]/80 via-[#12351F]/60 to-[#12351F]/25 flex items-center p-6">
                 <div className="max-w-lg space-y-2 text-white">
                   {editingSlide.kicker && (
                     <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#E1AD01]">
@@ -574,31 +566,6 @@ export const HeroSliderManager: React.FC<HeroSliderManagerProps> = ({
                         Clear
                       </button>
                     )}
-                  </div>
-                </div>
-
-                {/* Studio Presets */}
-                <div className="md:col-span-2 pt-2 border-t border-[#1B4D2E]/10">
-                  <span className="text-[10px] font-bold text-[#1B4D2E]/75 block mb-1.5">
-                    Or Quick-Select Studio Brand Photography:
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {INITIAL_HERO_SLIDES.map((preset, i) => (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() =>
-                          setEditingSlide({
-                            ...editingSlide,
-                            desktopImageUrl: preset.desktopImageUrl,
-                          })
-                        }
-                        className="inline-flex items-center space-x-1.5 bg-white hover:bg-emerald-50 border border-gray-200 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#1B4D2E] cursor-pointer"
-                      >
-                        <ImageIcon className="w-3 h-3 text-[#E1AD01]" />
-                        <span>Studio Banner #{i + 1}</span>
-                      </button>
-                    ))}
                   </div>
                 </div>
               </div>

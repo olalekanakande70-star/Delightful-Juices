@@ -7,7 +7,7 @@ import {
   SiteContent,
   NavItem,
 } from '../types';
-import { dataRepo, FALLBACK_BEVERAGE_IMAGE } from '../lib/storage';
+import { dataRepo } from '../lib/storage';
 import { supabaseService } from '../lib/supabaseClient';
 import { DynamicPageRenderer } from '../components/DynamicPageRenderer';
 import {
@@ -26,6 +26,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Layers,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 interface PagesManagerProps {
@@ -99,7 +100,7 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
           kicker: 'DELIGHTFUL JUICES',
           heading: 'New Page Headline',
           subheading: 'Introduce your story, seasonal promotion, or customer guide here.',
-          imageUrl: FALLBACK_BEVERAGE_IMAGE,
+          imageUrl: '',
           buttonLabel: 'Shop Now',
           buttonUrl: '/shop',
           theme: 'dark',
@@ -110,7 +111,7 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
           kicker: 'HANDCRAFTED QUALITY',
           heading: 'Naturally Made with Whole Botanicals',
           body: 'Write your page content here. You can add, reorder, or customize sections freely.',
-          imageUrl: FALLBACK_BEVERAGE_IMAGE,
+          imageUrl: '',
           imagePosition: 'left',
           buttonLabel: 'Explore Flavors',
           buttonUrl: '/shop',
@@ -147,20 +148,14 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
         type === 'image_text' || type === 'text_only' || type === 'promo_banner' || type === 'cta'
           ? 'Enter your rich customer-facing copy here.'
           : '',
-      imageUrl:
-        type === 'hero' || type === 'image_text' || type === 'full_image'
-          ? FALLBACK_BEVERAGE_IMAGE
-          : '',
+      imageUrl: '',
       imagePosition: 'left',
       buttonLabel:
         type === 'hero' || type === 'image_text' || type === 'promo_banner' || type === 'cta'
           ? 'Shop Now'
           : '',
       buttonUrl: '/shop',
-      galleryImages:
-        type === 'image_gallery'
-          ? [{ url: FALLBACK_BEVERAGE_IMAGE, caption: 'Handcrafted in Quakertown, PA' }]
-          : [],
+      galleryImages: [],
       maxProducts: type === 'featured_products' ? 3 : undefined,
       theme: type === 'hero' || type === 'cta' ? 'dark' : type === 'promo_banner' ? 'gold' : 'cream',
     };
@@ -673,14 +668,17 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
                       sec.type === 'image_text' ||
                       sec.type === 'full_image') && (
                       <div className="p-3 bg-[#FFF8E7] rounded-2xl border border-gray-200 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                        <img
-                          src={sec.imageUrl || FALLBACK_BEVERAGE_IMAGE}
-                          alt=""
-                          onError={(e) => {
-                            e.currentTarget.src = FALLBACK_BEVERAGE_IMAGE;
-                          }}
-                          className="w-20 h-14 rounded-xl object-cover border bg-white shrink-0"
-                        />
+                        {sec.imageUrl ? (
+                          <img
+                            src={sec.imageUrl}
+                            alt=""
+                            className="w-20 h-14 rounded-xl object-cover border bg-white shrink-0"
+                          />
+                        ) : (
+                          <div className="w-20 h-14 rounded-xl border bg-[#12351F] text-[#E1AD01] flex items-center justify-center shrink-0">
+                            <ImageIcon className="w-5 h-5" />
+                          </div>
+                        )}
                         <div className="flex-1 w-full space-y-1.5">
                           <input
                             type="text"
@@ -688,7 +686,7 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
                             onChange={(e) =>
                               handleUpdateSection(sec.id, { imageUrl: e.target.value })
                             }
-                            placeholder="Image URL or upload file..."
+                            placeholder="Live Supabase Storage URL or upload file..."
                             className="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-[#1B4D2E]"
                           />
                           <label className="inline-flex items-center space-x-1.5 bg-[#1B4D2E] text-white font-bold text-[11px] px-3 py-1.5 rounded-lg cursor-pointer">
@@ -735,12 +733,16 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
                               key={gIdx}
                               className="bg-white p-2 rounded-xl border border-gray-200 space-y-1.5"
                             >
-                              <div className="relative aspect-4/3 rounded-lg overflow-hidden">
-                                <img
-                                  src={gItem.url || FALLBACK_BEVERAGE_IMAGE}
-                                  alt=""
-                                  className="w-full h-full object-cover"
-                                />
+                              <div className="relative aspect-4/3 rounded-lg overflow-hidden bg-[#12351F] flex items-center justify-center">
+                                {gItem.url ? (
+                                  <img
+                                    src={gItem.url}
+                                    alt=""
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <ImageIcon className="w-6 h-6 text-[#E1AD01]/70" />
+                                )}
                                 <button
                                   type="button"
                                   onClick={() => {

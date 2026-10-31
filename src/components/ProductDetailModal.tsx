@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Product, SizeOption } from '../types';
 import { useCart } from '../context/CartContext';
-import { FALLBACK_BEVERAGE_IMAGE } from '../lib/storage';
 import {
   getCustomerSizeDisplay,
   getCustomerSizeFullLabel,
@@ -37,10 +36,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   );
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
-  const [activeImage, setActiveImage] = useState<string>(product.imageUrl);
+  const [activeImage, setActiveImage] = useState<string>(product.imageUrl || '');
+  const [imgError, setImgError] = useState(false);
 
   React.useEffect(() => {
-    setActiveImage(product.imageUrl);
+    setActiveImage(product.imageUrl || '');
+    setImgError(false);
     setSelectedSize(product.sizes[1] || product.sizes[0]);
   }, [product]);
 
@@ -71,18 +72,15 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="relative aspect-16/9 sm:aspect-21/9 bg-[#FFF8E7] overflow-hidden shrink-0">
-          <img
-            src={activeImage || FALLBACK_BEVERAGE_IMAGE}
-            alt={product.name}
-            onError={(e) => {
-              const target = e.currentTarget;
-              if (target.src !== FALLBACK_BEVERAGE_IMAGE) {
-                target.src = FALLBACK_BEVERAGE_IMAGE;
-              }
-            }}
-            className="w-full h-full object-cover transition-all duration-300"
-          />
+        <div className="relative aspect-16/9 sm:aspect-21/9 bg-[#12351F] overflow-hidden shrink-0">
+          {activeImage && !imgError && (
+            <img
+              src={activeImage}
+              alt={product.name}
+              onError={() => setImgError(true)}
+              className="w-full h-full object-cover transition-all duration-300"
+            />
+          )}
           <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent" />
 
           <button
@@ -101,7 +99,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <button
                   key={i}
                   type="button"
-                  onClick={() => setActiveImage(img)}
+                  onClick={() => {
+                    setImgError(false);
+                    setActiveImage(img);
+                  }}
                   className={`w-9 h-9 rounded-lg overflow-hidden border-2 transition-transform cursor-pointer ${
                     activeImage === img
                       ? 'border-[#E1AD01] scale-105'
@@ -111,9 +112,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <img
                     src={img}
                     alt=""
-                    onError={(e) => {
-                      e.currentTarget.src = FALLBACK_BEVERAGE_IMAGE;
-                    }}
                     className="w-full h-full object-cover"
                   />
                 </button>

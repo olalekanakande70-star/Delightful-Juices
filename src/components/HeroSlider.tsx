@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { HeroSlide, SiteContent } from '../types';
-import { FALLBACK_BEVERAGE_IMAGE } from '../lib/storage';
 import { sanitizeBrandAndUnitsText } from '../lib/units';
 import {
   ChevronLeft,
@@ -68,7 +67,7 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
             ctaUrl: '/shop',
             secondaryCtaLabel: 'Events & Catering',
             secondaryCtaUrl: '/events-catering',
-            desktopImageUrl: FALLBACK_BEVERAGE_IMAGE,
+            desktopImageUrl: '',
             mobileImageUrl: '',
             overlayOpacity: 0.55,
             displayOrder: 1,
@@ -80,10 +79,16 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
   const [isPaused, setIsPaused] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [loadedUrls, setLoadedUrls] = useState<Record<string, boolean>>({});
+  const [erroredUrls, setErroredUrls] = useState<Record<string, boolean>>({});
 
   const markImageLoaded = useCallback((url: string) => {
     if (!url) return;
     setLoadedUrls((prev) => (prev[url] ? prev : { ...prev, [url]: true }));
+  }, []);
+
+  const markImageErrored = useCallback((url: string) => {
+    if (!url) return;
+    setErroredUrls((prev) => (prev[url] ? prev : { ...prev, [url]: true }));
   }, []);
 
   // Clamp index if slide count changes dynamically in CMS
@@ -146,55 +151,52 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
       {/* Background Slide Layers with Smooth Crossfade & Subtle Ken Burns Zoom */}
       {effectiveSlides.map((slide, idx) => {
         const isCurrent = idx === currentIndex;
-        const desktopSrc = (slide.desktopImageUrl || '').trim() || FALLBACK_BEVERAGE_IMAGE;
+        const desktopSrc = (slide.desktopImageUrl || '').trim();
         const rawMobile = (slide.mobileImageUrl || '').trim();
         const customMobileSrc = rawMobile && rawMobile !== desktopSrc ? rawMobile : '';
         const imageLoadKey = `${desktopSrc}::${customMobileSrc}`;
         const isImgLoaded = Boolean(loadedUrls[imageLoadKey]);
+        const isImgErrored = Boolean(erroredUrls[imageLoadKey]);
         const scrimClass = getScrimOpacityClass(slide.overlayOpacity);
 
         return (
           <div
             key={slide.id}
             aria-hidden={!isCurrent}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+            className={`absolute inset-0 bg-gradient-to-br from-[#0E2918] via-[#12351F] to-[#1B4D2E] transition-opacity duration-1000 ease-in-out ${
               isCurrent ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
             }`}
           >
             {/* Ken Burns Motion Wrapper — Re-keys when active so scale starts smoothly */}
-            <div
-              key={`${slide.id}-${isCurrent ? 'active' : 'idle'}`}
-              className={`w-full h-full ${
-                isCurrent && !prefersReducedMotion ? 'hero-ken-burns' : ''
-              } ${isPaused ? 'hero-ken-burns-paused' : ''}`}
-            >
-              <picture className="block w-full h-full">
-                {customMobileSrc && <source media="(max-width: 767px)" srcSet={customMobileSrc} />}
-                <img
-                  ref={(el) => {
-                    if (el && el.complete && el.naturalWidth > 0) {
-                      markImageLoaded(imageLoadKey);
-                    }
-                  }}
-                  src={desktopSrc}
-                  alt={sanitizeBrandAndUnitsText(slide.heading)}
-                  loading={idx === 0 ? 'eager' : 'lazy'}
-                  fetchPriority={idx === 0 ? 'high' : 'auto'}
-                  decoding="async"
-                  onLoad={() => markImageLoaded(imageLoadKey)}
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    if (target.src !== FALLBACK_BEVERAGE_IMAGE) {
-                      target.src = FALLBACK_BEVERAGE_IMAGE;
-                    }
-                    markImageLoaded(imageLoadKey);
-                  }}
-                  className={`w-full h-full object-cover object-center select-none transition-opacity duration-500 ease-out ${
-                    isImgLoaded ? 'opacity-100' : 'opacity-0'
-                  }`}
-                />
-              </picture>
-            </div>
+            {desktopSrc && !isImgErrored && (
+              <div
+                key={`${slide.id}-${isCurrent ? 'active' : 'idle'}`}
+                className={`w-full h-full ${
+                  isCurrent && !prefersReducedMotion ? 'hero-ken-burns' : ''
+                } ${isPaused ? 'hero-ken-burns-paused' : ''}`}
+              >
+                <picture className="block w-full h-full">
+                  {customMobileSrc && <source media="(max-width: 767px)" srcSet={customMobileSrc} />}
+                  <img
+                    ref={(el) => {
+                      if (el && el.complete && el.naturalWidth > 0) {
+                        markImageLoaded(imageLoadKey);
+                      }
+                    }}
+                    src={desktopSrc}
+                    alt={sanitizeBrandAndUnitsText(slide.heading)}
+                    loading={idx === 0 ? 'eager' : 'lazy'}
+                    fetchPriority={idx === 0 ? 'high' : 'auto'}
+                    decoding="async"
+                    onLoad={() => markImageLoaded(imageLoadKey)}
+                    onError={() => markImageErrored(imageLoadKey)}
+                    className={`w-full h-full object-cover object-center select-none transition-opacity duration-500 ease-out ${
+                      isImgLoaded ? 'opacity-100' : 'opacity-0'
+                    }`}
+                  />
+                </picture>
+              </div>
+            )}
 
             {/* Layered Commercial Scrim for Optimal Text Contrast */}
             <div

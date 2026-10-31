@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Product, SizeOption } from '../types';
 import { useCart } from '../context/CartContext';
-import { FALLBACK_BEVERAGE_IMAGE } from '../lib/storage';
 import {
   getCustomerSizeDisplay,
   sanitizeBrandAndUnitsText,
@@ -11,6 +10,7 @@ import {
   Check,
   Plus,
   Minus,
+  Sparkles,
 } from 'lucide-react';
 
 interface ProductCardProps {
@@ -29,6 +29,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   );
   const [quantity, setQuantity] = useState(1);
   const [addedAnim, setAddedAnim] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  const liveImageSrc = (product.imageUrl || '').trim();
+
+  useEffect(() => {
+    setImgError(false);
+    setImgLoaded(liveImageSrc.startsWith('data:image/'));
+  }, [liveImageSrc]);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -37,9 +46,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     setTimeout(() => setAddedAnim(false), 1200);
   };
 
+  const cleanName = sanitizeBrandAndUnitsText(product.name);
+
   return (
     <article className="bg-white rounded-3xl overflow-hidden border border-[#1B4D2E]/15 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between group">
-      {/* Product Image */}
+      {/* Product Image (strictly from live Supabase) */}
       <div
         onClick={() => onOpenDetails(product)}
         role="button"
@@ -50,21 +61,34 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             onOpenDetails(product);
           }
         }}
-        aria-label={`View ${sanitizeBrandAndUnitsText(product.name)}`}
+        aria-label={`View ${cleanName}`}
         className="relative aspect-4/3 overflow-hidden bg-[#FFF8E7] cursor-pointer"
       >
-        <img
-          src={product.imageUrl || FALLBACK_BEVERAGE_IMAGE}
-          alt={sanitizeBrandAndUnitsText(product.name)}
-          loading="lazy"
-          onError={(e) => {
-            const target = e.currentTarget;
-            if (target.src !== FALLBACK_BEVERAGE_IMAGE) {
-              target.src = FALLBACK_BEVERAGE_IMAGE;
-            }
-          }}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        />
+        {liveImageSrc && !imgError ? (
+          <img
+            ref={(el) => {
+              if (el && el.complete && el.naturalWidth > 0 && !imgLoaded) {
+                setImgLoaded(true);
+              }
+            }}
+            src={liveImageSrc}
+            alt={cleanName}
+            loading="lazy"
+            decoding="async"
+            onLoad={() => setImgLoaded(true)}
+            onError={() => setImgError(true)}
+            className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-500 ${
+              imgLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-[#12351F] to-[#1B4D2E] flex flex-col items-center justify-center p-6 text-center">
+            <Sparkles className="w-6 h-6 text-[#E1AD01] mb-2" />
+            <span className="font-display font-bold text-sm text-[#FFF8E7] line-clamp-2">
+              {cleanName}
+            </span>
+          </div>
+        )}
 
         {(!product.inStock || product.badge) && (
           <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start">

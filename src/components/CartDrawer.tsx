@@ -1,6 +1,5 @@
 import React from 'react';
 import { useCart } from '../context/CartContext';
-import { FALLBACK_BEVERAGE_IMAGE } from '../lib/storage';
 import { getCustomerSizeDisplay, sanitizeBrandAndUnitsText } from '../lib/units';
 import {
   X,
@@ -165,14 +164,17 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content, onNavigate }) =
                 key={item.id}
                 className="bg-white p-3.5 rounded-2xl border border-[#1B4D2E]/10 shadow-xs flex items-center space-x-3"
               >
-                <img
-                  src={item.product.imageUrl || FALLBACK_BEVERAGE_IMAGE}
-                  alt={item.product.name}
-                  onError={(e) => {
-                    e.currentTarget.src = FALLBACK_BEVERAGE_IMAGE;
-                  }}
-                  className="w-16 h-16 rounded-xl object-cover shrink-0 bg-[#FFF8E7]"
-                />
+                {item.product.imageUrl ? (
+                  <img
+                    src={item.product.imageUrl}
+                    alt={item.product.name}
+                    className="w-16 h-16 rounded-xl object-cover shrink-0 bg-[#FFF8E7]"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-xl bg-[#1B4D2E] text-[#E1AD01] flex items-center justify-center shrink-0">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                )}
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between">

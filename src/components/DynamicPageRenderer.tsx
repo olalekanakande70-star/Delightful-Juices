@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { CmsPage, PageSection, Product, SiteContent } from '../types';
-import { FALLBACK_BEVERAGE_IMAGE } from '../lib/storage';
 import { sanitizeBrandAndUnitsText } from '../lib/units';
 import { ProductCard } from './ProductCard';
 import { EventsCateringSection } from './EventsCateringSection';
@@ -16,6 +15,7 @@ interface DynamicPageRendererProps {
   onNavigate: (href: string) => void;
   onOpenProductDetails: (product: Product) => void;
   isPreview?: boolean;
+  isProductsLoading?: boolean;
 }
 
 export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
@@ -25,6 +25,7 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
   onNavigate,
   onOpenProductDetails,
   isPreview = false,
+  isProductsLoading = false,
 }) => {
   // Dynamically sync SEO <title> and <meta name="description"> when viewing a page
   useEffect(() => {
@@ -64,20 +65,19 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
   const renderSection = (section: PageSection) => {
     switch (section.type) {
       case 'hero': {
-        const bgImg = section.imageUrl || FALLBACK_BEVERAGE_IMAGE;
+        const bgImg = (section.imageUrl || '').trim();
         return (
           <section
             key={section.id}
-            className="relative min-h-[380px] sm:min-h-[450px] bg-[#12351F] text-white flex items-center overflow-hidden"
+            className="relative min-h-[380px] sm:min-h-[450px] bg-gradient-to-br from-[#0e2918] via-[#12351F] to-[#1B4D2E] text-white flex items-center overflow-hidden"
           >
-            <img
-              src={bgImg}
-              alt={section.heading || page.title}
-              onError={(e) => {
-                e.currentTarget.src = FALLBACK_BEVERAGE_IMAGE;
-              }}
-              className="absolute inset-0 w-full h-full object-cover object-center"
-            />
+            {bgImg && (
+              <img
+                src={bgImg}
+                alt={section.heading || page.title}
+                className="absolute inset-0 w-full h-full object-cover object-center"
+              />
+            )}
             <div className="absolute inset-0 bg-gradient-to-r from-[#0e2918]/90 via-[#12351F]/75 to-[#12351F]/45" />
             <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-16 sm:py-22">
               <div className="max-w-2xl space-y-4">
@@ -129,6 +129,7 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
       case 'image_text': {
         const isRight = section.imagePosition === 'right';
         const isDark = section.theme === 'dark';
+        const splitImg = (section.imageUrl || '').trim();
         const paragraphs = sanitizeBrandAndUnitsText(section.body || '')
           .split('\n\n')
           .filter(Boolean);
@@ -137,20 +138,25 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
           <section key={section.id} className={`py-16 sm:py-20 ${getThemeClasses(section.theme)}`}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-                <div className={`lg:col-span-5 ${isRight ? 'lg:order-2' : 'lg:order-1'}`}>
-                  <div className="aspect-4/3 rounded-3xl overflow-hidden shadow-xl border-4 border-white bg-[#FFF8E7]">
-                    <img
-                      src={section.imageUrl || FALLBACK_BEVERAGE_IMAGE}
-                      alt={section.heading || page.title}
-                      onError={(e) => {
-                        e.currentTarget.src = FALLBACK_BEVERAGE_IMAGE;
-                      }}
-                      className="w-full h-full object-cover"
-                    />
+                {splitImg ? (
+                  <div className={`lg:col-span-5 ${isRight ? 'lg:order-2' : 'lg:order-1'}`}>
+                    <div className="aspect-4/3 rounded-3xl overflow-hidden shadow-xl border-4 border-white bg-[#FFF8E7]">
+                      <img
+                        src={splitImg}
+                        alt={section.heading || page.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                   </div>
-                </div>
+                ) : null}
 
-                <div className={`lg:col-span-7 space-y-5 ${isRight ? 'lg:order-1' : 'lg:order-2'}`}>
+                <div
+                  className={`${
+                    splitImg
+                      ? `lg:col-span-7 ${isRight ? 'lg:order-1' : 'lg:order-2'}`
+                      : 'lg:col-span-10 lg:col-start-2'
+                  } space-y-5`}
+                >
                   {section.kicker && (
                     <div
                       className={`inline-flex items-center space-x-2 text-xs font-extrabold uppercase tracking-[0.16em] border-l-2 border-[#E1AD01] pl-3 ${
@@ -196,6 +202,8 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
       }
 
       case 'full_image': {
+        const fullImg = (section.imageUrl || '').trim();
+        if (!fullImg) return null;
         return (
           <section key={section.id} className={`py-12 sm:py-16 ${getThemeClasses(section.theme)}`}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
@@ -206,11 +214,8 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
               )}
               <div className="aspect-16/9 sm:aspect-21/9 rounded-3xl overflow-hidden shadow-lg border border-[#1B4D2E]/15 bg-[#FFF8E7]">
                 <img
-                  src={section.imageUrl || FALLBACK_BEVERAGE_IMAGE}
+                  src={fullImg}
                   alt={section.heading || page.title}
-                  onError={(e) => {
-                    e.currentTarget.src = FALLBACK_BEVERAGE_IMAGE;
-                  }}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -354,23 +359,41 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-                {listToRender.map((prod) => (
-                  <ProductCard
-                    key={prod.id}
-                    product={prod}
-                    onOpenDetails={onOpenProductDetails}
-                    whatsappNumber={content.whatsappNumber}
-                  />
-                ))}
-              </div>
+              {isProductsLoading && products.length === 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+                  {[0, 1, 2].map((idx) => (
+                    <div
+                      key={idx}
+                      className="bg-white rounded-3xl overflow-hidden border border-[#1B4D2E]/10 shadow-xs animate-pulse"
+                    >
+                      <div className="aspect-4/3 bg-[#1B4D2E]/10" />
+                      <div className="p-5 space-y-3">
+                        <div className="h-5 w-2/3 bg-[#1B4D2E]/15 rounded-lg" />
+                        <div className="h-10 bg-[#1B4D2E]/15 rounded-xl" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+                  {listToRender.map((prod) => (
+                    <ProductCard
+                      key={prod.id}
+                      product={prod}
+                      onOpenDetails={onOpenProductDetails}
+                      whatsappNumber={content.whatsappNumber}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </section>
         );
       }
 
       case 'image_gallery': {
-        const items = section.galleryImages || [];
+        const items = (section.galleryImages || []).filter((img) => Boolean(img.url?.trim()));
+        if (items.length === 0) return null;
         return (
           <section key={section.id} className={`py-16 sm:py-20 ${getThemeClasses(section.theme)}`}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
@@ -392,32 +415,27 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
                 )}
               </div>
 
-              {items.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {items.map((img, i) => (
-                    <figure
-                      key={i}
-                      className="bg-white rounded-3xl overflow-hidden border border-[#1B4D2E]/12 shadow-xs"
-                    >
-                      <div className="aspect-4/3 overflow-hidden bg-[#FFF8E7]">
-                        <img
-                          src={img.url || FALLBACK_BEVERAGE_IMAGE}
-                          alt={img.caption || `Gallery image ${i + 1}`}
-                          onError={(e) => {
-                            e.currentTarget.src = FALLBACK_BEVERAGE_IMAGE;
-                          }}
-                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                        />
-                      </div>
-                      {img.caption && (
-                        <figcaption className="p-4 text-xs font-bold text-[#1B4D2E]">
-                          {sanitizeBrandAndUnitsText(img.caption)}
-                        </figcaption>
-                      )}
-                    </figure>
-                  ))}
-                </div>
-              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {items.map((img, i) => (
+                  <figure
+                    key={i}
+                    className="bg-white rounded-3xl overflow-hidden border border-[#1B4D2E]/12 shadow-xs"
+                  >
+                    <div className="aspect-4/3 overflow-hidden bg-[#FFF8E7]">
+                      <img
+                        src={img.url}
+                        alt={img.caption || `Gallery image ${i + 1}`}
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                    {img.caption && (
+                      <figcaption className="p-4 text-xs font-bold text-[#1B4D2E]">
+                        {sanitizeBrandAndUnitsText(img.caption)}
+                      </figcaption>
+                    )}
+                  </figure>
+                ))}
+              </div>
             </div>
           </section>
         );

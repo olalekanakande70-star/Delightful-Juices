@@ -35,11 +35,17 @@ function MainApp() {
   const [content, setContent] = useState<SiteContent>(() => dataRepo.getContent());
   const [navItems, setNavItems] = useState<NavItem[]>(() => dataRepo.getNavItems());
   const [products, setProducts] = useState<Product[]>(() => dataRepo.getProducts());
+  const [productsLoaded, setProductsLoaded] = useState<boolean>(() =>
+    dataRepo.isProductsLoaded()
+  );
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(() => dataRepo.getHeroSlides());
   const [heroSlidesLoaded, setHeroSlidesLoaded] = useState<boolean>(() =>
     dataRepo.isHeroSlidesLoaded()
   );
   const [cmsPages, setCmsPages] = useState<CmsPage[]>(() => dataRepo.getPages());
+  const [cmsPagesLoaded, setCmsPagesLoaded] = useState<boolean>(() =>
+    dataRepo.isCmsPagesLoaded()
+  );
   const [selectedProductForModal, setSelectedProductForModal] = useState<Product | null>(null);
 
   const [currentPath, setCurrentPath] = useState<string>(() =>
@@ -117,9 +123,11 @@ function MainApp() {
       setContent(dataRepo.getContent());
       setNavItems(dataRepo.getNavItems());
       setProducts(dataRepo.getProducts());
+      setProductsLoaded(dataRepo.isProductsLoaded());
       setHeroSlides(dataRepo.getHeroSlides());
       setHeroSlidesLoaded(dataRepo.isHeroSlidesLoaded());
       setCmsPages(dataRepo.getPages());
+      setCmsPagesLoaded(dataRepo.isCmsPagesLoaded());
     };
     const unsubscribe = dataRepo.subscribe(handleUpdate);
 
@@ -242,6 +250,7 @@ function MainApp() {
               whatsappNumber={content.whatsappNumber}
               featuredOnly={true}
               onNavigate={navigate}
+              isLoading={!productsLoaded && products.length === 0}
             />
 
             {/* 3. Our Signature Promise */}
@@ -297,13 +306,30 @@ function MainApp() {
             content={content}
             onOpenDetails={openProductPage}
             onNavigate={navigate}
+            isLoading={!productsLoaded && products.length === 0}
           />
+        ) : productRouteSlug && !productsLoaded && !matchedProduct ? (
+          <section className="py-16 px-4 bg-[#FFF8E7] min-h-[65vh]">
+            <div className="max-w-7xl mx-auto bg-white rounded-3xl border border-[#1B4D2E]/15 p-6 sm:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 animate-pulse">
+              <div className="lg:col-span-6 aspect-square rounded-3xl bg-[#1B4D2E]/10" />
+              <div className="lg:col-span-6 space-y-5 py-4">
+                <div className="h-4 w-36 bg-[#1B4D2E]/10 rounded-md" />
+                <div className="h-10 w-3/4 bg-[#1B4D2E]/15 rounded-xl" />
+                <div className="h-24 w-full bg-[#1B4D2E]/10 rounded-2xl" />
+                <div className="h-14 w-full bg-[#1B4D2E]/15 rounded-xl" />
+              </div>
+            </div>
+          </section>
         ) : matchedProduct ? (
           <ProductDetailPage
             product={matchedProduct}
             content={content}
             onNavigate={navigate}
           />
+        ) : !productRouteSlug && !cmsPagesLoaded && !matchedPublishedPage ? (
+          <section className="min-h-[60vh] bg-[#FFF8E7]/60">
+            <div className="h-72 bg-gradient-to-br from-[#0E2918] via-[#12351F] to-[#1B4D2E] animate-pulse" />
+          </section>
         ) : matchedPublishedPage ? (
           <DynamicPageRenderer
             page={matchedPublishedPage}
@@ -311,6 +337,7 @@ function MainApp() {
             content={content}
             onNavigate={navigate}
             onOpenProductDetails={openProductPage}
+            isProductsLoading={!productsLoaded && products.length === 0}
           />
         ) : (
           /* Clean Branded 404 / Unpublished Draft Guard */
