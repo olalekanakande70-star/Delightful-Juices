@@ -258,11 +258,11 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
           <div className="pt-4 border-t border-white/15 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-[#FFF8E7]/90 font-medium">
             <span className="flex items-center space-x-1.5">
               <CheckCircle2 className="w-4 h-4 text-[#E1AD01] shrink-0" />
-              <span>100% Natural Cold-Pressed</span>
+              <span>100% Natural Botanicals</span>
             </span>
             <span className="flex items-center space-x-1.5">
               <CheckCircle2 className="w-4 h-4 text-[#E1AD01] shrink-0" />
-              <span>11.8 oz • 16.9 oz • 33.8 oz Bottles</span>
+              <span>Affordable Delivery</span>
             </span>
             <span className="flex items-center space-x-1.5">
               <MapPin className="w-4 h-4 text-[#E1AD01] shrink-0" />

@@ -65,8 +65,8 @@ export const INITIAL_HERO_SLIDES: HeroSlide[] = [
     id: 'slide-1',
     heading: 'Savor the Pure Goodness of Handcrafted Botanicals.',
     subheading:
-      'Cold-pressed daily in Quakertown, PA by Delightful Juices. Experience our ruby-red Nigerian Zobo hibiscus infusion, vibrant ginger elixirs, and velvety Tigernut Milk.',
-    kicker: 'FRESH COLD-PRESSED IN QUAKERTOWN, PA',
+      'Handcrafted daily in Quakertown, PA by Delightful Juices with affordable delivery. Experience our ruby-red Nigerian Zobo hibiscus infusion, vibrant ginger elixirs, and velvety Tigernut Milk.',
+    kicker: 'HANDCRAFTED FRESH IN QUAKERTOWN, PA • AFFORDABLE DELIVERY',
     ctaLabel: 'Shop Now',
     ctaUrl: '/shop',
     secondaryCtaLabel: 'Events & Catering',
@@ -81,8 +81,8 @@ export const INITIAL_HERO_SLIDES: HeroSlide[] = [
     id: 'slide-2',
     heading: 'Fiery Organic Ginger & Sun-Ripened Tropical Elixirs.',
     subheading:
-      'Whole cold-pressed ginger root harmonized with Alfonso mango, golden pineapple, and fragrant lychee—crafted with zero refined syrups or artificial preservatives.',
-    kicker: '100% REAL ROOTS, FRUITS & SPICES',
+      'Whole ginger root harmonized with Alfonso mango, golden pineapple, and natural botanicals—crafted with zero refined syrups or artificial preservatives.',
+    kicker: '100% REAL ROOTS, FRUITS & BOTANICALS',
     ctaLabel: 'Shop Fresh Flavors',
     ctaUrl: '/shop',
     secondaryCtaLabel: 'Our Signature Promise',
@@ -171,9 +171,9 @@ export const INITIAL_PRODUCTS: Product[] = [
     slug: 'pure-organic-ginger',
     category: 'ginger',
     categoryLabel: 'Ginger Elixirs',
-    tagline: 'Fiery cold-pressed ginger root balanced with fresh lemon & golden honey',
+    tagline: 'Fiery organic ginger root balanced with fresh lemon & golden honey',
     description:
-      'An invigorating wellness powerhouse from Delightful Juices! Crafted from whole fresh ginger root cold-pressed to preserve active gingerol compounds. Balanced with fresh citrus lemon and wildflower honey for a bold, fiery kick that instantly energizes your body and soothes the throat.',
+      'An invigorating wellness powerhouse from Delightful Juices! Crafted from whole fresh ginger root to preserve active gingerol compounds. Balanced with fresh citrus lemon and wildflower honey for a bold, fiery kick that instantly energizes your body and soothes the throat.',
     ingredients: [
       'Whole Organic Ginger Root',
       'Fresh Squeezed Lemon Juice',
@@ -211,10 +211,10 @@ export const INITIAL_PRODUCTS: Product[] = [
     categoryLabel: 'Ginger Elixirs',
     tagline: 'Velvety tropical Alfonso mango nectar harmonized with zesty fresh ginger',
     description:
-      'A vibrant tropical symphony where rich, sun-ripened mango puree meets the invigorating warmth of cold-pressed ginger. Velvety smooth with just the right amount of spicy kick, perfect for sunny afternoons, event celebrations, and everyday refreshment.',
+      'A vibrant tropical symphony where rich, sun-ripened mango puree meets the invigorating warmth of fresh ginger. Velvety smooth with just the right amount of spicy kick, perfect for sunny afternoons, event celebrations, and everyday refreshment.',
     ingredients: [
       'Sun-Ripened Mango Puree',
-      'Cold-Pressed Fresh Ginger',
+      'Fresh Ginger Root',
       'Pure Pressed Apple & Orange Juice',
       'Lime Touch',
       'Delightful Juices Botanical Blend',
@@ -250,7 +250,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     description:
       'Crisp, bright, and intensely refreshing. We extract the pure juice of ripe golden pineapples and harmonize it with our signature ginger press. Naturally loaded with bromelain and enzymes, this drink elevates your palate with every sip.',
     ingredients: [
-      'Golden Pineapple Cold-Pressed Juice',
+      'Golden Pineapple Pure Juice',
       'Fresh Ginger Root',
       'Mint Leaf Infusion',
       'Touch of Lime',
@@ -285,7 +285,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     categoryLabel: 'Ginger Elixirs',
     tagline: 'Delicate floral exotic lychee blended with gentle warming ginger',
     description:
-      'An exotic culinary delight from Delightful Juices! Fragrant lychee fruit nectar paired gracefully with subtle, micro-pressed ginger. Sweet, floral, and deeply cooling with a light aromatic zest that pairs exceptionally well with festive dinners and catering spreads.',
+      'An exotic culinary delight from Delightful Juices! Natural botanicals and lychee fruit nectar paired gracefully with subtle ginger. Sweet, floral, and deeply cooling with a light aromatic zest that pairs exceptionally well with festive dinners and catering spreads.',
     ingredients: [
       'Exotic Lychee Nectar',
       'Micro-Pressed Ginger Root',
@@ -362,7 +362,7 @@ export const INITIAL_PRODUCTS: Product[] = [
       'The ultimate Delightful Juices tasting collection! Includes 2x Signature Zobo, 1x Pure Organic Ginger, 1x Ginger Mango, 1x Ginger Pineapple, and 1x Tigernut Milk in 16.9 oz bottles. Packed cold in an insulated carrier, perfect for weekend brunch, gift giving, and small parties.',
     ingredients: [
       '6 × 16.9 oz assorted bottles (Zobo, Ginger blends, Tigernut Milk)',
-      'Fresh cold-pressed whole ingredients',
+      'Fresh whole botanical ingredients',
       'Delightful Juices signature botanical touch',
     ],
     tasteProfile: 'Complete journey from tart floral hibiscus to fiery ginger and creamy tigernut sweetness',
@@ -428,11 +428,11 @@ export const INITIAL_SITE_CONTENT: SiteContent = {
   websiteDomain: 'www.delightfuljuices.com',
   heroHeadline: 'Savor the Pure Goodness.',
   heroSubheadline:
-    'Naturally made, cold-pressed healthy sips handcrafted in Quakertown, PA. From our signature hibiscus Zobo to organic ginger infusions and rich tigernut milk, every bottle from Delightful Juices is thoughtfully prepared for authentic flavor and vitality.',
+    'Naturally made healthy sips handcrafted in Quakertown, PA with affordable delivery. From our signature hibiscus Zobo to organic ginger infusions and rich tigernut milk, every bottle from Delightful Juices is thoughtfully prepared for authentic flavor and vitality.',
   announcementTicker:
-    '🌿 Fresh Batch Pressed Daily in Quakertown, PA • Free Local Delivery over $40 • Now Booking Weddings, Birthdays & Corporate Gatherings • Call/WhatsApp (484) 792-8023 🌿',
+    '🌿 Fresh Batch Pressed Daily in Quakertown, PA • Affordable Local Delivery • Free Delivery Over $40 • Now Booking Weddings & Events • Call/WhatsApp (484) 792-8023 🌿',
   aboutStory:
-    'Delightful Juices was founded on a simple, passionate mission: to create truly nourishing, uncompromised drinks using nature’s most potent botanicals, fruits, herbs, and spices. Rooted in authentic West African heritage flavors like Zobo (Hibiscus) and Kunu Aya (Tigernut Milk), alongside revitalizing cold-pressed ginger roots, every recipe is hand-blended with care by CEO Oluyemi B. Ajibolade and our dedicated kitchen team.',
+    'Delightful Juices was founded on a simple, passionate mission: to create truly nourishing, uncompromised drinks using nature’s most potent botanicals, fruits, herbs, and spices. Rooted in authentic West African heritage flavors like Zobo (Hibiscus) and Kunu Aya (Tigernut Milk), alongside revitalizing organic ginger roots, every recipe is hand-blended with care by CEO Oluyemi B. Ajibolade and our dedicated kitchen team.',
   signaturePromise:
     'Every bottle of Delightful Juices is handcrafted with care and whole botanical ingredients, giving you a pure, refreshing experience you can enjoy again and again.',
   freeDeliveryThreshold: 40.0,
@@ -544,7 +544,7 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
     slug: 'about-us',
     seoTitle: 'About Us | Delightful Juices – Handcrafted Natural Drinks in Quakertown, PA',
     metaDescription:
-      'Discover the story behind Delightful Juices, led by C.E.O. Oluyemi B. Ajibolade in Quakertown, PA. Handcrafted Nigerian Zobo, cold-pressed ginger elixirs, and Tigernut Milk.',
+      'Discover the story behind Delightful Juices, led by C.E.O. Oluyemi B. Ajibolade in Quakertown, PA. Handcrafted Nigerian Zobo, organic ginger elixirs, and Tigernut Milk.',
     status: 'published',
     showInNav: false,
     parentNavId: 'nav-about',
@@ -555,7 +555,7 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
         kicker: 'OUR HERITAGE & KITCHEN CRAFT',
         heading: 'Crafted from Passion, Heritage & Whole Botanicals',
         subheading:
-          'Hand-blended in Quakertown, Pennsylvania by C.E.O. Oluyemi B. Ajibolade—honoring West African botanical traditions and pure cold-pressed nutrition.',
+          'Hand-blended in Quakertown, Pennsylvania by C.E.O. Oluyemi B. Ajibolade—honoring West African botanical traditions and pure natural nutrition.',
         imageUrl: '',
         buttonLabel: 'Shop Fresh Juices',
         buttonUrl: '/shop',
@@ -607,7 +607,7 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
     slug: 'our-story',
     seoTitle: 'Our Story & Signature Promise | Delightful Juices',
     metaDescription:
-      'Learn about the Delightful Juices four-pillar quality commitment: real whole hibiscus, cold-pressed ginger root, Medjool date sweetened tigernut milk, and zero artificial additives.',
+      'Learn about the Delightful Juices four-pillar quality commitment: real whole hibiscus, fresh ginger root, Medjool date sweetened tigernut milk, and zero artificial additives.',
     status: 'published',
     showInNav: false,
     parentNavId: 'nav-about',
@@ -620,17 +620,17 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
         subheading:
           'Why hundreds of families and event hosts trust Delightful Juices for pure, preservative-free hydration.',
         imageUrl: '',
-        buttonLabel: 'Shop Cold-Pressed Juices',
+        buttonLabel: 'Shop Fresh Juices',
         buttonUrl: '/shop',
         theme: 'dark',
       },
       {
         id: 'sec-story-split',
         type: 'image_text',
-        kicker: 'SMALL-BATCH COLD PRESSING',
+        kicker: 'SMALL-BATCH BOTANICAL CRAFT',
         heading: 'Whole Roots, Calyces & Tubers—Never Concentrates',
         body:
-          'Unlike mass-produced shelf beverages that rely on pasteurized flavor syrups and synthetic coloring, Delightful Juices begins every morning with whole botanicals.\n\nWe steep whole organic hibiscus flowers with aromatic cloves and ripe pineapple peels for our Zobo, cold-press fresh ginger rhizomes to protect active gingerols, and stone-blend soaked tigernuts with soft Medjool dates for naturally prebiotic plant milk.',
+          'Unlike mass-produced shelf beverages that rely on pasteurized flavor syrups and synthetic coloring, Delightful Juices begins every morning with whole botanicals.\n\nWe steep whole organic hibiscus flowers with aromatic cloves and ripe pineapple peels for our Zobo, press fresh ginger rhizomes to protect active gingerols, and stone-blend soaked tigernuts with soft Medjool dates for naturally prebiotic plant milk.',
         imageUrl: '',
         imagePosition: 'right',
         buttonLabel: 'Order Fresh Batch',
@@ -740,7 +740,7 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
     slug: 'wholesale',
     seoTitle: 'Wholesale & Retail Distribution | Delightful Juices',
     metaDescription:
-      'Partner with Delightful Juices to stock cold-pressed Zobo, Ginger Elixirs, and Tigernut Milk in your restaurant, cafe, grocery market, or corporate office.',
+      'Partner with Delightful Juices to stock handcrafted Zobo, Ginger Elixirs, and Tigernut Milk in your restaurant, cafe, grocery market, or corporate office.',
     status: 'published',
     showInNav: false,
     parentNavId: 'nav-services',

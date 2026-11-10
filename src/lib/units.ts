@@ -189,6 +189,25 @@ export function sanitizeBrandText(text: string): string {
   out = out.replace(/DelightOil/gi, 'Delightful Juices');
   out = out.replace(/\bDelightful Juice\b(?!s)/g, 'Delightful Juices');
 
+  // Replace "Fragrant" with "Natural Botanicals" (case-preserving patterns)
+  out = out.replace(/\bFragrant\b/g, 'Natural Botanicals');
+  out = out.replace(/\bfragrant\b/g, 'natural botanicals');
+  out = out.replace(/\bFRAGRANT\b/g, 'NATURAL BOTANICALS');
+
+  // Remove "Cold-Pressed", "Cold pressed", "Cold-pressing", etc.
+  out = out.replace(/\bFresh\s+Cold-Pressed\b/gi, 'Fresh');
+  out = out.replace(/\b100%\s+Natural\s+Cold-Pressed\b/gi, '100% Natural Botanicals');
+  out = out.replace(/\bPure\s+Cold-Pressing\b/gi, 'Pure Botanical Extraction');
+  out = out.replace(/\bCold-Pressed\s+/gi, '');
+  out = out.replace(/\bCold-pressed\s+/gi, '');
+  out = out.replace(/\bcold-pressed\s+/gi, '');
+  out = out.replace(/\bCold\s+Pressed\s+/gi, '');
+  out = out.replace(/\bcold\s+pressed\s+/gi, '');
+  out = out.replace(/\s+Cold-Pressed\b/gi, '');
+  out = out.replace(/\s+cold-pressed\b/gi, '');
+  out = out.replace(/\bCold-Pressed\b/gi, '');
+  out = out.replace(/\bcold-pressed\b/gi, '');
+
   return out;
 }
 

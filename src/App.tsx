@@ -170,7 +170,7 @@ function MainApp() {
     if (currentPath === '/' || currentPath === '/admin') {
       document.title = `${content.businessName} | ${content.motto}`;
     } else if (currentPath === '/shop') {
-      document.title = `Shop Fresh Cold-Pressed Juices | ${content.businessName}`;
+      document.title = `Shop Fresh Juices | ${content.businessName}`;
     }
   }, [currentPath, content.businessName, content.motto]);
 
@@ -265,13 +265,13 @@ function MainApp() {
                 <div className="bg-gradient-to-br from-[#1B4D2E] to-[#0f2c1a] rounded-3xl p-8 sm:p-12 border border-[#E1AD01]/35 shadow-2xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
                   <div className="max-w-2xl space-y-3">
                     <span className="inline-block text-xs font-extrabold uppercase tracking-widest text-[#E1AD01]">
-                      Small-Batch Cold-Pressed Goodness
+                      Small-Batch Botanical Goodness • Affordable Delivery
                     </span>
                     <h2 className="font-display font-black text-3xl sm:text-4xl text-[#FFF8E7] leading-tight">
                       Ready to Stock Your Fridge or Host an Unforgettable Event?
                     </h2>
                     <p className="text-sm sm:text-base text-[#FFF8E7]/85 leading-relaxed">
-                      Order fresh 11.8 oz, 16.9 oz, and 33.8 oz bottles of Zobo, Ginger Elixirs, and Creamy Tigernut Milk online—or request custom-labeled bottles for weddings, birthdays, and corporate gatherings.
+                      Order fresh bottles of Zobo, Ginger Elixirs, and Creamy Tigernut Milk online with affordable local delivery—or request custom-labeled bottles for weddings, birthdays, and corporate gatherings.
                     </p>
                   </div>
 
@@ -351,7 +351,7 @@ function MainApp() {
                   Page Not Found
                 </h1>
                 <p className="text-sm text-[#1B4D2E]/75 leading-relaxed">
-                  The page you requested may have moved, or it is currently saved as an unpublished draft. Explore our fresh cold-pressed juices below.
+                  The page you requested may have moved, or it is currently saved as an unpublished draft. Explore our fresh handcrafted juices below.
                 </p>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-3 pt-2">

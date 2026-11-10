@@ -196,8 +196,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
       category: 'ginger',
       categoryLabel: 'Ginger Elixirs',
       tagline: 'Freshly pressed cold drink with botanicals',
-      description: 'Crafted in small batches by Delightful Juices with natural organic fruits and cold-pressed botanicals.',
-      ingredients: ['Cold-Pressed Ginger', 'Fresh Citrus', 'Organic Botanicals'],
+      description: 'Crafted in small batches by Delightful Juices with natural organic fruits and natural botanicals.',
+      ingredients: ['Fresh Ginger Root', 'Fresh Citrus', 'Organic Botanicals'],
       tasteProfile: 'Zesty, crisp and balanced sweetness',
       healthBenefits: ['Natural immune support', 'Revitalizing enzymes'],
       sizes: [

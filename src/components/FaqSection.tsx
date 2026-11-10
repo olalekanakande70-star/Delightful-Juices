@@ -64,7 +64,7 @@ export const FaqSection: React.FC<FaqSectionProps> = ({ content }) => {
             Frequently Asked Questions
           </h2>
           <p className="text-xs sm:text-sm text-[#1B4D2E]/70 max-w-xl mx-auto">
-            Everything you need to know about our cold-pressed process, ounce bottle sizes, shelf life, and delivery policies.
+            Everything you need to know about our natural botanical process, ounce bottle sizes, shelf life, and affordable delivery policies.
           </p>
         </div>
 

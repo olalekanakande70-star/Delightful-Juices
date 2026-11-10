@@ -83,10 +83,10 @@ export const ShopPage: React.FC<ShopPageProps> = ({
                 <span>DELIGHTFUL JUICES ONLINE STORE</span>
               </div>
               <h1 className="font-display font-extrabold text-3xl sm:text-5xl text-white tracking-tight">
-                Shop Fresh Cold-Pressed Juices
+                Shop Fresh Juices
               </h1>
               <p className="text-sm sm:text-base text-[#FFF8E7]/88 leading-relaxed">
-                Handcrafted to order in Quakertown, PA using whole hibiscus calyces, organic ginger root, ripe tropical fruit, and soaked tigernuts. Available in{' '}
+                Handcrafted to order in Quakertown, PA using whole hibiscus calyces, organic ginger root, ripe tropical fruit, and soaked tigernuts. Enjoy affordable delivery directly to your door in{' '}
                 <strong className="text-[#E1AD01]">11.8 oz</strong>,{' '}
                 <strong className="text-[#E1AD01]">16.9 oz</strong>, and{' '}
                 <strong className="text-[#E1AD01]">33.8 oz</strong> bottles.
@@ -120,7 +120,7 @@ export const ShopPage: React.FC<ShopPageProps> = ({
             <div className="flex items-center space-x-2.5">
               <Truck className="w-4 h-4 text-[#E1AD01] shrink-0" />
               <span>
-                Free cold-insulated delivery over{' '}
+                Affordable Delivery • Free over{' '}
                 <strong>${content.freeDeliveryThreshold.toFixed(2)}</strong>
               </span>
             </div>
@@ -130,7 +130,7 @@ export const ShopPage: React.FC<ShopPageProps> = ({
             </div>
             <div className="flex items-center space-x-2.5">
               <CheckCircle2 className="w-4 h-4 text-[#E1AD01] shrink-0" />
-              <span>100% preservative-free • Pressed fresh daily</span>
+              <span>100% natural botanicals • Fresh daily</span>
             </div>
           </div>
         </div>

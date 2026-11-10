@@ -163,8 +163,8 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ content, onNavigate 
                   <Check className="w-3.5 h-3.5" />
                 </div>
                 <div className="text-xs">
-                  <span className="font-bold text-[#1B4D2E] block">Pure Cold-Pressing</span>
-                  <span className="text-[#1B4D2E]/70">Active enzymes and vital micronutrients preserved</span>
+                  <span className="font-bold text-[#1B4D2E] block">Pure Botanical Extraction</span>
+                  <span className="text-[#1B4D2E]/70">Active enzymes and vital nutrients naturally preserved</span>
                 </div>
               </div>
 

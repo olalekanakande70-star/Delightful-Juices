@@ -23,7 +23,7 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({ content, onC
           </h2>
 
           <p className="text-sm sm:text-base text-[#1B4D2E]/80 leading-relaxed">
-            Delight your patrons with handcrafted botanical juices and cold-pressed ginger drinks from <strong>Delightful Juices</strong>. We partner with restaurants, cafés, specialty markets, grocery stores, and corporate offices across Pennsylvania.
+            Delight your patrons with handcrafted botanical juices and ginger drinks from <strong>Delightful Juices</strong>. We partner with restaurants, cafés, specialty markets, grocery stores, and corporate offices across Pennsylvania with reliable, affordable delivery.
           </p>
         </div>
 
@@ -126,7 +126,7 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({ content, onC
                 Corporate & Campus Fridges
               </h3>
               <p className="text-xs text-[#1B4D2E]/75 mb-6">
-                Replace sugary sodas with cold-pressed natural energy. Ideal for offices, co-working lounges, universities, and wellness clinics.
+                Replace sugary sodas with natural botanical energy. Ideal for offices, co-working lounges, universities, and wellness clinics.
               </p>
 
               <div className="space-y-2.5 text-xs text-[#1B4D2E]/80">

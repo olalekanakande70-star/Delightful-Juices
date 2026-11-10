@@ -66,9 +66,9 @@ export const HeroSliderManager: React.FC<HeroSliderManagerProps> = ({
     const nextOrder = sortedSlides.length + 1;
     const blank: HeroSlide = {
       id: `slide-${Date.now()}`,
-      heading: 'Fresh Cold-Pressed Botanical Juices',
+      heading: 'Fresh Botanical Juices • Affordable Delivery',
       subheading:
-        'Handcrafted daily in Quakertown, PA using whole hibiscus flowers, fresh organic ginger, and ripe tropical fruits.',
+        'Handcrafted daily in Quakertown, PA using whole hibiscus flowers, fresh organic ginger, and ripe tropical fruits with affordable delivery.',
       kicker: 'NATURALLY MADE • HEALTHY SIPS',
       ctaLabel: 'Shop Now',
       ctaUrl: '/shop',
@@ -578,7 +578,7 @@ export const HeroSliderManager: React.FC<HeroSliderManagerProps> = ({
                     type="text"
                     value={editingSlide.kicker || ''}
                     onChange={(e) => setEditingSlide({ ...editingSlide, kicker: e.target.value })}
-                    placeholder="e.g. FRESH COLD-PRESSED IN QUAKERTOWN, PA"
+                    placeholder="e.g. FRESH BOTANICALS • AFFORDABLE DELIVERY"
                     className="w-full bg-[#FFF8E7] border border-gray-200 rounded-xl p-2.5 text-[#1B4D2E]"
                   />
                 </div>

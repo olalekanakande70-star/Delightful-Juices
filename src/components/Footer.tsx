@@ -73,7 +73,7 @@ export const Footer: React.FC<FooterProps> = ({ content, navItems, onNavigate })
             </button>
 
             <p className="text-xs sm:text-sm text-[#FFF8E7]/80 leading-relaxed max-w-sm">
-              Naturally made, cold-pressed healthy sips by Delightful Juices. Featuring authentic Nigerian Zobo, organic ginger blends, and nutrient-dense tigernut milk—handcrafted daily in Quakertown, PA in 11.8 oz, 16.9 oz, and 33.8 oz bottles.
+              Naturally made healthy sips by Delightful Juices. Featuring authentic Nigerian Zobo, organic ginger blends, and nutrient-dense tigernut milk—handcrafted daily in Quakertown, PA with affordable delivery right to your door.
             </p>
 
             <div className="pt-2 flex items-center space-x-3">

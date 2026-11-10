@@ -17,11 +17,13 @@ interface ProductCardProps {
   product: Product;
   onOpenDetails: (product: Product) => void;
   whatsappNumber?: string;
+  showSizes?: boolean;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
   product,
   onOpenDetails,
+  showSizes = true,
 }) => {
   const { addToCart } = useCart();
   const [selectedSize, setSelectedSize] = useState<SizeOption>(
@@ -121,36 +123,40 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         <div className="space-y-3">
-          {/* Available Size Selector */}
-          {product.sizes.length > 1 ? (
-            <div
-              className={`grid gap-1.5 ${
-                product.sizes.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
-              }`}
-            >
-              {product.sizes.map((s) => {
-                const isSelected = selectedSize.size === s.size;
-                return (
-                  <button
-                    type="button"
-                    key={s.size}
-                    onClick={() => setSelectedSize(s)}
-                    className={`py-2 px-2 rounded-xl text-xs font-bold transition-all text-center truncate cursor-pointer ${
-                      isSelected
-                        ? 'bg-[#1B4D2E] text-[#FFF8E7] shadow-xs'
-                        : 'bg-[#FFF8E7] text-[#1B4D2E]/85 hover:bg-[#1B4D2E]/10 border border-[#1B4D2E]/15'
-                    }`}
-                  >
-                    {getCustomerSizeDisplay(s)}
-                  </button>
-                );
-              })}
-            </div>
-          ) : product.sizes.length === 1 ? (
-            <div className="text-xs font-semibold text-[#1B4D2E]/75">
-              Size: <span className="text-[#1B4D2E] font-bold">{getCustomerSizeDisplay(product.sizes[0])}</span>
-            </div>
-          ) : null}
+          {/* Available Size Selector (hidden on homepage per request) */}
+          {showSizes && (
+            <>
+              {product.sizes.length > 1 ? (
+                <div
+                  className={`grid gap-1.5 ${
+                    product.sizes.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
+                  }`}
+                >
+                  {product.sizes.map((s) => {
+                    const isSelected = selectedSize.size === s.size;
+                    return (
+                      <button
+                        type="button"
+                        key={s.size}
+                        onClick={() => setSelectedSize(s)}
+                        className={`py-2 px-2 rounded-xl text-xs font-bold transition-all text-center truncate cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#1B4D2E] text-[#FFF8E7] shadow-xs'
+                            : 'bg-[#FFF8E7] text-[#1B4D2E]/85 hover:bg-[#1B4D2E]/10 border border-[#1B4D2E]/15'
+                        }`}
+                      >
+                        {getCustomerSizeDisplay(s)}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : product.sizes.length === 1 ? (
+                <div className="text-xs font-semibold text-[#1B4D2E]/75">
+                  Size: <span className="text-[#1B4D2E] font-bold">{getCustomerSizeDisplay(product.sizes[0])}</span>
+                </div>
+              ) : null}
+            </>
+          )}
 
           {/* Quantity & Add to Cart */}
           <div className="flex items-center gap-2 pt-1">

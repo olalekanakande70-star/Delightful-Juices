@@ -56,14 +56,11 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
             </div>
 
             <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-5xl text-[#1B4D2E] tracking-tight">
-              {featuredOnly ? 'Featured Cold-Pressed Sips' : 'Our Fresh Juice Collection'}
+              {featuredOnly ? 'Featured Delightful Juices' : 'Our Fresh Juice Collection'}
             </h2>
 
             <p className="text-sm sm:text-base text-[#1B4D2E]/80 leading-relaxed">
-              Every bottle of <strong className="text-[#1B4D2E]">Delightful Juices</strong> is made to order using whole raw fruits, organic roots, and fragrant botanicals. Choose your ideal bottle size: convenient{' '}
-              <span className="font-semibold text-[#1B4D2E]">11.8 oz</span>, daily{' '}
-              <span className="font-semibold text-[#1B4D2E]">16.9 oz</span>, or family-size{' '}
-              <span className="font-semibold text-[#1B4D2E]">33.8 oz</span>.
+              Every bottle of <strong className="text-[#1B4D2E]">Delightful Juices</strong> is made to order using whole raw fruits, organic roots, and natural botanicals. Enjoy pure, refreshing craft with affordable delivery right to your door.
             </p>
           </div>
 
@@ -184,6 +181,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                 product={product}
                 onOpenDetails={onOpenDetails}
                 whatsappNumber={whatsappNumber}
+                showSizes={!featuredOnly}
               />
             ))}
           </div>

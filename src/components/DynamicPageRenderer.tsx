@@ -341,7 +341,7 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
                     </div>
                   )}
                   <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-[#1B4D2E]">
-                    {sanitizeBrandAndUnitsText(section.heading || 'Featured Cold-Pressed Sips')}
+                    {sanitizeBrandAndUnitsText(section.heading || 'Featured Delightful Juices')}
                   </h2>
                   {section.subheading && (
                     <p className="text-sm text-[#1B4D2E]/75">
