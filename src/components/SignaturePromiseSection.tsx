@@ -74,12 +74,19 @@ export const SignaturePromiseSection: React.FC<SignaturePromiseSectionProps> = (
               <h3 className="font-display font-bold text-xl text-[#FFF8E7] mb-2">
                 Nourishing Health Benefits
               </h3>
-              <p className="text-xs sm:text-sm text-[#FFF8E7]/80 leading-relaxed">
+              <p className="text-xs sm:text-sm text-[#FFF8E7]/80 leading-relaxed mb-3">
                 From active gingerols to hibiscus anthocyanins and prebiotic resistant starch in Tigernut Milk, every Delightful Juices recipe supports digestion, immunity, and natural vitality.
               </p>
+              <div className="inline-flex items-center space-x-1.5 bg-[#E1AD01]/20 border border-[#E1AD01]/40 text-[#E1AD01] px-2.5 py-1 rounded-lg text-xs font-bold">
+                <CheckCircle className="w-3.5 h-3.5" />
+                <span>Supports Blood Circulation</span>
+              </div>
             </div>
-            <div className="mt-5 pt-4 border-t border-[#FFF8E7]/10 flex items-center text-xs font-semibold text-[#E1AD01]">
-              <CheckCircle className="w-3.5 h-3.5 mr-1.5" /> Functional Wellness
+            <div className="mt-5 pt-4 border-t border-[#FFF8E7]/10 flex items-center justify-between text-xs font-semibold text-[#E1AD01]">
+              <span className="flex items-center">
+                <CheckCircle className="w-3.5 h-3.5 mr-1.5" /> Functional Wellness
+              </span>
+              <span className="text-[#FFF8E7]/60 text-[11px]">• Circulation Support</span>
             </div>
           </div>
 
@@ -92,7 +99,7 @@ export const SignaturePromiseSection: React.FC<SignaturePromiseSectionProps> = (
                 Handcrafted in Quakertown
               </h3>
               <p className="text-xs sm:text-sm text-[#FFF8E7]/80 leading-relaxed">
-                Prepared under strict food-safety standards with culinary leadership by Oluyemi B. Ajibolade right here at 500 W Broad St, Quakertown, Pennsylvania.
+                Prepared under strict food-safety standards by our dedicated artisanal kitchen team right here at 500 W Broad St, Quakertown, Pennsylvania.
               </p>
             </div>
             <div className="mt-5 pt-4 border-t border-[#FFF8E7]/10 flex items-center text-xs font-semibold text-[#E1AD01]">

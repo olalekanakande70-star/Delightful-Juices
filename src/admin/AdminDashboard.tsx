@@ -26,6 +26,7 @@ import { getCustomerSizeDisplay, formatBottleCodeToOz } from '../lib/units';
 import { HeroSliderManager } from './HeroSliderManager';
 import { PagesManager } from './PagesManager';
 import { NavigationManager } from './NavigationManager';
+import { EventShowcaseManager } from './EventShowcaseManager';
 import { 
   ShieldCheck, 
   LogOut, 
@@ -75,7 +76,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
   const [loginError, setLoginError] = useState('');
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'hero_slider' | 'pages' | 'branding' | 'appearance' | 'products' | 'orders' | 'inquiries' | 'stripe' | 'content' | 'nav' | 'supabase'
+    'overview' | 'hero_slider' | 'event_showcase' | 'pages' | 'branding' | 'appearance' | 'products' | 'orders' | 'inquiries' | 'stripe' | 'content' | 'nav' | 'supabase'
   >('overview');
 
   // Repositories state
@@ -638,6 +639,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
               </div>
               <span className="hidden md:inline text-[11px] bg-gray-100 text-[#1B4D2E] font-bold px-2 py-0.5 rounded-full">
                 {heroSlides.filter((s) => s.active !== false).length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('event_showcase')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                activeTab === 'event_showcase'
+                  ? 'bg-[#1B4D2E] text-[#FFF8E7] shadow-xs'
+                  : 'text-[#1B4D2E]/75 hover:bg-[#FFF8E7]'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <Sparkles className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
+                <span className="hidden md:inline">Event Showcase</span>
+              </div>
+              <span className="hidden md:inline text-[11px] bg-gray-100 text-[#1B4D2E] font-bold px-2 py-0.5 rounded-full">
+                {dataRepo.getEventShowcase().length}
               </span>
             </button>
 
@@ -2892,6 +2910,197 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                   </div>
                 </div>
 
+                {/* Shop Page Heading & Pack Pricing Management */}
+                <div className="pt-6 border-t border-[#1B4D2E]/10 space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Sparkles className="w-4 h-4 text-[#E1AD01]" />
+                    <h3 className="font-display font-bold text-sm text-[#1B4D2E]">
+                      Shop Page Heading & Multi-Pack Pricing
+                    </h3>
+                  </div>
+                  <p className="text-xs text-[#1B4D2E]/70">
+                    Manage the public Shop page heading, pack bundles (6-pack, 12-pack, 24-pack), and the official pricing conditions disclaimer.
+                  </p>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
+                      Shop Page Main Heading
+                    </label>
+                    <input
+                      type="text"
+                      value={content.shopHeading || content.branding?.shopHeading || 'Shop Fresh, Natural Delightful Juices.'}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const updatedBranding = {
+                          ...(content.branding || { logoText: 'Delightful Juices', showLogoIcon: true }),
+                          shopHeading: val,
+                        };
+                        setContent({ ...content, shopHeading: val, branding: updatedBranding });
+                      }}
+                      className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs text-[#1B4D2E] font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-2">
+                      Pack Pricing Tiers
+                    </label>
+                    <div className="space-y-3">
+                      {(content.packPricing?.tiers || [
+                        { id: 'pack-6', name: '6-pack', bottlesCount: 6, price: 28, badge: 'Popular Sampler', description: 'Choice of 6 fresh assorted bottles. Perfect for personal weekly refreshment.', enabled: true },
+                        { id: 'pack-12', name: '12-pack', bottlesCount: 12, price: 48, badge: 'Most Popular', description: 'Ideal for families, busy weeks, and wellness sharing.', enabled: true },
+                        { id: 'pack-24', name: '24-pack', bottlesCount: 24, price: 90, badge: 'Best Value', description: 'Full case for gatherings, office fridges, and bulk stock.', enabled: true },
+                      ]).map((tier, idx) => (
+                        <div key={tier.id || idx} className="bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl p-3 grid grid-cols-1 sm:grid-cols-12 gap-3 items-center text-xs">
+                          <div className="sm:col-span-3">
+                            <label className="block text-[10px] font-bold text-[#1B4D2E]/60 uppercase">Tier Name</label>
+                            <input
+                              type="text"
+                              value={tier.name}
+                              onChange={(e) => {
+                                const currentTiers = [...(content.packPricing?.tiers || [])];
+                                currentTiers[idx] = { ...tier, name: e.target.value };
+                                const updatedPackPricing = {
+                                  ...(content.packPricing || { heading: 'Delightful Juice Value Packs', tiers: [], pricingNote: '' }),
+                                  tiers: currentTiers,
+                                };
+                                setContent({
+                                  ...content,
+                                  packPricing: updatedPackPricing,
+                                  branding: { ...(content.branding || { logoText: 'Delightful Juices', showLogoIcon: true }), packPricing: updatedPackPricing },
+                                });
+                              }}
+                              className="w-full bg-white border border-[#1B4D2E]/20 rounded-lg px-2 py-1 font-bold text-[#1B4D2E]"
+                            />
+                          </div>
+                          <div className="sm:col-span-2">
+                            <label className="block text-[10px] font-bold text-[#1B4D2E]/60 uppercase">Price ($)</label>
+                            <input
+                              type="number"
+                              step="1"
+                              value={tier.price}
+                              onChange={(e) => {
+                                const currentTiers = [...(content.packPricing?.tiers || [])];
+                                currentTiers[idx] = { ...tier, price: parseFloat(e.target.value) || 0 };
+                                const updatedPackPricing = {
+                                  ...(content.packPricing || { heading: 'Delightful Juice Value Packs', tiers: [], pricingNote: '' }),
+                                  tiers: currentTiers,
+                                };
+                                setContent({
+                                  ...content,
+                                  packPricing: updatedPackPricing,
+                                  branding: { ...(content.branding || { logoText: 'Delightful Juices', showLogoIcon: true }), packPricing: updatedPackPricing },
+                                });
+                              }}
+                              className="w-full bg-white border border-[#1B4D2E]/20 rounded-lg px-2 py-1 font-bold text-[#1B4D2E]"
+                            />
+                          </div>
+                          <div className="sm:col-span-2">
+                            <label className="block text-[10px] font-bold text-[#1B4D2E]/60 uppercase">Bottles</label>
+                            <input
+                              type="number"
+                              step="1"
+                              value={tier.bottlesCount}
+                              onChange={(e) => {
+                                const currentTiers = [...(content.packPricing?.tiers || [])];
+                                currentTiers[idx] = { ...tier, bottlesCount: parseInt(e.target.value, 10) || 0 };
+                                const updatedPackPricing = {
+                                  ...(content.packPricing || { heading: 'Delightful Juice Value Packs', tiers: [], pricingNote: '' }),
+                                  tiers: currentTiers,
+                                };
+                                setContent({
+                                  ...content,
+                                  packPricing: updatedPackPricing,
+                                  branding: { ...(content.branding || { logoText: 'Delightful Juices', showLogoIcon: true }), packPricing: updatedPackPricing },
+                                });
+                              }}
+                              className="w-full bg-white border border-[#1B4D2E]/20 rounded-lg px-2 py-1 text-[#1B4D2E]"
+                            />
+                          </div>
+                          <div className="sm:col-span-3">
+                            <label className="block text-[10px] font-bold text-[#1B4D2E]/60 uppercase">Badge Tag</label>
+                            <input
+                              type="text"
+                              value={tier.badge || ''}
+                              onChange={(e) => {
+                                const currentTiers = [...(content.packPricing?.tiers || [])];
+                                currentTiers[idx] = { ...tier, badge: e.target.value };
+                                const updatedPackPricing = {
+                                  ...(content.packPricing || { heading: 'Delightful Juice Value Packs', tiers: [], pricingNote: '' }),
+                                  tiers: currentTiers,
+                                };
+                                setContent({
+                                  ...content,
+                                  packPricing: updatedPackPricing,
+                                  branding: { ...(content.branding || { logoText: 'Delightful Juices', showLogoIcon: true }), packPricing: updatedPackPricing },
+                                });
+                              }}
+                              className="w-full bg-white border border-[#1B4D2E]/20 rounded-lg px-2 py-1 text-[#1B4D2E]"
+                            />
+                          </div>
+                          <div className="sm:col-span-2 flex items-center pt-3">
+                            <label className="inline-flex items-center space-x-1.5 cursor-pointer text-xs">
+                              <input
+                                type="checkbox"
+                                checked={tier.enabled !== false}
+                                onChange={(e) => {
+                                  const currentTiers = [...(content.packPricing?.tiers || [])];
+                                  currentTiers[idx] = { ...tier, enabled: e.target.checked };
+                                  const updatedPackPricing = {
+                                    ...(content.packPricing || { heading: 'Delightful Juice Value Packs', tiers: [], pricingNote: '' }),
+                                    tiers: currentTiers,
+                                  };
+                                  setContent({
+                                    ...content,
+                                    packPricing: updatedPackPricing,
+                                    branding: { ...(content.branding || { logoText: 'Delightful Juices', showLogoIcon: true }), packPricing: updatedPackPricing },
+                                  });
+                                }}
+                                className="rounded text-[#1B4D2E] focus:ring-[#1B4D2E]"
+                              />
+                              <span className="text-[11px] font-bold text-[#1B4D2E]">Active</span>
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
+                      Pricing Conditions Note
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={
+                        content.packPricing?.pricingNote ||
+                        'Prices vary depending on delivery location and order quantity. Wholesale discounts are available for bulk purchases.'
+                      }
+                      onChange={(e) => {
+                        const updatedPackPricing = {
+                          ...(content.packPricing || {
+                            heading: 'Delightful Juice Value Packs',
+                            subheading: 'Stock up your fridge, office, or event with curated multi-packs handcrafted daily.',
+                            tiers: [
+                              { id: 'pack-6', name: '6-pack', bottlesCount: 6, price: 28, badge: 'Popular Sampler', description: 'Choice of 6 fresh assorted bottles. Perfect for personal weekly refreshment.', enabled: true },
+                              { id: 'pack-12', name: '12-pack', bottlesCount: 12, price: 48, badge: 'Most Popular', description: 'Ideal for families, busy weeks, and wellness sharing.', enabled: true },
+                              { id: 'pack-24', name: '24-pack', bottlesCount: 24, price: 90, badge: 'Best Value', description: 'Full case for gatherings, office fridges, and bulk stock.', enabled: true },
+                            ],
+                            pricingNote: '',
+                          }),
+                          pricingNote: e.target.value,
+                        };
+                        setContent({
+                          ...content,
+                          packPricing: updatedPackPricing,
+                          branding: { ...(content.branding || { logoText: 'Delightful Juices', showLogoIcon: true }), packPricing: updatedPackPricing },
+                        });
+                      }}
+                      className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl p-3 text-xs text-[#1B4D2E]"
+                    />
+                  </div>
+                </div>
+
                 <div className="pt-4 flex justify-end">
                   <button
                     onClick={() => {
@@ -2916,6 +3125,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
               cmsPages={cmsPages}
               supabaseConnected={supabaseCfg.connected}
               onToast={showToast}
+            />
+          )}
+
+          {/* TAB: EVENT SHOWCASE (MOTION GRID) */}
+          {activeTab === 'event_showcase' && (
+            <EventShowcaseManager
+              onToast={showToast}
+              onPreviewPublic={() => {
+                onClose();
+                if (onNavigate) onNavigate('/wholesale');
+              }}
             />
           )}
 
@@ -3190,6 +3410,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                   onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
                   className="w-full bg-[#FFF8E7] border rounded-xl p-2.5 text-[#1B4D2E]"
                 />
+              </div>
+
+              <div>
+                <label className="block font-bold mb-1">
+                  Ingredients List (Comma-separated or one per line)
+                </label>
+                <textarea
+                  rows={2}
+                  value={(editingProduct.ingredients || []).join(', ')}
+                  onChange={(e) => {
+                    const parsed = e.target.value
+                      .split(/,|\n/)
+                      .map((s) => s.trim())
+                      .filter(Boolean);
+                    setEditingProduct({ ...editingProduct, ingredients: parsed });
+                  }}
+                  placeholder="e.g. Organic Hibiscus Flowers, Fresh Ginger Root, Pineapple Puree, Whole Cloves"
+                  className="w-full bg-[#FFF8E7] border rounded-xl p-2.5 text-[#1B4D2E]"
+                />
+                <span className="text-[10px] text-gray-500">
+                  Displayed on the Shop flavor details and About Us juice showcase.
+                </span>
               </div>
 
               {/* Product Images Management Section */}

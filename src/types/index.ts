@@ -136,7 +136,9 @@ export type PageSectionType =
   | 'text_only'
   | 'promo_banner'
   | 'featured_products'
+  | 'product_ingredients'
   | 'image_gallery'
+  | 'event_motion_grid'
   | 'cta'
   | 'contact_info'
   | 'catering_calculator'
@@ -203,12 +205,52 @@ export interface AboutShowcaseSettings {
   extraStoryParagraph2?: string;
 }
 
+export interface EventShowcaseItem {
+  id: string;
+  url: string;
+  title: string;
+  caption?: string;
+  displayOrder: number;
+  published: boolean;
+  createdAt?: string;
+}
+
+export interface PackPricingTier {
+  id: string;
+  name: string;
+  bottlesCount: number;
+  price: number;
+  badge?: string;
+  description?: string;
+  enabled: boolean;
+}
+
+export interface PackPricingSettings {
+  heading?: string;
+  subheading?: string;
+  tiers: PackPricingTier[];
+  pricingNote: string;
+}
+
+export interface ProductSliderSettings {
+  enabled: boolean;
+  heading?: string;
+  subheading?: string;
+  kicker?: string;
+  productIds?: string[];
+  autoplayInterval?: number;
+}
+
 export interface BrandSettings {
   logoUrl?: string;
   mobileLogoUrl?: string;
   logoText: string;
   showLogoIcon: boolean;
   aboutShowcase?: AboutShowcaseSettings;
+  eventShowcase?: EventShowcaseItem[];
+  packPricing?: PackPricingSettings;
+  shopHeading?: string;
+  productSlider?: ProductSliderSettings;
 }
 
 export interface ColorThemeSettings {
@@ -265,6 +307,10 @@ export interface SiteContent {
   pickupAddress: string;
   operatingHours: string;
   chatButtonLabel?: string;
+  shopHeading?: string;
+  packPricing?: PackPricingSettings;
+  eventShowcase?: EventShowcaseItem[];
+  productSlider?: ProductSliderSettings;
   branding?: BrandSettings;
   colors?: ColorThemeSettings;
   typography?: TypographySettings;

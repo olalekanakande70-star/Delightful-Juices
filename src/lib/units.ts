@@ -39,17 +39,23 @@ export function convertToOzNumber(quantity: number, unit: MeasurementUnit): numb
 }
 
 /**
- * Formats an ounce number cleanly (e.g. 16.9 -> "16.9 oz", 12.0 -> "12 oz").
+ * Formats an ounce number cleanly (e.g. 12 -> "12oz", 16 -> "16oz", 18 -> "18oz").
+ * Standardised strictly without spaces between the number and "oz".
  */
 export function formatOzValue(oz: number): string {
+  if (!Number.isFinite(oz) || oz <= 0) return '12oz';
+  // Standardise legacy bottle sizes to 12oz, 16oz, 18oz
+  if (Math.abs(oz - 16.9) < 0.2 || oz === 16 || Math.abs(oz - 17) < 0.2) return '16oz';
+  if (Math.abs(oz - 33.8) < 0.2 || oz === 18 || Math.abs(oz - 34) < 0.5) return '18oz';
+  if (Math.abs(oz - 11.8) < 0.2 || oz === 12) return '12oz';
   const rounded = Math.round(oz * 10) / 10;
   const formatted = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
-  return `${formatted} oz`;
+  return `${formatted}oz`;
 }
 
 /**
- * Parses a legacy size string (e.g., "35cl", "50cl", "1L", "1.5L", "12 oz", "Pack")
- * into structured { quantityValue, unit } without double converting.
+ * Parses a legacy size string (e.g., "35cl", "50cl", "1L", "1.5L", "12 oz", "16.9 oz", "33.8 oz", "Pack")
+ * into structured { quantityValue, unit } mapped to standardised 12oz, 16oz, 18oz.
  */
 export function parseSizeString(sizeStr: string, labelStr?: string): {
   quantityValue: number;
@@ -60,37 +66,51 @@ export function parseSizeString(sizeStr: string, labelStr?: string): {
   const clean = (sizeStr || '').trim();
 
   if (clean.toLowerCase() === 'pack' || clean.toLowerCase().includes('pack')) {
-    // Check if label specifies e.g. "6 x 50cl" or "6 x 16.9 oz"
     const packMatch = (labelStr || clean).match(/(\d+)\s*[x×]\s*(\d+(?:\.\d+)?)\s*(cl|l|ml|oz)/i);
     if (packMatch) {
       const count = parseFloat(packMatch[1]);
-      const bQty = parseFloat(packMatch[2]);
+      let bQty = parseFloat(packMatch[2]);
       const rawUnit = packMatch[3].toLowerCase();
-      const bUnit: MeasurementUnit =
-        rawUnit === 'l' ? 'L' : rawUnit === 'cl' ? 'cl' : rawUnit === 'ml' ? 'ml' : 'oz';
+      if (rawUnit === 'cl' && Math.abs(bQty - 50) < 5) bQty = 16;
+      else if (rawUnit === 'l' && Math.abs(bQty - 1) < 0.2) bQty = 18;
+      else if (Math.abs(bQty - 16.9) < 0.5) bQty = 16;
       return {
         quantityValue: count,
         unit: 'Pack',
         packBottleQuantity: bQty,
-        packBottleUnit: bUnit,
+        packBottleUnit: 'oz',
       };
     }
     return {
       quantityValue: 6,
       unit: 'Pack',
-      packBottleQuantity: 50,
-      packBottleUnit: 'cl',
+      packBottleQuantity: 16,
+      packBottleUnit: 'oz',
     };
   }
 
-  // Match e.g. "35cl", "50 cl", "1L", "1.5 L", "16.9oz", "16.9 oz", "500ml"
+  // Match e.g. "35cl", "50 cl", "1L", "1.5 L", "16.9oz", "16.9 oz", "12oz", "16oz", "18oz", "500ml"
   const match = clean.match(/^(\d+(?:\.\d+)?)\s*(cl|l|litre|litres|liter|liters|ml|oz|fl\s*oz)$/i);
   if (match) {
     const qty = parseFloat(match[1]);
     const rawU = match[2].toLowerCase();
-    if (rawU === 'cl') return { quantityValue: qty, unit: 'cl' };
-    if (rawU.startsWith('l')) return { quantityValue: qty, unit: 'L' };
-    if (rawU === 'ml') return { quantityValue: qty, unit: 'ml' };
+    if (rawU === 'cl') {
+      if (Math.abs(qty - 35) <= 3) return { quantityValue: 12, unit: 'oz' };
+      if (Math.abs(qty - 50) <= 5) return { quantityValue: 16, unit: 'oz' };
+      return { quantityValue: 12, unit: 'oz' };
+    }
+    if (rawU.startsWith('l')) {
+      if (Math.abs(qty - 1) <= 0.2) return { quantityValue: 18, unit: 'oz' };
+      return { quantityValue: 18, unit: 'oz' };
+    }
+    if (rawU === 'ml') {
+      if (qty <= 360) return { quantityValue: 12, unit: 'oz' };
+      if (qty <= 550) return { quantityValue: 16, unit: 'oz' };
+      return { quantityValue: 18, unit: 'oz' };
+    }
+    if (Math.abs(qty - 16.9) < 0.5 || qty === 16) return { quantityValue: 16, unit: 'oz' };
+    if (Math.abs(qty - 33.8) < 0.5 || qty === 18) return { quantityValue: 18, unit: 'oz' };
+    if (Math.abs(qty - 11.8) < 0.5 || qty === 12) return { quantityValue: 12, unit: 'oz' };
     return { quantityValue: qty, unit: 'oz' };
   }
 
@@ -100,14 +120,19 @@ export function parseSizeString(sizeStr: string, labelStr?: string): {
     if (lblMatch) {
       const qty = parseFloat(lblMatch[1]);
       const rawU = lblMatch[2].toLowerCase();
-      if (rawU === 'cl') return { quantityValue: qty, unit: 'cl' };
-      if (rawU.startsWith('l')) return { quantityValue: qty, unit: 'L' };
-      if (rawU === 'ml') return { quantityValue: qty, unit: 'ml' };
+      if (rawU === 'cl') {
+        if (Math.abs(qty - 35) <= 3) return { quantityValue: 12, unit: 'oz' };
+        if (Math.abs(qty - 50) <= 5) return { quantityValue: 16, unit: 'oz' };
+      }
+      if (rawU.startsWith('l')) return { quantityValue: 18, unit: 'oz' };
+      if (Math.abs(qty - 16.9) < 0.5 || qty === 16) return { quantityValue: 16, unit: 'oz' };
+      if (Math.abs(qty - 33.8) < 0.5 || qty === 18) return { quantityValue: 18, unit: 'oz' };
+      if (Math.abs(qty - 11.8) < 0.5 || qty === 12) return { quantityValue: 12, unit: 'oz' };
       return { quantityValue: qty, unit: 'oz' };
     }
   }
 
-  return { quantityValue: 16.9, unit: 'oz' };
+  return { quantityValue: 12, unit: 'oz' };
 }
 
 /**
@@ -226,7 +251,7 @@ export function sanitizeBrandAndUnitsText(text: string): string {
 export function convertInlineMeasurementsToOz(text: string): string {
   if (!text) return '';
 
-  // Handle patterns like "35cl (12 oz ...)" first so we don't produce "11.8 oz (12 oz ...)"
+  // Handle patterns like "35cl (12 oz ...)" first so we don't produce "12oz (12oz ...)"
   let result = text.replace(
     /\b(\d+(?:\.\d+)?)\s*cl\s*\(\s*\d+(?:\.\d+)?\s*oz([^)]*)\)/gi,
     (_m, numStr, rest) => {
@@ -235,6 +260,17 @@ export function convertInlineMeasurementsToOz(text: string): string {
       return cleanRest ? `${oz} (${cleanRest})` : oz;
     }
   );
+
+  // Standardise existing oz mentions with spaces or decimals to 12oz, 16oz, 18oz
+  result = result.replace(/\b11\.8\s*oz\b/gi, '12oz');
+  result = result.replace(/\b11\.8oz\b/gi, '12oz');
+  result = result.replace(/\b16\.9\s*oz\b/gi, '16oz');
+  result = result.replace(/\b16\.9oz\b/gi, '16oz');
+  result = result.replace(/\b33\.8\s*oz\b/gi, '18oz');
+  result = result.replace(/\b33\.8oz\b/gi, '18oz');
+  result = result.replace(/\b12\s*oz\b/gi, '12oz');
+  result = result.replace(/\b16\s*oz\b/gi, '16oz');
+  result = result.replace(/\b18\s*oz\b/gi, '18oz');
 
   // Convert centilitres: e.g. 10cl, 25 cl, 30cl, 33cl, 35cl, 50cl
   result = result.replace(/\b(\d+(?:\.\d+)?)\s*cl\b/gi, (_match, numStr) => {
@@ -255,11 +291,11 @@ export function convertInlineMeasurementsToOz(text: string): string {
 }
 
 /**
- * Formats an order or catering bottle size code (e.g. '35cl', '50cl', '1L') for customer-facing display in oz.
+ * Formats an order or catering bottle size code (e.g. '35cl', '50cl', '1L', '12oz', '16oz', '18oz') for customer-facing display in oz.
  */
 export function formatBottleCodeToOz(code: string): string {
   if (!code) return '';
-  if (code.toLowerCase() === 'pack') return '6-Pack (16.9 oz ea)';
+  if (code.toLowerCase() === 'pack') return '6-Pack (16oz ea)';
   const parsed = parseSizeString(code);
   return formatOzValue(convertToOzNumber(parsed.quantityValue, parsed.unit));
 }

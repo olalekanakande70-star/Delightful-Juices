@@ -18,12 +18,14 @@ interface ProductCardProps {
   onOpenDetails: (product: Product) => void;
   whatsappNumber?: string;
   showSizes?: boolean;
+  showPrice?: boolean;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
   product,
   onOpenDetails,
   showSizes = true,
+  showPrice = true,
 }) => {
   const { addToCart } = useCart();
   const [selectedSize, setSelectedSize] = useState<SizeOption>(
@@ -108,27 +110,29 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       </div>
 
       {/* Essential Product Info & Controls */}
-      <div className="p-5 flex-1 flex flex-col justify-between gap-4">
+      <div className="p-3.5 sm:p-5 flex-1 flex flex-col justify-between gap-3 sm:gap-4">
         {/* Product Name & Price */}
         <div
           onClick={() => onOpenDetails(product)}
-          className="flex items-start justify-between gap-3 cursor-pointer"
+          className="flex items-start justify-between gap-2 cursor-pointer"
         >
-          <h3 className="font-display font-bold text-lg sm:text-xl text-[#1B4D2E] group-hover:text-[#12351F] transition-colors leading-snug">
+          <h3 className="font-display font-bold text-sm sm:text-lg lg:text-xl text-[#1B4D2E] group-hover:text-[#12351F] transition-colors leading-snug line-clamp-2">
             {sanitizeBrandAndUnitsText(product.name)}
           </h3>
-          <span className="font-extrabold text-lg sm:text-xl text-[#1B4D2E] tabular-nums shrink-0">
-            ${(selectedSize.price * quantity).toFixed(2)}
-          </span>
+          {showPrice && (
+            <span className="font-extrabold text-sm sm:text-lg lg:text-xl text-[#1B4D2E] tabular-nums shrink-0">
+              ${(selectedSize.price * quantity).toFixed(2)}
+            </span>
+          )}
         </div>
 
-        <div className="space-y-3">
-          {/* Available Size Selector (hidden on homepage per request) */}
+        <div className="space-y-2.5 sm:space-y-3">
+          {/* Available Size Selector */}
           {showSizes && (
             <>
               {product.sizes.length > 1 ? (
                 <div
-                  className={`grid gap-1.5 ${
+                  className={`grid gap-1 sm:gap-1.5 ${
                     product.sizes.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
                   }`}
                 >
@@ -139,7 +143,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                         type="button"
                         key={s.size}
                         onClick={() => setSelectedSize(s)}
-                        className={`py-2 px-2 rounded-xl text-xs font-bold transition-all text-center truncate cursor-pointer ${
+                        className={`py-1.5 sm:py-2 px-1 sm:px-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all text-center truncate cursor-pointer ${
                           isSelected
                             ? 'bg-[#1B4D2E] text-[#FFF8E7] shadow-xs'
                             : 'bg-[#FFF8E7] text-[#1B4D2E]/85 hover:bg-[#1B4D2E]/10 border border-[#1B4D2E]/15'
@@ -151,7 +155,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   })}
                 </div>
               ) : product.sizes.length === 1 ? (
-                <div className="text-xs font-semibold text-[#1B4D2E]/75">
+                <div className="text-[11px] sm:text-xs font-semibold text-[#1B4D2E]/75">
                   Size: <span className="text-[#1B4D2E] font-bold">{getCustomerSizeDisplay(product.sizes[0])}</span>
                 </div>
               ) : null}
@@ -159,54 +163,67 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           )}
 
           {/* Quantity & Add to Cart */}
-          <div className="flex items-center gap-2 pt-1">
-            <div className="flex items-center border border-[#1B4D2E]/20 rounded-xl bg-[#FFF8E7] px-1.5 py-1">
+          {showPrice ? (
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 sm:gap-2 pt-1">
+              <div className="flex items-center justify-between sm:justify-start border border-[#1B4D2E]/20 rounded-xl bg-[#FFF8E7] px-1 sm:px-1.5 py-0.5 sm:py-1">
+                <button
+                  type="button"
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="p-1 sm:p-1.5 text-[#1B4D2E] hover:text-[#E1AD01] transition-colors cursor-pointer"
+                  aria-label="Decrease quantity"
+                >
+                  <Minus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                </button>
+                <span className="px-1.5 sm:px-2 font-bold text-[11px] sm:text-xs text-[#1B4D2E] tabular-nums">
+                  {quantity}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="p-1 sm:p-1.5 text-[#1B4D2E] hover:text-[#E1AD01] transition-colors cursor-pointer"
+                  aria-label="Increase quantity"
+                >
+                  <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                </button>
+              </div>
+
               <button
                 type="button"
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="p-1.5 text-[#1B4D2E] hover:text-[#E1AD01] transition-colors cursor-pointer"
-                aria-label="Decrease quantity"
+                onClick={handleAddToCart}
+                disabled={!product.inStock}
+                className={`flex-1 flex items-center justify-center space-x-1.5 py-2 sm:py-2.5 px-2.5 sm:px-3 rounded-xl font-bold text-[11px] sm:text-xs transition-all cursor-pointer ${
+                  addedAnim
+                    ? 'bg-emerald-600 text-white'
+                    : product.inStock
+                    ? 'bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] shadow-xs'
+                    : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                }`}
               >
-                <Minus className="w-3.5 h-3.5" />
-              </button>
-              <span className="px-2 font-bold text-xs text-[#1B4D2E] tabular-nums">
-                {quantity}
-              </span>
-              <button
-                type="button"
-                onClick={() => setQuantity(quantity + 1)}
-                className="p-1.5 text-[#1B4D2E] hover:text-[#E1AD01] transition-colors cursor-pointer"
-                aria-label="Increase quantity"
-              >
-                <Plus className="w-3.5 h-3.5" />
+                {addedAnim ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span>Added!</span>
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#E1AD01]" />
+                    <span>{product.inStock ? 'Add to Cart' : 'Sold Out'}</span>
+                  </>
+                )}
               </button>
             </div>
-
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              disabled={!product.inStock}
-              className={`flex-1 flex items-center justify-center space-x-1.5 py-2.5 px-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-                addedAnim
-                  ? 'bg-emerald-600 text-white'
-                  : product.inStock
-                  ? 'bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] shadow-xs'
-                  : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {addedAnim ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  <span>Added!</span>
-                </>
-              ) : (
-                <>
-                  <ShoppingCart className="w-3.5 h-3.5 text-[#E1AD01]" />
-                  <span>{product.inStock ? 'Add to Cart' : 'Sold Out'}</span>
-                </>
-              )}
-            </button>
-          </div>
+          ) : (
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => onOpenDetails(product)}
+                className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl font-extrabold text-xs bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] transition-all cursor-pointer shadow-xs group/btn"
+              >
+                <span>View Flavor Details</span>
+                <span className="text-[#E1AD01] group-hover/btn:translate-x-0.5 transition-transform">→</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </article>

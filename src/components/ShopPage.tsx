@@ -70,6 +70,25 @@ export const ShopPage: React.FC<ShopPageProps> = ({
     });
   }, [products, activeCategory, inStockOnly, searchQuery, sortBy]);
 
+  const shopHeading =
+    content.shopHeading ||
+    content.branding?.shopHeading ||
+    'Shop Fresh, Natural Delightful Juices.';
+
+  const packPricing =
+    content.packPricing ||
+    content.branding?.packPricing || {
+      heading: 'Delightful Juice Value Packs',
+      subheading: 'Stock up your fridge, office, or event with curated multi-packs handcrafted daily.',
+      tiers: [
+        { id: 'pack-6', name: '6-pack', bottlesCount: 6, price: 28, badge: 'Popular Sampler', description: 'Choice of 6 fresh assorted bottles. Perfect for weekly refreshment.', enabled: true },
+        { id: 'pack-12', name: '12-pack', bottlesCount: 12, price: 48, badge: 'Most Popular', description: 'Ideal for families, busy weeks, and wellness sharing.', enabled: true },
+        { id: 'pack-24', name: '24-pack', bottlesCount: 24, price: 90, badge: 'Best Value', description: 'Full case for gatherings, office fridges, and bulk stock.', enabled: true },
+      ],
+      pricingNote:
+        'Prices vary depending on delivery location and order quantity. Wholesale discounts are available for bulk purchases.',
+    };
+
   return (
     <div className="bg-[#FFF8E7] min-h-screen pb-20">
       {/* Shop Page Header Banner */}
@@ -82,14 +101,14 @@ export const ShopPage: React.FC<ShopPageProps> = ({
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>DELIGHTFUL JUICES ONLINE STORE</span>
               </div>
-              <h1 className="font-display font-extrabold text-3xl sm:text-5xl text-white tracking-tight">
-                Shop Fresh Juices
+              <h1 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight leading-tight">
+                {shopHeading}
               </h1>
               <p className="text-sm sm:text-base text-[#FFF8E7]/88 leading-relaxed">
                 Handcrafted to order in Quakertown, PA using whole hibiscus calyces, organic ginger root, ripe tropical fruit, and soaked tigernuts. Enjoy affordable delivery directly to your door in{' '}
-                <strong className="text-[#E1AD01]">11.8 oz</strong>,{' '}
-                <strong className="text-[#E1AD01]">16.9 oz</strong>, and{' '}
-                <strong className="text-[#E1AD01]">33.8 oz</strong> bottles.
+                <strong className="text-[#E1AD01]">12oz</strong>,{' '}
+                <strong className="text-[#E1AD01]">16oz</strong>, and{' '}
+                <strong className="text-[#E1AD01]">18oz</strong> bottles.
               </p>
             </div>
 
@@ -218,32 +237,24 @@ export const ShopPage: React.FC<ShopPageProps> = ({
           </div>
         </div>
 
-        {/* Product Grid */}
+        {/* Product Grid: 2 columns on mobile, adapts to tablet and desktop */}
         {isLoading && products.length === 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8" aria-busy="true">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6 lg:gap-8" aria-busy="true">
             {[0, 1, 2, 3, 4, 5].map((idx) => (
               <div
                 key={idx}
                 className="bg-white rounded-3xl overflow-hidden border border-[#1B4D2E]/10 shadow-xs animate-pulse"
               >
                 <div className="aspect-4/3 bg-[#1B4D2E]/10" />
-                <div className="p-5 space-y-4">
-                  <div className="flex justify-between gap-3">
-                    <div className="h-5 w-2/3 bg-[#1B4D2E]/15 rounded-lg" />
-                    <div className="h-5 w-14 bg-[#1B4D2E]/15 rounded-lg" />
-                  </div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <div className="h-8 bg-[#FFF8E7] rounded-xl" />
-                    <div className="h-8 bg-[#FFF8E7] rounded-xl" />
-                    <div className="h-8 bg-[#FFF8E7] rounded-xl" />
-                  </div>
-                  <div className="h-10 bg-[#1B4D2E]/15 rounded-xl" />
+                <div className="p-3.5 sm:p-5 space-y-3">
+                  <div className="h-4 sm:h-5 w-2/3 bg-[#1B4D2E]/15 rounded-lg" />
+                  <div className="h-8 sm:h-10 bg-[#1B4D2E]/15 rounded-xl" />
                 </div>
               </div>
             ))}
           </div>
         ) : filteredAndSorted.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6 lg:gap-8">
             {filteredAndSorted.map((product) => (
               <ProductCard
                 key={product.id}
@@ -274,6 +285,89 @@ export const ShopPage: React.FC<ShopPageProps> = ({
             </button>
           </div>
         )}
+
+        {/* Product Pricing and Pack Sizes */}
+        <section className="mt-16 bg-white rounded-3xl p-6 sm:p-10 border border-[#1B4D2E]/15 shadow-sm space-y-8">
+          <div className="max-w-3xl space-y-2">
+            <div className="inline-flex items-center space-x-2 text-xs font-extrabold uppercase tracking-widest text-[#1B4D2E]">
+              <Sparkles className="w-3.5 h-3.5 text-[#E1AD01]" />
+              <span>PACK PRICING &amp; VARIETY BUNDLES</span>
+            </div>
+            <h2 className="font-display font-black text-2xl sm:text-4xl text-[#1B4D2E]">
+              {packPricing.heading || 'Delightful Juice Value Packs'}
+            </h2>
+            <p className="text-xs sm:text-sm text-[#1B4D2E]/75">
+              {packPricing.subheading ||
+                'Stock up your fridge, office, or event with curated multi-packs handcrafted daily.'}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {packPricing.tiers
+              .filter((t) => t.enabled !== false)
+              .map((tier) => (
+                <div
+                  key={tier.id}
+                  className="bg-[#FFF8E7] rounded-3xl p-6 sm:p-7 border border-[#1B4D2E]/15 flex flex-col justify-between hover:shadow-lg transition-all relative group"
+                >
+                  {tier.badge && (
+                    <div className="absolute top-4 right-4 bg-[#E1AD01] text-[#1B4D2E] text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-md shadow-xs">
+                      {tier.badge}
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-[#1B4D2E]/80 block">
+                      {tier.bottlesCount} Fresh Bottles
+                    </span>
+                    <h3 className="font-display font-black text-2xl text-[#1B4D2E]">
+                      {tier.name}
+                    </h3>
+                    <div className="flex items-baseline space-x-1.5 pt-1">
+                      <span className="text-3xl sm:text-4xl font-black text-[#1B4D2E] tabular-nums">
+                        ${tier.price}
+                      </span>
+                      <span className="text-xs font-bold text-[#1B4D2E]/70">/ pack</span>
+                    </div>
+                    {tier.description && (
+                      <p className="text-xs text-[#1B4D2E]/80 leading-relaxed pt-1">
+                        {tier.description}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="pt-6 border-t border-[#1B4D2E]/10 mt-6">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const bundle = products.find((p) => p.category === 'bundles');
+                        if (bundle) {
+                          onOpenDetails(bundle);
+                        } else {
+                          onNavigate('/contact-us');
+                        }
+                      }}
+                      className="w-full inline-flex items-center justify-center space-x-2 bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] py-3 px-4 rounded-xl text-xs font-extrabold transition-all shadow-xs cursor-pointer group-hover:bg-[#143822]"
+                    >
+                      <ShoppingCart className="w-3.5 h-3.5 text-[#E1AD01]" />
+                      <span>Order {tier.name}</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-[#E1AD01] group-hover:translate-x-0.5 transition-transform" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+
+          {/* Pricing Conditions Note */}
+          <div className="p-4 sm:p-5 bg-[#FFF8E7] rounded-2xl border border-[#E1AD01]/30 text-xs sm:text-sm text-[#1B4D2E]/90 flex items-start space-x-3">
+            <Sparkles className="w-4 h-4 text-[#E1AD01] shrink-0 mt-0.5" />
+            <p className="leading-relaxed">
+              <strong>Pricing Note:</strong>{' '}
+              {packPricing.pricingNote ||
+                'Prices vary depending on delivery location and order quantity. Wholesale discounts are available for bulk purchases.'}
+            </p>
+          </div>
+        </section>
 
         {/* Catering / Bulk Order Callout */}
         <div className="mt-16 bg-[#1B4D2E] text-[#FFF8E7] rounded-3xl p-7 sm:p-10 border border-[#E1AD01]/35 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-lg">

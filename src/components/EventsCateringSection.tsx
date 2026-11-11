@@ -215,7 +215,7 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
                 Need a fast quote in under 15 minutes?
               </h4>
               <p className="text-xs text-[#1B4D2E]/70 mb-4">
-                Chat directly with C.E.O. Oluyemi B. Ajibolade via WhatsApp with your event specs.
+                Chat directly with our event coordination team via WhatsApp with your event specs.
               </p>
               <a
                 href={whatsappInquiryUrl}

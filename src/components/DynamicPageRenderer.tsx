@@ -6,6 +6,8 @@ import { EventsCateringSection } from './EventsCateringSection';
 import { WholesaleSection } from './WholesaleSection';
 import { FaqSection } from './FaqSection';
 import { ContactSection } from './ContactSection';
+import { AboutProductsShowcase } from './AboutProductsShowcase';
+import { EventProductShowcase } from './EventProductShowcase';
 import { ArrowRight, ShoppingBag, Sparkles } from 'lucide-react';
 
 interface DynamicPageRendererProps {
@@ -440,6 +442,31 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
           </section>
         );
       }
+
+      case 'product_ingredients':
+        return (
+          <AboutProductsShowcase
+            key={section.id}
+            products={products}
+            heading={section.heading}
+            subheading={section.subheading}
+            kicker={section.kicker}
+            onOpenDetails={onOpenProductDetails}
+            onNavigate={onNavigate}
+          />
+        );
+
+      case 'event_motion_grid':
+        return (
+          <EventProductShowcase
+            key={section.id}
+            items={content.eventShowcase || content.branding?.eventShowcase || []}
+            heading={section.heading}
+            subheading={section.subheading}
+            kicker={section.kicker}
+            onPlanEventClick={() => onNavigate('/wholesale')}
+          />
+        );
 
       case 'catering_calculator':
         return <EventsCateringSection key={section.id} content={content} />;

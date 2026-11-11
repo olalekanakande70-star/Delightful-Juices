@@ -22,7 +22,7 @@ export const FaqSection: React.FC<FaqSectionProps> = ({ content }) => {
     },
     {
       q: 'What bottle sizes do you offer?',
-      a: 'All of our signature juices and plant milks are bottled in convenient US fluid ounce sizes: 11.8 oz Pocket Sip bottles, 16.9 oz Daily Refresh bottles, and 33.8 oz Family Sharing Jugs, plus our popular 6 × 16.9 oz Party Sampler Pack.',
+      a: 'All of our signature juices and plant milks are bottled in convenient US fluid ounce sizes: 12oz Pocket Sip bottles, 16oz Daily Refresh bottles, and 18oz Sharing Bottles, plus our popular 6 × 16oz Party Sampler Pack.',
     },
     {
       q: 'What is your delivery timeframe?',
@@ -42,7 +42,7 @@ export const FaqSection: React.FC<FaqSectionProps> = ({ content }) => {
     },
     {
       q: 'Can we get custom branded labels for our wedding or corporate party?',
-      a: 'Yes! We design and apply custom waterproof labels with wedding monograms, birthday photos, or corporate logos on our 11.8 oz and 16.9 oz bottles. Simply select "Custom Event Branded Labels" on our Events & Catering page or message us on WhatsApp.',
+      a: 'Yes! We design and apply custom waterproof labels with wedding monograms, birthday photos, or corporate logos on our 12oz and 16oz bottles. Simply select "Custom Event Branded Labels" on our Events & Catering page or message us on WhatsApp.',
     },
     {
       q: 'What payment methods do you accept?',

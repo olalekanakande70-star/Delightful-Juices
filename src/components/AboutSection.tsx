@@ -64,47 +64,32 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ content, onNavigate 
                       </p>
                     </div>
                     <div className="pt-4 border-t border-white/15 flex items-center justify-between text-[11px] font-bold text-[#E1AD01]">
-                      <span>11.8 oz • 16.9 oz • 33.8 oz</span>
+                      <span>12oz • 16oz • 18oz</span>
                       <span>100% Natural</span>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Editable Founder / C.E.O. Card */}
-              {showcase.showCeoCard !== false && (
-                <div className="absolute -bottom-6 -right-4 sm:-right-6 bg-white rounded-2xl p-4 sm:p-5 shadow-xl border border-[#1B4D2E]/10 max-w-[265px]">
-                  <div className="flex items-center space-x-3 mb-2">
-                    {ceoAvatarSrc && !avatarError ? (
-                      <img
-                        src={ceoAvatarSrc}
-                        alt={content.ceoName}
-                        onError={() => setAvatarError(true)}
-                        className="w-10 h-10 rounded-full object-cover border-2 border-[#E1AD01] shrink-0 bg-[#1B4D2E]"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-[#1B4D2E] text-[#E1AD01] flex items-center justify-center font-bold text-sm shrink-0">
-                        {showcase.ceoInitials?.trim() || 'OA'}
-                      </div>
-                    )}
-                    <div>
-                      <div className="font-extrabold text-xs text-[#1B4D2E]">
-                        {sanitizeBrandAndUnitsText(content.ceoName)}
-                      </div>
-                      {showcase.ceoRole?.trim() && (
-                        <div className="text-[10px] text-[#1B4D2E]/70 uppercase tracking-wider font-semibold">
-                          {sanitizeBrandAndUnitsText(showcase.ceoRole)}
-                        </div>
-                      )}
+              {/* Quality & Craft Badge */}
+              <div className="absolute -bottom-6 -right-4 sm:-right-6 bg-white rounded-2xl p-4 sm:p-5 shadow-xl border border-[#1B4D2E]/10 max-w-[265px]">
+                <div className="flex items-center space-x-3 mb-1.5">
+                  <div className="w-9 h-9 rounded-xl bg-[#1B4D2E] text-[#E1AD01] flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="font-extrabold text-xs text-[#1B4D2E]">
+                      Small-Batch Pressed Daily
+                    </div>
+                    <div className="text-[10px] text-[#1B4D2E]/70 uppercase tracking-wider font-bold">
+                      Quakertown Kitchen
                     </div>
                   </div>
-                  {showcase.ceoQuote?.trim() && (
-                    <p className="text-[11px] text-[#1B4D2E]/80 italic leading-relaxed">
-                      &ldquo;{sanitizeBrandAndUnitsText(showcase.ceoQuote)}&rdquo;
-                    </p>
-                  )}
                 </div>
-              )}
+                <p className="text-[11px] text-[#1B4D2E]/80 leading-relaxed">
+                  Whole hibiscus calyces, freshly micro-pressed ginger root, and organic botanicals.
+                </p>
+              </div>
 
               {/* Editable Corner Badge */}
               {showcase.showBadge !== false && showcase.badgeText?.trim() && (
@@ -128,7 +113,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ content, onNavigate 
             <h2 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-5xl text-[#1B4D2E] tracking-tight leading-tight">
               {sanitizeBrandAndUnitsText(
                 showcase.sectionHeading ||
-                  'Crafted from Passion, Heritage, and Real Whole Botanicals.'
+                  'Authentic Heritage, Pure Botanicals & Uncompromised Quality.'
               )}
             </h2>
 

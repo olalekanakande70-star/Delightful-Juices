@@ -11,6 +11,7 @@ import {
   MessageCircle,
   ChevronDown,
   ShoppingBag,
+  Truck,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -246,13 +247,13 @@ export const Header: React.FC<HeaderProps> = ({
               })}
             </nav>
 
-            {/* Right Action Buttons: Prominent Shop Now + Cart (Admin button removed per client request) */}
-            <div className="flex items-center space-x-2.5 sm:space-x-3 shrink-0">
-              {/* Prominent Shop Now CTA */}
+            {/* Right Action Buttons: Shop Now and Bulk Order + Cart */}
+            <div className="flex items-center space-x-2 sm:space-x-2.5 shrink-0">
+              {/* Shop Now CTA */}
               <button
                 type="button"
                 onClick={() => handleLinkSelect('/shop')}
-                className={`hidden sm:inline-flex items-center space-x-1.5 px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all cursor-pointer shadow-xs ${
+                className={`hidden md:inline-flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all cursor-pointer shadow-xs ${
                   isRouteActive('/shop')
                     ? 'bg-[#E1AD01] text-[#1B4D2E]'
                     : 'bg-[#E1AD01] hover:bg-[#f0bc0e] text-[#1B4D2E]'
@@ -260,6 +261,20 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <ShoppingBag className="w-4 h-4" />
                 <span>Shop Now</span>
+              </button>
+
+              {/* Bulk Order CTA */}
+              <button
+                type="button"
+                onClick={() => handleLinkSelect('/wholesale')}
+                className={`hidden sm:inline-flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all cursor-pointer border border-[#1B4D2E]/25 ${
+                  isRouteActive('/wholesale') || isRouteActive('/events-catering')
+                    ? 'bg-[#1B4D2E] text-[#FFF8E7]'
+                    : 'bg-white hover:bg-[#1B4D2E] text-[#1B4D2E] hover:text-[#FFF8E7]'
+                }`}
+              >
+                <Truck className="w-4 h-4 text-[#E1AD01]" />
+                <span>Bulk Order</span>
               </button>
 
               {/* Shopping Cart Button */}
@@ -367,20 +382,31 @@ export const Header: React.FC<HeaderProps> = ({
                 );
               })}
 
-              {/* Prominent Mobile Shop Now & Call Actions */}
-              <div className="pt-3 mt-2 border-t border-[#1B4D2E]/10 flex flex-col space-y-2.5">
+              {/* Prominent Mobile Shop Now & Bulk Order Actions */}
+              <div className="pt-3 mt-2 border-t border-[#1B4D2E]/10 grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => handleLinkSelect('/shop')}
-                  className="w-full flex items-center justify-center space-x-2 py-3 px-4 text-sm font-extrabold text-[#1B4D2E] rounded-xl bg-[#E1AD01] hover:bg-[#f0bc0e] shadow-xs cursor-pointer"
+                  className="w-full flex items-center justify-center space-x-1.5 py-3 px-3 text-xs sm:text-sm font-extrabold text-[#1B4D2E] rounded-xl bg-[#E1AD01] hover:bg-[#f0bc0e] shadow-xs cursor-pointer"
                 >
-                  <ShoppingBag className="w-4 h-4" />
-                  <span>Shop Fresh Juices Now</span>
+                  <ShoppingBag className="w-4 h-4 shrink-0" />
+                  <span>Shop Now</span>
                 </button>
 
+                <button
+                  type="button"
+                  onClick={() => handleLinkSelect('/wholesale')}
+                  className="w-full flex items-center justify-center space-x-1.5 py-3 px-3 text-xs sm:text-sm font-extrabold text-[#FFF8E7] rounded-xl bg-[#1B4D2E] hover:bg-[#143822] shadow-xs cursor-pointer"
+                >
+                  <Truck className="w-4 h-4 text-[#E1AD01] shrink-0" />
+                  <span>Bulk Order</span>
+                </button>
+              </div>
+
+              <div className="pt-1">
                 <a
                   href={`tel:${content.phone.replace(/[^0-9]/g, '')}`}
-                  className="flex items-center justify-center space-x-2 py-2.5 px-3 text-sm font-semibold text-[#1B4D2E] rounded-xl bg-white border border-[#1B4D2E]/15 hover:bg-[#1B4D2E]/5"
+                  className="flex items-center justify-center space-x-2 py-2.5 px-3 text-xs sm:text-sm font-semibold text-[#1B4D2E] rounded-xl bg-white border border-[#1B4D2E]/15 hover:bg-[#1B4D2E]/5"
                 >
                   <Phone className="w-4 h-4 text-[#1B4D2E]" />
                   <span>Call Kitchen: {content.phone}</span>

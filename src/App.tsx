@@ -9,9 +9,11 @@ import { dataRepo } from './lib/storage';
 import { Product, SiteContent, NavItem, HeroSlide, CmsPage } from './types';
 import { Header } from './components/Header';
 import { HeroSlider } from './components/HeroSlider';
+import { ProductSliderSection } from './components/ProductSliderSection';
 import { MenuSection } from './components/MenuSection';
 import { SignaturePromiseSection } from './components/SignaturePromiseSection';
 import { AboutSection } from './components/AboutSection';
+import { TestimonialsSection } from './components/TestimonialsSection';
 import { FaqSection } from './components/FaqSection';
 import { ShopPage } from './components/ShopPage';
 import { ProductDetailPage } from './components/ProductDetailPage';
@@ -110,7 +112,10 @@ function MainApp() {
     }
 
     // Clean internal SPA path (e.g. '/', '/shop', '/about-us', '/contact-us', '/custom-slug')
-    const normalized = normalizePathname(href.startsWith('/') ? href : `/${href}`);
+    let normalized = normalizePathname(href.startsWith('/') ? href : `/${href}`);
+    if (normalized === '/our-story') {
+      normalized = '/about-us';
+    }
     window.history.pushState(null, '', normalized);
     setCurrentPath(normalized);
     setIsAdminOpen(false);
@@ -132,7 +137,10 @@ function MainApp() {
     const unsubscribe = dataRepo.subscribe(handleUpdate);
 
     const handlePopState = () => {
-      const nextPath = normalizePathname(window.location.pathname);
+      let nextPath = normalizePathname(window.location.pathname);
+      if (nextPath === '/our-story') {
+        nextPath = '/about-us';
+      }
       const isAdm =
         nextPath.toLowerCase() === '/admin' ||
         nextPath.toLowerCase().startsWith('/admin/') ||
@@ -170,9 +178,9 @@ function MainApp() {
     if (currentPath === '/' || currentPath === '/admin') {
       document.title = `${content.businessName} | ${content.motto}`;
     } else if (currentPath === '/shop') {
-      document.title = `Shop Fresh Juices | ${content.businessName}`;
+      document.title = `${content.shopHeading || 'Shop Fresh, Natural Delightful Juices'} | ${content.businessName}`;
     }
-  }, [currentPath, content.businessName, content.motto]);
+  }, [currentPath, content.businessName, content.motto, content.shopHeading]);
 
   // Resolve individual product detail route (/shop/:slug or /product/:slug)
   const productRouteSlug = (() => {
@@ -195,7 +203,8 @@ function MainApp() {
     : undefined;
 
   // Resolve active CMS page when currentPath is not '/', '/shop', or a product route
-  const activeSlug = currentPath.replace(/^\/+/, '').toLowerCase();
+  const rawActiveSlug = currentPath.replace(/^\/+/, '').toLowerCase();
+  const activeSlug = rawActiveSlug === 'our-story' ? 'about-us' : rawActiveSlug;
   const matchedPublishedPage =
     currentPath !== '/' &&
     currentPath !== '/shop' &&
@@ -243,7 +252,15 @@ function MainApp() {
               isLoading={!heroSlidesLoaded && heroSlides.length === 0}
             />
 
-            {/* 2. Featured Artisanal Drinks with Prominent Shop Now CTA */}
+            {/* 2. Dedicated Interactive Product Slider (Discover without scrolling through long grid) */}
+            <ProductSliderSection
+              products={products}
+              content={content}
+              onOpenDetails={openProductPage}
+              onNavigate={navigate}
+            />
+
+            {/* 3. Featured Artisanal Drinks with Prominent Shop Now CTA */}
             <MenuSection
               products={products}
               onOpenDetails={openProductPage}
@@ -265,13 +282,13 @@ function MainApp() {
                 <div className="bg-gradient-to-br from-[#1B4D2E] to-[#0f2c1a] rounded-3xl p-8 sm:p-12 border border-[#E1AD01]/35 shadow-2xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
                   <div className="max-w-2xl space-y-3">
                     <span className="inline-block text-xs font-extrabold uppercase tracking-widest text-[#E1AD01]">
-                      Small-Batch Botanical Goodness • Affordable Delivery
+                      Commercial Wholesale &amp; Bulk Orders
                     </span>
                     <h2 className="font-display font-black text-3xl sm:text-4xl text-[#FFF8E7] leading-tight">
-                      Ready to Stock Your Fridge or Host an Unforgettable Event?
+                      Ready to Stock Your Restaurants and Stores?
                     </h2>
                     <p className="text-sm sm:text-base text-[#FFF8E7]/85 leading-relaxed">
-                      Order fresh bottles of Zobo, Ginger Elixirs, and Creamy Tigernut Milk online with affordable local delivery—or request custom-labeled bottles for weddings, birthdays, and corporate gatherings.
+                      Partner with Delightful Juices for US-approved wholesale distribution to cafés, retail markets, grocery stores, and corporate lounges—or place bulk orders for celebrations and special events.
                     </p>
                   </div>
 
@@ -297,8 +314,8 @@ function MainApp() {
               </div>
             </section>
 
-            {/* 6. Frequently Asked Questions */}
-            <FaqSection content={content} />
+            {/* 6. Customer & Partner Testimonials with Ask a Question button */}
+            <TestimonialsSection content={content} onNavigate={navigate} />
           </>
         ) : currentPath === '/shop' ? (
           <ShopPage

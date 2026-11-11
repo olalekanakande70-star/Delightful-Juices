@@ -182,6 +182,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                 onOpenDetails={onOpenDetails}
                 whatsappNumber={whatsappNumber}
                 showSizes={!featuredOnly}
+                showPrice={!featuredOnly}
               />
             ))}
           </div>
