@@ -137,6 +137,7 @@ export type PageSectionType =
   | 'promo_banner'
   | 'featured_products'
   | 'product_ingredients'
+  | 'product_slider'
   | 'image_gallery'
   | 'event_motion_grid'
   | 'cta'

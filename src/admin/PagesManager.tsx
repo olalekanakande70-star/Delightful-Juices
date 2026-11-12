@@ -51,6 +51,7 @@ const SECTION_TEMPLATES: { type: PageSectionType; label: string; desc: string }[
   { type: 'catering_calculator', label: 'Live Catering Estimator', desc: 'Interactive event bottle calculator & inquiry form' },
   { type: 'wholesale_tiers', label: 'Wholesale Partner Tiers', desc: 'Restaurant, Retail & Corporate wholesale cards' },
   { type: 'product_ingredients', label: 'Juice Descriptions & Ingredients', desc: 'Showcase each handcrafted juice with image, story and ingredients' },
+  { type: 'product_slider', label: 'Interactive Flavor Showcase Slider', desc: 'Engaging product slider with prominent bottles, sizes, prices & smooth transitions' },
   { type: 'event_motion_grid', label: 'Event Showcase: Motion Grid', desc: 'Masonry animated photo grid of bespoke events & catering setups' },
   { type: 'contact_info', label: 'Contact Info & Message Form', desc: 'Quakertown kitchen address, hours & form' },
   { type: 'faq_list', label: 'FAQ Accordion', desc: 'Delivery, shelf-life & freshness answers' },

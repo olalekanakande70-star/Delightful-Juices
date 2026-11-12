@@ -3,6 +3,7 @@ import { SiteContent, EventInquiry } from '../types';
 import { dataRepo } from '../lib/storage';
 import { sanitizeBrandAndUnitsText } from '../lib/units';
 import { EventProductShowcase } from './EventProductShowcase';
+import { WholesaleProductGallery } from './WholesaleProductGallery';
 import {
   Building2,
   Store,
@@ -52,6 +53,14 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({ content, onC
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+
+  const handleSelectGalleryItem = (productName: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      message: `${prev.message ? prev.message + '\n' : ''}Interested in wholesale supply for: ${productName}`,
+    }));
+    scrollToInquiryForm();
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -360,7 +369,10 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({ content, onC
         </div>
       </section>
 
-      {/* 4. Event Product Showcase: Motion Grid (Initially empty, populated from Admin) */}
+      {/* 4. Commercial Wholesale Product Gallery */}
+      <WholesaleProductGallery onSelectForInquiry={handleSelectGalleryItem} />
+
+      {/* 5. Event Product Showcase: Motion Grid (Populated from Admin) */}
       <EventProductShowcase
         items={eventShowcaseItems}
         heading="Event Product Showcase: Motion Grid"

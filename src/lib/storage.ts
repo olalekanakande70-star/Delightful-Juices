@@ -679,6 +679,14 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
         theme: 'cream',
       },
       {
+        id: 'sec-about-slider',
+        type: 'product_slider',
+        kicker: 'INTERACTIVE FLAVOR SHOWCASE',
+        heading: 'Discover Our Signature Handcrafted Juices',
+        subheading:
+          'Slide through our authentic botanical creations, pressed fresh in Quakertown, PA with no preservatives added.',
+      },
+      {
         id: 'sec-about-products',
         type: 'product_ingredients',
         kicker: 'HANDCRAFTED JUICE CREATIONS',

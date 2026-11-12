@@ -7,6 +7,7 @@ import { WholesaleSection } from './WholesaleSection';
 import { FaqSection } from './FaqSection';
 import { ContactSection } from './ContactSection';
 import { AboutProductsShowcase } from './AboutProductsShowcase';
+import { ProductSliderSection } from './ProductSliderSection';
 import { EventProductShowcase } from './EventProductShowcase';
 import { ArrowRight, ShoppingBag, Sparkles } from 'lucide-react';
 
@@ -443,6 +444,17 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
         );
       }
 
+      case 'product_slider':
+        return (
+          <ProductSliderSection
+            key={section.id}
+            products={products}
+            content={content}
+            onOpenDetails={onOpenProductDetails}
+            onNavigate={onNavigate}
+          />
+        );
+
       case 'product_ingredients':
         return (
           <AboutProductsShowcase
@@ -491,10 +503,33 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
     }
   };
 
+  const effectiveSections = React.useMemo(() => {
+    const rawSections = page.sections || [];
+    const isAboutPage = (page.slug || '').replace(/^\/+/, '').toLowerCase() === 'about-us';
+    if (isAboutPage && !rawSections.some((s) => s.type === 'product_slider')) {
+      const idx = rawSections.findIndex((s) => s.type === 'product_ingredients');
+      const sliderSection: PageSection = {
+        id: 'sec-about-slider-auto',
+        type: 'product_slider',
+        kicker: 'INTERACTIVE FLAVOR SHOWCASE',
+        heading: 'Discover Our Signature Handcrafted Juices',
+        subheading:
+          'Slide through our authentic botanical creations, pressed fresh in Quakertown, PA with no preservatives added.',
+      };
+      if (idx >= 0) {
+        const copy = [...rawSections];
+        copy.splice(idx, 0, sliderSection);
+        return copy;
+      }
+      return [...rawSections, sliderSection];
+    }
+    return rawSections;
+  }, [page.sections, page.slug]);
+
   return (
     <div className="min-h-[60vh]">
-      {page.sections && page.sections.length > 0 ? (
-        page.sections.map((section) => renderSection(section))
+      {effectiveSections.length > 0 ? (
+        effectiveSections.map((section) => renderSection(section))
       ) : (
         <section className="py-24 bg-[#FFF8E7] text-center px-4">
           <div className="max-w-xl mx-auto space-y-4">

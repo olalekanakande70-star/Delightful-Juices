@@ -252,15 +252,7 @@ function MainApp() {
               isLoading={!heroSlidesLoaded && heroSlides.length === 0}
             />
 
-            {/* 2. Dedicated Interactive Product Slider (Discover without scrolling through long grid) */}
-            <ProductSliderSection
-              products={products}
-              content={content}
-              onOpenDetails={openProductPage}
-              onNavigate={navigate}
-            />
-
-            {/* 3. Featured Artisanal Drinks with Prominent Shop Now CTA */}
+            {/* 2. Featured Artisanal Drinks with Prominent Shop Now CTA */}
             <MenuSection
               products={products}
               onOpenDetails={openProductPage}
