@@ -65,6 +65,10 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
     }
   };
 
+  const isAboutPage =
+    (page.slug || '').replace(/^\/+/, '').toLowerCase() === 'about-us' ||
+    (page.slug || '').replace(/^\/+/, '').toLowerCase() === 'our-story';
+
   const renderSection = (section: PageSection) => {
     switch (section.type) {
       case 'hero': {
@@ -452,6 +456,7 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
             content={content}
             onOpenDetails={onOpenProductDetails}
             onNavigate={onNavigate}
+            hidePricesAndSizes={isAboutPage}
           />
         );
 

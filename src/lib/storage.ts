@@ -671,7 +671,7 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
         kicker: 'THE DELIGHTFUL JUICES STORY',
         heading: 'Nourishing Everyday Refreshment Without Compromise',
         body:
-          'Delightful Juices creates refreshing and nourishing drinks made from carefully selected natural ingredients, whole fruits, roots, herbs, and spices.\n\nOur goal is simple: to make everyday refreshment more enjoyable while offering delicious, healthful beverages made with ingredients your family can trust. From our signature ruby-red Zobo (Hibiscus) and fiery Organic Ginger Elixirs to our velvety dairy-free Tigernut Milk (Kunu Aya), every bottle is prepared in small batches at 500 W Broad St, Quakertown, PA.\n\nWe never use artificial preservatives, synthetic dyes, or high-fructose corn syrups—just honest botanical vitality in convenient 12oz, 16oz, and 18oz bottles.',
+          'Delightful Juices creates refreshing and nourishing drinks made from carefully selected natural ingredients, whole fruits, roots, herbs, and spices.\n\nOur goal is simple: to make everyday refreshment more enjoyable while offering delicious, healthful beverages made with ingredients your family can trust. From our signature ruby-red Zobo (Hibiscus) and fiery Organic Ginger Elixirs to our velvety dairy-free Tigernut Milk (Kunu Aya), every bottle is prepared in small batches at 500 W Broad St, Quakertown, PA.\n\nWe never use artificial preservatives, synthetic dyes, or high-fructose corn syrups—just honest botanical vitality in every handcrafted bottle.',
         imageUrl: '',
         imagePosition: 'left',
         buttonLabel: 'Explore the Shop',
@@ -1048,6 +1048,8 @@ function normalizeProduct(p: Product): Product {
 }
 
 function normalizeCmsPage(page: CmsPage): CmsPage {
+  const isAbout = (page.slug || '').replace(/^\/+/, '').toLowerCase() === 'about-us';
+
   return {
     ...page,
     title: sanitizeBrandText(page.title),
@@ -1058,11 +1060,25 @@ function normalizeCmsPage(page: CmsPage): CmsPage {
       if (heading.includes('Crafted from Passion')) {
         heading = 'Authentic Heritage, Pure Botanicals & Uncompromised Quality';
       }
+      let body = cleanCeoMentions(sec.body);
+      let subheading = cleanCeoMentions(sec.subheading);
+
+      if (isAbout) {
+        body = body
+          .replace(/in convenient\s*12oz,\s*16oz,?\s*(and|&)?\s*18oz\s*bottles/gi, 'in every handcrafted bottle')
+          .replace(/\b(in\s+)?12oz,\s*16oz,?\s*(and|&)?\s*18oz\s*bottles\b/gi, 'handcrafted bottles')
+          .replace(/\b12oz,\s*16oz,?\s*(and|&)?\s*18oz\b/gi, 'fresh bottles');
+        subheading = subheading
+          .replace(/in convenient\s*12oz,\s*16oz,?\s*(and|&)?\s*18oz\s*bottles/gi, 'in every handcrafted bottle')
+          .replace(/\b(in\s+)?12oz,\s*16oz,?\s*(and|&)?\s*18oz\s*bottles\b/gi, 'handcrafted bottles')
+          .replace(/\b12oz,\s*16oz,?\s*(and|&)?\s*18oz\b/gi, 'fresh bottles');
+      }
+
       return {
         ...sec,
         heading,
-        subheading: cleanCeoMentions(sec.subheading),
-        body: cleanCeoMentions(sec.body),
+        subheading,
+        body,
         imageUrl: sanitizeLiveImageUrl(sec.imageUrl),
         galleryImages: (sec.galleryImages || [])
           .map((g) => ({

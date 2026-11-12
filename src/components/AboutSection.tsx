@@ -64,7 +64,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ content, onNavigate 
                       </p>
                     </div>
                     <div className="pt-4 border-t border-white/15 flex items-center justify-between text-[11px] font-bold text-[#E1AD01]">
-                      <span>12oz • 16oz • 18oz</span>
+                      <span>Small-Batch Pressed</span>
                       <span>100% Natural</span>
                     </div>
                   </div>

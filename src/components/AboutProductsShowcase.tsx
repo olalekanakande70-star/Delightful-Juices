@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Product } from '../types';
-import { sanitizeBrandAndUnitsText, getCustomerSizeDisplay } from '../lib/units';
+import { sanitizeBrandAndUnitsText } from '../lib/units';
 import { Sparkles, Leaf, ArrowRight, ShoppingBag, ShieldCheck, Clock, Snowflake } from 'lucide-react';
 
 interface AboutProductsShowcaseProps {
@@ -83,12 +83,6 @@ export const AboutProductsShowcase: React.FC<AboutProductsShowcaseProps> = ({
             const liveImg = rawLiveImg || fallbackImg;
             const hasImgError = imageErrors[product.id];
             const isTigernut = (product.id || '').includes('tigernut') || (product.name || '').toLowerCase().includes('tigernut');
-
-            // Format bottle size availability
-            const sizeLabel =
-              product.sizes && product.sizes.length === 1
-                ? `Available in ${getCustomerSizeDisplay(product.sizes[0])} only`
-                : 'Available in 12oz, 16oz, 18oz';
 
             return (
               <article
@@ -197,10 +191,9 @@ export const AboutProductsShowcase: React.FC<AboutProductsShowcaseProps> = ({
                 {/* Footer Action */}
                 <div className="p-6 pt-0 sm:p-7 sm:pt-0">
                   <div className="pt-4 border-t border-[#1B4D2E]/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="text-xs font-extrabold text-[#1B4D2E]">
-                      <span className="inline-block bg-[#1B4D2E]/8 px-2.5 py-1 rounded-lg">
-                        {sizeLabel}
-                      </span>
+                    <div className="text-xs font-bold text-[#1B4D2E]/80 flex items-center space-x-1.5">
+                      <Leaf className="w-3.5 h-3.5 text-[#1B4D2E]" />
+                      <span>100% Natural Botanicals</span>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -243,7 +236,7 @@ export const AboutProductsShowcase: React.FC<AboutProductsShowcaseProps> = ({
               Looking to order for your family, event, or business?
             </h4>
             <p className="text-xs sm:text-sm text-[#FFF8E7]/85">
-              All juices are pressed fresh to order in 12oz, 16oz, and 18oz bottles with affordable local delivery across Pennsylvania.
+              All juices are pressed fresh to order with affordable local delivery across Pennsylvania.
             </p>
           </div>
           {onNavigate && (

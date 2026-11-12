@@ -19,6 +19,7 @@ interface ProductSliderSectionProps {
   content: SiteContent;
   onOpenDetails: (product: Product) => void;
   onNavigate: (href: string) => void;
+  hidePricesAndSizes?: boolean;
 }
 
 export const ProductSliderSection: React.FC<ProductSliderSectionProps> = ({
@@ -26,6 +27,7 @@ export const ProductSliderSection: React.FC<ProductSliderSectionProps> = ({
   content,
   onOpenDetails,
   onNavigate,
+  hidePricesAndSizes = false,
 }) => {
   const sliderConfig = content.productSlider || content.branding?.productSlider;
   const isEnabled = sliderConfig?.enabled !== false;
@@ -278,15 +280,27 @@ export const ProductSliderSection: React.FC<ProductSliderSectionProps> = ({
                 )}
               </div>
 
-              {/* Price & Sizes Strip */}
-              <div className="flex flex-wrap items-center gap-3 pt-1">
-                <div className="bg-[#E1AD01] text-[#1B4D2E] font-black text-base sm:text-xl px-3.5 py-1.5 rounded-xl shadow-xs tabular-nums">
-                  {priceDisplay}
+              {/* Price & Sizes Strip (omitted on About Us page) */}
+              {!hidePricesAndSizes ? (
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <div className="bg-[#E1AD01] text-[#1B4D2E] font-black text-base sm:text-xl px-3.5 py-1.5 rounded-xl shadow-xs tabular-nums">
+                    {priceDisplay}
+                  </div>
+                  <div className="bg-white/10 border border-white/15 text-xs font-bold px-3 py-1.5 rounded-xl text-white">
+                    Sizes: <strong className="text-[#E1AD01] ml-1">{sizesText}</strong>
+                  </div>
                 </div>
-                <div className="bg-white/10 border border-white/15 text-xs font-bold px-3 py-1.5 rounded-xl text-white">
-                  Sizes: <strong className="text-[#E1AD01] ml-1">{sizesText}</strong>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <span className="bg-white/10 border border-white/15 text-xs font-bold px-3 py-1.5 rounded-xl text-white flex items-center space-x-1.5">
+                    <Leaf className="w-3.5 h-3.5 text-[#E1AD01]" />
+                    <span>100% Real Botanicals</span>
+                  </span>
+                  <span className="bg-[#E1AD01]/20 text-[#E1AD01] border border-[#E1AD01]/40 text-xs font-bold px-3 py-1.5 rounded-xl">
+                    Small-Batch Handcrafted
+                  </span>
                 </div>
-              </div>
+              )}
 
               {/* Short Supporting Description */}
               <p className="text-xs sm:text-sm text-[#FFF8E7]/90 leading-relaxed line-clamp-3">

@@ -9,6 +9,7 @@ import { dataRepo } from './lib/storage';
 import { Product, SiteContent, NavItem, HeroSlide, CmsPage } from './types';
 import { Header } from './components/Header';
 import { HeroSlider } from './components/HeroSlider';
+import { CoverflowCarousel } from './components/CoverflowCarousel';
 import { ProductSliderSection } from './components/ProductSliderSection';
 import { MenuSection } from './components/MenuSection';
 import { SignaturePromiseSection } from './components/SignaturePromiseSection';
@@ -250,6 +251,14 @@ function MainApp() {
               content={content}
               onNavigate={navigate}
               isLoading={!heroSlidesLoaded && heroSlides.length === 0}
+            />
+
+            {/* NEW: Interactive 3D Coverflow Carousel Slider directly below Hero Section */}
+            <CoverflowCarousel
+              products={products}
+              content={content}
+              onSelectProduct={openProductPage}
+              isLoading={!productsLoaded && products.length === 0}
             />
 
             {/* 2. Featured Artisanal Drinks with Prominent Shop Now CTA */}
