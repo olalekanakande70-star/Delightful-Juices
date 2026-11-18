@@ -27,6 +27,7 @@ import { HeroSliderManager } from './HeroSliderManager';
 import { PagesManager } from './PagesManager';
 import { NavigationManager } from './NavigationManager';
 import { EventShowcaseManager } from './EventShowcaseManager';
+import { WholesaleGalleryManager } from './WholesaleGalleryManager';
 import { 
   ShieldCheck, 
   LogOut, 
@@ -76,7 +77,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
   const [loginError, setLoginError] = useState('');
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'hero_slider' | 'event_showcase' | 'pages' | 'branding' | 'appearance' | 'products' | 'orders' | 'inquiries' | 'stripe' | 'content' | 'nav' | 'supabase'
+    'overview' | 'hero_slider' | 'wholesale_gallery' | 'event_showcase' | 'pages' | 'branding' | 'appearance' | 'products' | 'orders' | 'inquiries' | 'stripe' | 'content' | 'nav' | 'supabase'
   >('overview');
 
   // Repositories state
@@ -639,6 +640,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
               </div>
               <span className="hidden md:inline text-[11px] bg-gray-100 text-[#1B4D2E] font-bold px-2 py-0.5 rounded-full">
                 {heroSlides.filter((s) => s.active !== false).length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('wholesale_gallery')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                activeTab === 'wholesale_gallery'
+                  ? 'bg-[#1B4D2E] text-[#FFF8E7] shadow-xs'
+                  : 'text-[#1B4D2E]/75 hover:bg-[#FFF8E7]'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <ImageIcon className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
+                <span className="hidden md:inline">Wholesale Gallery</span>
+              </div>
+              <span className="hidden md:inline text-[11px] bg-gray-100 text-[#1B4D2E] font-bold px-2 py-0.5 rounded-full">
+                {dataRepo.getWholesaleGallery().length}
               </span>
             </button>
 
@@ -3128,13 +3146,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
             />
           )}
 
+          {/* TAB: WHOLESALE PRODUCT GALLERY */}
+          {activeTab === 'wholesale_gallery' && (
+            <WholesaleGalleryManager
+              onToast={showToast}
+              onPreviewPublic={() => {
+                onClose();
+                if (onNavigate) onNavigate('/wholesale');
+              }}
+            />
+          )}
+
           {/* TAB: EVENT SHOWCASE (MOTION GRID) */}
           {activeTab === 'event_showcase' && (
             <EventShowcaseManager
               onToast={showToast}
               onPreviewPublic={() => {
                 onClose();
-                if (onNavigate) onNavigate('/wholesale');
+                if (onNavigate) onNavigate('/events-catering');
               }}
             />
           )}

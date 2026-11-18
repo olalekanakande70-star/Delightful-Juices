@@ -510,7 +510,16 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
 
   const effectiveSections = React.useMemo(() => {
     const rawSections = page.sections || [];
-    const isAboutPage = (page.slug || '').replace(/^\/+/, '').toLowerCase() === 'about-us';
+    const normalizedSlug = (page.slug || '').replace(/^\/+/, '').toLowerCase();
+
+    if (
+      normalizedSlug === 'wholesale' &&
+      rawSections.some((s) => s.type === 'wholesale_tiers')
+    ) {
+      return rawSections.filter((s) => s.type !== 'hero');
+    }
+
+    const isAboutPage = normalizedSlug === 'about-us';
     if (isAboutPage && !rawSections.some((s) => s.type === 'product_slider')) {
       const idx = rawSections.findIndex((s) => s.type === 'product_ingredients');
       const sliderSection: PageSection = {

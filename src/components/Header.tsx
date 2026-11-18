@@ -19,6 +19,9 @@ interface HeaderProps {
   navItems: NavItem[];
   currentPath: string;
   onNavigate: (href: string) => void;
+  showAnnouncement?: boolean;
+  showMainNav?: boolean;
+  isBottomPlacement?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -26,6 +29,9 @@ export const Header: React.FC<HeaderProps> = ({
   navItems,
   currentPath,
   onNavigate,
+  showAnnouncement = true,
+  showMainNav = true,
+  isBottomPlacement = false,
 }) => {
   const { totalCount, setIsCartOpen } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -88,35 +94,44 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <>
       {/* Top Announcement Bar */}
-      <div className="bg-[#1B4D2E] text-[#FFF8E7] text-xs sm:text-sm font-medium py-2 px-4 shadow-xs border-b border-[#143822]">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center space-x-2 truncate">
-            <span className="inline-block w-2 h-2 rounded-full bg-[#E1AD01] animate-pulse shrink-0" />
-            <span className="truncate">{sanitizeBrandText(content.announcementTicker)}</span>
-          </div>
+      {showAnnouncement && (
+        <div className="bg-[#1B4D2E] text-[#FFF8E7] text-xs sm:text-sm font-medium py-2 px-4 shadow-xs border-b border-[#143822]">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <div className="flex items-center space-x-2 truncate">
+              <span className="inline-block w-2 h-2 rounded-full bg-[#E1AD01] animate-pulse shrink-0" />
+              <span className="truncate">{sanitizeBrandText(content.announcementTicker)}</span>
+            </div>
 
-          <div className="hidden md:flex items-center space-x-5 text-xs text-[#FFF8E7]/90 shrink-0">
-            <a
-              href={`https://wa.me/${content.whatsappNumber}?text=Hello%20Delightful%20Juices%2C%20I%20would%20like%20to%20inquire%20about%20ordering%20fresh%20drinks!`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center space-x-1 hover:text-[#E1AD01] transition-colors"
-            >
-              <MessageCircle className="w-3.5 h-3.5 text-[#E1AD01]" />
-              <span>WhatsApp: {content.phone}</span>
-            </a>
-            <span className="text-[#E1AD01]/40">•</span>
-            <span className="flex items-center space-x-1">
-              <MapPin className="w-3.5 h-3.5 text-[#E1AD01]" />
-              <span>Quakertown, PA</span>
-            </span>
+            <div className="hidden md:flex items-center space-x-5 text-xs text-[#FFF8E7]/90 shrink-0">
+              <a
+                href={`https://wa.me/${content.whatsappNumber}?text=Hello%20Delightful%20Juices%2C%20I%20would%20like%20to%20inquire%20about%20ordering%20fresh%20drinks!`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-1 hover:text-[#E1AD01] transition-colors"
+              >
+                <MessageCircle className="w-3.5 h-3.5 text-[#E1AD01]" />
+                <span>WhatsApp: {content.phone}</span>
+              </a>
+              <span className="text-[#E1AD01]/40">•</span>
+              <span className="flex items-center space-x-1">
+                <MapPin className="w-3.5 h-3.5 text-[#E1AD01]" />
+                <span>Quakertown, PA</span>
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Main Sticky Navigation Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#1B4D2E]/10 transition-all shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {showMainNav && (
+        <header
+          className={`${
+            isBottomPlacement
+              ? 'relative z-40 bg-white/95 backdrop-blur-md border-y border-[#1B4D2E]/10 shadow-xs'
+              : 'sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#1B4D2E]/10 transition-all shadow-xs'
+          }`}
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20 gap-3">
             {/* Brand Logo */}
             <button
@@ -219,7 +234,11 @@ export const Header: React.FC<HeaderProps> = ({
 
                     {/* Dropdown Panel */}
                     {isOpen && children.length > 0 && (
-                      <div className="absolute left-0 top-full pt-2 w-60 z-50 animate-in fade-in duration-150">
+                      <div
+                        className={`absolute left-0 w-60 z-50 animate-in fade-in duration-150 ${
+                          isBottomPlacement ? 'bottom-full pb-2' : 'top-full pt-2'
+                        }`}
+                      >
                         <div className="bg-white rounded-2xl shadow-xl border border-[#1B4D2E]/15 py-2 overflow-hidden">
                           {children.map((child) => {
                             const childActive = isRouteActive(child.href);
@@ -415,7 +434,8 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
         )}
-      </header>
+        </header>
+      )}
     </>
   );
 };

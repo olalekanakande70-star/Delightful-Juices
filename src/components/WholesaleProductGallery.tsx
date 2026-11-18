@@ -1,135 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { WholesaleGalleryItem } from '../types';
+import { dataRepo } from '../lib/storage';
 import { sanitizeBrandAndUnitsText } from '../lib/units';
 import {
   Sparkles,
   ShieldCheck,
   Eye,
   X,
-  Maximize2,
   Box,
-  Truck,
-  CheckCircle2,
   Barcode,
-  Layers,
   ArrowRight,
+  Image as ImageIcon,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
-interface WholesaleGalleryItem {
-  id: string;
-  title: string;
-  category: 'all' | 'zobo' | 'ginger' | 'milks' | 'craft';
-  categoryLabel: string;
-  imageUrl: string;
-  badge?: string;
-  sizes: string;
-  barcode: string;
-  description: string;
-  packOptions: string;
-}
-
-const DEFAULT_GALLERY_ITEMS: WholesaleGalleryItem[] = [
-  {
-    id: 'wg-zobo',
-    title: 'Home Made Hibiscus Juice - Sorrel (Zobo)',
-    category: 'zobo',
-    categoryLabel: 'Signature Zobo',
-    imageUrl: '/assets/aistudio/18oz_zobo_label_17754013.png',
-    badge: 'Top Wholesale Mover',
-    sizes: '12oz • 16oz • 18oz',
-    barcode: 'UPC: 036000291452',
-    description:
-      'Preservative-free West African Sorrel brewed from dried hibiscus calyces, fresh ginger root, ripe pineapple, and sweet dates. Sealed with tamper-evident safety band.',
-    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
-  },
-  {
-    id: 'wg-ginger',
-    title: 'Home Made Ginger Juice (Pure Organic Ginger)',
-    category: 'ginger',
-    categoryLabel: 'Ginger Elixirs',
-    imageUrl: '/assets/aistudio/12oz_ginger_d302545f.png',
-    badge: 'Immunity Powerhouse',
-    sizes: '12oz • 16oz • 18oz',
-    barcode: 'UPC: 036000291452',
-    description:
-      'Fiery whole ginger root with fresh lemon juice, whole cloves, and sweet dates. A high-turnover grab-and-go immunity bottle for grocery coolers and cafés.',
-    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
-  },
-  {
-    id: 'wg-tigernut',
-    title: 'Home Made Tigernut Juice (Tigernut Milk / Kunu Aya)',
-    category: 'milks',
-    categoryLabel: 'Artisanal Milks',
-    imageUrl: '/assets/aistudio/12oz_Tigernut_a2076757.png',
-    badge: '100% Dairy-Free',
-    sizes: '12oz • 16oz • 18oz',
-    barcode: 'UPC: 036000291452',
-    description:
-      'Creamy, velvety heritage plant milk crafted from whole soaked tigernuts, sweet dates, cloves, and ginger. 100% nut-free, vegan, and prebiotic-rich.',
-    packOptions: '12-Pack Cases (Refrigerated)',
-  },
-  {
-    id: 'wg-pineapple',
-    title: 'Home Made Ginger Juice - Pineapple',
-    category: 'ginger',
-    categoryLabel: 'Ginger Elixirs',
-    imageUrl: '/assets/aistudio/12oz_pineapple_28b92d79.png',
-    badge: 'Tropical Best Seller',
-    sizes: '12oz Single Serve',
-    barcode: 'UPC: 036000291452',
-    description:
-      'Pure golden pineapple puree blended with spicy ginger root, lemon juice, and sweet dates. High demand in gourmet bodegas and natural grocers.',
-    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
-  },
-  {
-    id: 'wg-mango',
-    title: 'Home Made Ginger Juice - Mango',
-    category: 'ginger',
-    categoryLabel: 'Ginger Elixirs',
-    imageUrl: '/assets/aistudio/12oz_mango_dcfd0401.png',
-    badge: 'Alfonso Puree Blend',
-    sizes: '12oz Single Serve',
-    barcode: 'UPC: 036000291452',
-    description:
-      'Sun-ripened tropical mango puree harmonized with freshly pressed ginger root, lemon juice, sweet dates, and whole cloves.',
-    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
-  },
-  {
-    id: 'wg-lychee',
-    title: 'Home Made Ginger Juice - Lychee',
-    category: 'ginger',
-    categoryLabel: 'Ginger Elixirs',
-    imageUrl: '/assets/aistudio/12oz_Lychee_771f865d.png',
-    badge: 'Artisanal Floral',
-    sizes: '12oz Single Serve',
-    barcode: 'UPC: 036000291452',
-    description:
-      'Exotic floral lychee fruit puree infused into our signature homemade ginger base with fresh lemon juice, sweet dates, and whole cloves.',
-    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
-  },
-  {
-    id: 'wg-craft',
-    title: 'Small-Batch Botanical Kitchen Staging',
-    category: 'craft',
-    categoryLabel: 'Kitchen & Raw Craft',
-    imageUrl: '/assets/aistudio/image_119a2987.png',
-    badge: 'Quakertown, PA Craft',
-    sizes: 'Whole Ingredients Batch',
-    barcode: 'Commercial Kitchen Certified',
-    description:
-      'Whole dried hibiscus calyces, freshly harvested ginger root, whole lemons, and soaked tigernuts prepared daily at our commercial kitchen in Quakertown, PA.',
-    packOptions: 'Bulk Food-Service Jugs & Bar Staging',
-  },
-];
-
 interface WholesaleProductGalleryProps {
+  items?: WholesaleGalleryItem[];
   onSelectForInquiry?: (productName: string) => void;
 }
 
 export const WholesaleProductGallery: React.FC<WholesaleProductGalleryProps> = ({
+  items,
   onSelectForInquiry,
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [activeModalItem, setActiveModalItem] = useState<WholesaleGalleryItem | null>(null);
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [isHovered, setIsHovered] = useState<boolean>(false);
+  const [dragStartX, setDragStartX] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [windowWidth, setWindowWidth] = useState<number>(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 1200
+  );
+
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const sourceItems = items ?? dataRepo.getWholesaleGallery();
+  const publishedItems = (sourceItems || [])
+    .filter((item) => item.published !== false && Boolean(item.imageUrl?.trim()))
+    .sort((a, b) => (a.displayOrder ?? 99) - (b.displayOrder ?? 99));
 
   const categories = [
     { id: 'all', label: 'All Wholesale Products' },
@@ -139,10 +49,81 @@ export const WholesaleProductGallery: React.FC<WholesaleProductGalleryProps> = (
     { id: 'craft', label: 'Kitchen Staging' },
   ];
 
-  const filteredItems = DEFAULT_GALLERY_ITEMS.filter((item) => {
+  const filteredItems = publishedItems.filter((item) => {
     if (activeCategory === 'all') return true;
     return item.category === activeCategory;
   });
+
+  const total = filteredItems.length;
+
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [activeCategory, total]);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const nextSlide = useCallback(() => {
+    if (total <= 1) return;
+    setCurrentIndex((prev) => (prev + 1) % total);
+  }, [total]);
+
+  const prevSlide = useCallback(() => {
+    if (total <= 1) return;
+    setCurrentIndex((prev) => (prev - 1 + total) % total);
+  }, [total]);
+
+  const goToSlide = (idx: number) => {
+    if (idx >= 0 && idx < total) {
+      setCurrentIndex(idx);
+    }
+  };
+
+  useEffect(() => {
+    if (isHovered || isDragging || activeModalItem || total <= 1) return;
+    timerRef.current = setInterval(nextSlide, 5000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isHovered, isDragging, activeModalItem, total, nextSlide]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setDragStartX(e.touches[0].clientX);
+    setIsDragging(true);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (dragStartX === null) return;
+    const diff = dragStartX - e.changedTouches[0].clientX;
+    if (diff > 45) nextSlide();
+    else if (diff < -45) prevSlide();
+    setDragStartX(null);
+    setIsDragging(false);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setDragStartX(e.clientX);
+    setIsDragging(true);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || dragStartX === null) return;
+    const diff = dragStartX - e.clientX;
+    if (Math.abs(diff) > 70) {
+      if (diff > 0) nextSlide();
+      else prevSlide();
+      setDragStartX(null);
+      setIsDragging(false);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setDragStartX(null);
+    setIsDragging(false);
+  };
 
   const handleInquiryClick = (item: WholesaleGalleryItem) => {
     setActiveModalItem(null);
@@ -151,11 +132,27 @@ export const WholesaleProductGallery: React.FC<WholesaleProductGalleryProps> = (
     }
   };
 
+  const isMobile = windowWidth < 640;
+  const isTablet = windowWidth >= 640 && windowWidth < 1024;
+
   return (
-    <section className="py-20 bg-white border-b border-[#1B4D2E]/10 relative">
+    <section
+      aria-label="Wholesale Product Gallery Carousel"
+      className="py-20 bg-white border-b border-[#1B4D2E]/10 relative overflow-hidden select-none"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        setIsDragging(false);
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="max-w-3xl mx-auto text-center space-y-3 mb-12 sm:mb-16">
+        <div className="max-w-3xl mx-auto text-center space-y-3 mb-10 sm:mb-12">
           <div className="inline-flex items-center space-x-2 text-xs font-extrabold uppercase tracking-[0.2em] text-[#E1AD01] bg-[#1B4D2E] px-4 py-1.5 rounded-full shadow-xs">
             <Sparkles className="w-3.5 h-3.5" />
             <span>COMMERCIAL PRODUCT GALLERY</span>
@@ -164,158 +161,283 @@ export const WholesaleProductGallery: React.FC<WholesaleProductGalleryProps> = (
             Wholesale &amp; Retail Product Gallery
           </h2>
           <p className="text-sm sm:text-base text-[#1B4D2E]/80 leading-relaxed max-w-2xl mx-auto">
-            Browse our bottled lineup with commercial UPC barcodes, tamper-evident safety seals, and master case packaging available for distribution across Pennsylvania and nationwide.
+            Browse our bottled lineup with commercial UPC barcodes, tamper-evident safety seals, and master case packaging available for USDA-approved distribution across Pennsylvania and nationwide.
           </p>
 
-          {/* Category Filter Pills */}
-          <div className="flex flex-wrap justify-center gap-2 pt-4">
-            {categories.map((cat) => {
-              const isSelected = activeCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={`text-xs font-bold px-4 py-2 rounded-xl transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-[#1B4D2E] text-[#FFF8E7] shadow-sm'
-                      : 'bg-[#FFF8E7] text-[#1B4D2E]/80 hover:bg-[#1B4D2E]/10 border border-[#1B4D2E]/15'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              );
-            })}
-          </div>
+          {/* Category Filter Tabs (only shown when gallery items exist) */}
+          {publishedItems.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-2 pt-4">
+              {categories.map((cat) => {
+                const isSelected = activeCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setActiveCategory(cat.id)}
+                    className={`text-xs font-bold px-4 py-2 rounded-xl transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#1B4D2E] text-[#FFF8E7] shadow-sm'
+                        : 'bg-[#FFF8E7] text-[#1B4D2E]/80 hover:bg-[#1B4D2E]/10 border border-[#1B4D2E]/15'
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Gallery Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-          {filteredItems.map((item) => (
-            <article
-              key={item.id}
-              className="bg-[#FFF8E7]/50 rounded-3xl overflow-hidden border border-[#1B4D2E]/15 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
+        {/* Horizontal 3D Coverflow Carousel OR Clean Empty State */}
+        {total > 0 ? (
+          <div>
+            <div
+              className="relative w-full h-[460px] sm:h-[510px] md:h-[530px] flex items-center justify-center my-2 cursor-grab active:cursor-grabbing"
+              style={{
+                perspective: '1200px',
+                perspectiveOrigin: '50% 50%',
+              }}
             >
-              <div>
-                {/* Image Container with Label View */}
-                <div
-                  onClick={() => setActiveModalItem(item)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setActiveModalItem(item);
-                    }
-                  }}
-                  className="relative aspect-4/3 sm:aspect-1/1 bg-[#12351F] overflow-hidden flex items-center justify-center p-4 cursor-pointer"
-                  aria-label={`Inspect ${item.title}`}
-                >
-                  <img
-                    src={item.imageUrl}
-                    alt={item.title}
-                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-                  />
+              {filteredItems.map((item, idx) => {
+                let offset = (idx - currentIndex) % total;
+                if (offset > total / 2) offset -= total;
+                if (offset < -total / 2) offset += total;
 
-                  {/* Badges */}
-                  <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start">
-                    <span className="bg-[#1B4D2E] text-[#E1AD01] border border-[#E1AD01]/40 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg shadow-xs flex items-center space-x-1">
-                      <ShieldCheck className="w-3 h-3 text-[#E1AD01]" />
-                      <span>{item.badge || 'US-Approved'}</span>
-                    </span>
-                  </div>
+                const isCenter = offset === 0;
+                const isVisible = Math.abs(offset) <= 2;
 
-                  <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-xs text-[#FFF8E7] text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center space-x-1">
-                    <Eye className="w-3 h-3" />
-                    <span>Inspect Label</span>
-                  </div>
-                </div>
+                if (!isVisible) return null;
 
-                {/* Details */}
-                <div className="p-5 sm:p-6 space-y-3">
-                  <div className="space-y-1">
-                    <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#E1AD01] bg-[#1B4D2E] inline-block px-2.5 py-0.5 rounded-md">
-                      {item.categoryLabel}
+                let translateX = 0;
+                let translateZ = 0;
+                let rotateY = 0;
+                let scale = 1;
+                let opacity = 1;
+                let zIndex = 30;
+
+                const baseStep1 = isMobile ? 125 : isTablet ? 190 : 245;
+                const baseStep2 = isMobile ? 225 : isTablet ? 340 : 440;
+
+                if (offset === 0) {
+                  translateX = 0;
+                  translateZ = isMobile ? 30 : 60;
+                  rotateY = 0;
+                  scale = isMobile ? 1.02 : 1.06;
+                  opacity = 1;
+                  zIndex = 40;
+                } else if (offset === -1) {
+                  translateX = -baseStep1;
+                  translateZ = isMobile ? -50 : -85;
+                  rotateY = isMobile ? 22 : 28;
+                  scale = isMobile ? 0.85 : 0.88;
+                  opacity = 0.88;
+                  zIndex = 25;
+                } else if (offset === 1) {
+                  translateX = baseStep1;
+                  translateZ = isMobile ? -50 : -85;
+                  rotateY = isMobile ? -22 : -28;
+                  scale = isMobile ? 0.85 : 0.88;
+                  opacity = 0.88;
+                  zIndex = 25;
+                } else if (offset === -2) {
+                  translateX = -baseStep2;
+                  translateZ = isMobile ? -110 : -175;
+                  rotateY = isMobile ? 32 : 40;
+                  scale = isMobile ? 0.72 : 0.75;
+                  opacity = isMobile ? 0.35 : 0.58;
+                  zIndex = 10;
+                } else if (offset === 2) {
+                  translateX = baseStep2;
+                  translateZ = isMobile ? -110 : -175;
+                  rotateY = isMobile ? -32 : -40;
+                  scale = isMobile ? 0.72 : 0.75;
+                  opacity = isMobile ? 0.35 : 0.58;
+                  zIndex = 10;
+                }
+
+                return (
+                  <article
+                    key={item.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={isCenter ? `Inspect ${item.title}` : `Focus ${item.title}`}
+                    onClick={() => {
+                      if (!isCenter) {
+                        goToSlide(idx);
+                      } else {
+                        setActiveModalItem(item);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        if (!isCenter) goToSlide(idx);
+                        else setActiveModalItem(item);
+                      }
+                    }}
+                    className={`absolute top-1/2 left-1/2 rounded-3xl overflow-hidden transition-all duration-500 ease-out flex flex-col justify-between cursor-pointer ${
+                      isCenter
+                        ? 'w-[270px] sm:w-[320px] md:w-[350px] h-[425px] sm:h-[465px] md:h-[485px] bg-[#FFF8E7] border-2 border-[#E1AD01] shadow-[0_24px_50px_rgba(27,77,46,0.18)] ring-1 ring-[#E1AD01]/35'
+                        : 'w-[245px] sm:w-[290px] md:w-[315px] h-[395px] sm:h-[430px] md:h-[450px] bg-white border border-[#1B4D2E]/15 shadow-lg hover:border-[#E1AD01]/60'
+                    }`}
+                    style={{
+                      transform: `translate(-50%, -50%) translateX(${translateX}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`,
+                      zIndex,
+                      opacity,
+                      transformStyle: 'preserve-3d',
+                    }}
+                  >
+                    {/* Top Image Container */}
+                    <div className="relative h-[220px] sm:h-[245px] bg-[#12351F] overflow-hidden flex items-center justify-center p-4 shrink-0">
+                      <img
+                        src={item.imageUrl}
+                        alt={item.title}
+                        draggable={false}
+                        className="w-full h-full object-contain transition-transform duration-500 hover:scale-105"
+                      />
+
+                      <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start">
+                        <span className="bg-[#1B4D2E] text-[#E1AD01] border border-[#E1AD01]/40 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg shadow-xs flex items-center space-x-1">
+                          <ShieldCheck className="w-3 h-3 text-[#E1AD01]" />
+                          <span>{item.badge || 'USDA-Approved'}</span>
+                        </span>
+                      </div>
+
+                      {isCenter && (
+                        <div className="absolute bottom-2.5 right-2.5 bg-black/65 backdrop-blur-xs text-[#FFF8E7] text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center space-x-1">
+                          <Eye className="w-3 h-3" />
+                          <span>Inspect Label</span>
+                        </div>
+                      )}
                     </div>
-                    <h3
-                      onClick={() => setActiveModalItem(item)}
-                      className="font-display font-bold text-lg sm:text-xl text-[#1B4D2E] group-hover:text-[#12351F] transition-colors leading-snug cursor-pointer line-clamp-2"
-                    >
-                      {sanitizeBrandAndUnitsText(item.title)}
-                    </h3>
-                  </div>
 
-                  <p className="text-xs text-[#1B4D2E]/80 leading-relaxed line-clamp-2">
-                    {sanitizeBrandAndUnitsText(item.description)}
-                  </p>
+                    {/* Details */}
+                    <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
+                      <div className="space-y-1.5">
+                        <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#E1AD01] bg-[#1B4D2E] inline-block px-2.5 py-0.5 rounded-md">
+                          {item.categoryLabel}
+                        </div>
+                        <h3 className="font-display font-bold text-base sm:text-lg text-[#1B4D2E] leading-snug line-clamp-1">
+                          {sanitizeBrandAndUnitsText(item.title)}
+                        </h3>
+                        {item.description && (
+                          <p className="text-[11px] text-[#1B4D2E]/80 leading-relaxed line-clamp-2">
+                            {sanitizeBrandAndUnitsText(item.description)}
+                          </p>
+                        )}
+                      </div>
 
-                  <div className="pt-2 border-t border-[#1B4D2E]/10 space-y-2 text-xs">
-                    <div className="flex items-center justify-between text-[#1B4D2E]">
-                      <span className="font-semibold text-[#1B4D2E]/70">Available Sizes:</span>
-                      <strong className="font-extrabold text-[#1B4D2E]">{item.sizes}</strong>
+                      <div className="pt-2 border-t border-[#1B4D2E]/10 space-y-1 text-[11px]">
+                        {item.sizes && (
+                          <div className="flex items-center justify-between text-[#1B4D2E]">
+                            <span className="font-semibold text-[#1B4D2E]/70">Sizes:</span>
+                            <strong className="font-extrabold text-[#1B4D2E]">{item.sizes}</strong>
+                          </div>
+                        )}
+                        {item.barcode && (
+                          <div className="flex items-center justify-between text-[#1B4D2E]">
+                            <span className="font-semibold text-[#1B4D2E]/70 flex items-center space-x-1">
+                              <Barcode className="w-3 h-3 text-[#1B4D2E]/60" />
+                              <span>Barcode:</span>
+                            </span>
+                            <span className="font-mono text-[10px] font-bold">{item.barcode}</span>
+                          </div>
+                        )}
+                        {item.packOptions && (
+                          <div className="flex items-center justify-between text-[#1B4D2E]">
+                            <span className="font-semibold text-[#1B4D2E]/70 flex items-center space-x-1">
+                              <Box className="w-3 h-3 text-[#1B4D2E]/60" />
+                              <span>Pack:</span>
+                            </span>
+                            <span className="text-[10px] font-semibold truncate max-w-[140px]">
+                              {item.packOptions}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div
+                        className="pt-2.5 border-t border-[#1B4D2E]/10 flex items-center gap-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setActiveModalItem(item)}
+                          className="flex-1 bg-white hover:bg-gray-50 text-[#1B4D2E] border border-[#1B4D2E]/20 font-bold text-[11px] py-2 px-2.5 rounded-xl transition-all text-center cursor-pointer shadow-xs"
+                        >
+                          Inspect
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInquiryClick(item)}
+                          className="flex-1 bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold text-[11px] py-2 px-2.5 rounded-xl transition-all flex items-center justify-center space-x-1 cursor-pointer shadow-xs"
+                        >
+                          <span>Request Quote</span>
+                          <ArrowRight className="w-3 h-3 text-[#E1AD01]" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between text-[#1B4D2E]">
-                      <span className="font-semibold text-[#1B4D2E]/70 flex items-center space-x-1">
-                        <Barcode className="w-3.5 h-3.5 text-[#1B4D2E]/60" />
-                        <span>Barcode:</span>
-                      </span>
-                      <span className="font-mono text-[11px] font-bold">{item.barcode}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-[#1B4D2E]">
-                      <span className="font-semibold text-[#1B4D2E]/70 flex items-center space-x-1">
-                        <Box className="w-3.5 h-3.5 text-[#1B4D2E]/60" />
-                        <span>Packaging:</span>
-                      </span>
-                      <span className="text-[11px] font-semibold">{item.packOptions}</span>
-                    </div>
-                  </div>
-                </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            {/* Carousel Navigation: Arrows & Pagination Dots */}
+            <div className="mt-6 flex items-center justify-center space-x-4">
+              <button
+                type="button"
+                onClick={prevSlide}
+                aria-label="Previous wholesale product"
+                className="w-11 h-11 rounded-2xl bg-[#FFF8E7] hover:bg-[#E1AD01] text-[#1B4D2E] border border-[#1B4D2E]/20 flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center space-x-2">
+                {filteredItems.map((item, idx) => {
+                  const isActive = currentIndex === idx;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => goToSlide(idx)}
+                      aria-label={`Go to slide ${idx + 1}: ${item.title}`}
+                      className={`transition-all rounded-full cursor-pointer ${
+                        isActive
+                          ? 'w-8 h-2.5 bg-[#E1AD01] shadow-xs'
+                          : 'w-2.5 h-2.5 bg-[#1B4D2E]/25 hover:bg-[#1B4D2E]/50'
+                      }`}
+                    />
+                  );
+                })}
               </div>
 
-              {/* Action Buttons */}
-              <div className="p-5 pt-0 sm:p-6 sm:pt-0">
-                <div className="pt-3 border-t border-[#1B4D2E]/10 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveModalItem(item)}
-                    className="flex-1 bg-white hover:bg-gray-50 text-[#1B4D2E] border border-[#1B4D2E]/20 font-bold text-xs py-2 px-3 rounded-xl transition-all text-center cursor-pointer shadow-xs"
-                  >
-                    Inspect Packaging
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleInquiryClick(item)}
-                    className="flex-1 bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold text-xs py-2 px-3 rounded-xl transition-all flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs"
-                  >
-                    <span>Request Quote</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-[#E1AD01]" />
-                  </button>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        {/* Wholesale Bottom Information Banner */}
-        <div className="mt-12 p-6 sm:p-8 bg-[#1B4D2E] text-[#FFF8E7] rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl border border-[#E1AD01]/25">
-          <div className="space-y-1 text-center md:text-left max-w-xl">
-            <h4 className="font-display font-bold text-lg sm:text-xl text-white">
-              Need Custom Case Quantities, Cold-Chain Delivery, or Samples?
-            </h4>
-            <p className="text-xs sm:text-sm text-[#FFF8E7]/80">
-              We provide sample tasting kits for qualifying retail buyers, cafés, and restaurant beverage directors across Pennsylvania and neighboring regions.
-            </p>
+              <button
+                type="button"
+                onClick={nextSlide}
+                aria-label="Next wholesale product"
+                className="w-11 h-11 rounded-2xl bg-[#FFF8E7] hover:bg-[#E1AD01] text-[#1B4D2E] border border-[#1B4D2E]/20 flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (onSelectForInquiry) onSelectForInquiry('Sample Tasting Kit / Wholesale');
-            }}
-            className="bg-[#E1AD01] hover:bg-[#f0bc0e] text-[#1B4D2E] font-black text-xs sm:text-sm px-6 py-3.5 rounded-xl shadow-md transition-all cursor-pointer whitespace-nowrap active:scale-95"
-          >
-            Request Wholesale Tasting Kit
-          </button>
-        </div>
+        ) : (
+          <div className="bg-[#FFF8E7] rounded-3xl border border-[#1B4D2E]/15 p-10 sm:p-14 text-center max-w-3xl mx-auto space-y-4 shadow-xs">
+            <div className="w-14 h-14 rounded-2xl bg-[#1B4D2E] text-[#E1AD01] flex items-center justify-center mx-auto shadow-sm">
+              <ImageIcon className="w-7 h-7" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="font-display font-extrabold text-2xl text-[#1B4D2E]">
+                Wholesale Product Gallery
+              </h3>
+              <p className="text-xs sm:text-sm text-[#1B4D2E]/75 max-w-lg mx-auto leading-relaxed">
+                Commercial bottle photography and packaging specs can be uploaded and managed directly from the Admin Dashboard under <strong>Wholesale Gallery</strong>.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Lightbox / High-Resolution Packaging Inspection Modal */}
@@ -358,23 +480,31 @@ export const WholesaleProductGallery: React.FC<WholesaleProductGalleryProps> = (
                   <h3 className="font-display font-bold text-xl sm:text-2xl text-[#1B4D2E] leading-snug">
                     {sanitizeBrandAndUnitsText(activeModalItem.title)}
                   </h3>
-                  <p className="text-xs text-[#1B4D2E]/80 leading-relaxed">
-                    {sanitizeBrandAndUnitsText(activeModalItem.description)}
-                  </p>
+                  {activeModalItem.description && (
+                    <p className="text-xs text-[#1B4D2E]/80 leading-relaxed">
+                      {sanitizeBrandAndUnitsText(activeModalItem.description)}
+                    </p>
+                  )}
 
                   <div className="pt-3 border-t border-gray-100 space-y-2 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-[#1B4D2E]/70">Available Sizes:</span>
-                      <strong className="text-[#1B4D2E]">{activeModalItem.sizes}</strong>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-[#1B4D2E]/70">UPC Barcode:</span>
-                      <span className="font-mono text-xs">{activeModalItem.barcode}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-[#1B4D2E]/70">Case Staging:</span>
-                      <span className="font-semibold">{activeModalItem.packOptions}</span>
-                    </div>
+                    {activeModalItem.sizes && (
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-[#1B4D2E]/70">Available Sizes:</span>
+                        <strong className="text-[#1B4D2E]">{activeModalItem.sizes}</strong>
+                      </div>
+                    )}
+                    {activeModalItem.barcode && (
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-[#1B4D2E]/70">UPC Barcode:</span>
+                        <span className="font-mono text-xs">{activeModalItem.barcode}</span>
+                      </div>
+                    )}
+                    {activeModalItem.packOptions && (
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-[#1B4D2E]/70">Case Staging:</span>
+                        <span className="font-semibold">{activeModalItem.packOptions}</span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-[#1B4D2E]/70">Cold Shelf-Life:</span>
                       <span className="font-semibold">7–10 Days Refrigerated (36°F - 40°F)</span>

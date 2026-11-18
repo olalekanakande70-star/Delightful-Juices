@@ -41,7 +41,7 @@ export const EventShowcaseManager: React.FC<EventShowcaseManagerProps> = ({
     const newItem: EventShowcaseItem = {
       id: `event-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       url,
-      title: 'Bespoke Celebration Setup',
+      title: 'Delightful Celebration Setup',
       caption: 'Handcrafted juices and custom monogrammed bottles for special occasions.',
       displayOrder: items.length + 1,
       published: true,
@@ -262,7 +262,7 @@ export const EventShowcaseManager: React.FC<EventShowcaseManagerProps> = ({
               Event Showcase is Currently Empty
             </h3>
             <p className="text-xs text-[#1B4D2E]/75 max-w-md mx-auto">
-              Per requirements, no random stock photos are populated by default. Upload photos above when you have bespoke event or catering pictures ready to display.
+              Per requirements, no random stock photos are populated by default. Upload photos above when you have delightful event or catering pictures ready to display.
             </p>
           </div>
         </div>

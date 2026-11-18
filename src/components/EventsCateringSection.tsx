@@ -8,6 +8,9 @@ import {
   CheckCircle2,
   Send,
   MessageCircle,
+  Calendar,
+  Check,
+  ArrowRight,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -127,11 +130,86 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
       `Looking forward to hearing back with official packages!`
   )}`;
 
+  const scrollToTarget = (elementId: string) => {
+    const el = document.getElementById(elementId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <section id="events-catering" className="py-20 bg-[#FFF8E7] relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+        {/* Relocated Customized Packages for Events & Celebrations Section */}
+        <div className="bg-[#12351F] text-[#FFF8E7] rounded-3xl p-8 sm:p-14 border border-[#E1AD01]/30 shadow-2xl relative overflow-hidden">
+          <div className="max-w-3xl space-y-5 relative z-10">
+            <div className="inline-flex items-center space-x-2 text-xs font-extrabold uppercase tracking-[0.2em] text-[#E1AD01]">
+              <Calendar className="w-4 h-4" />
+              <span>DELIGHTFUL EVENT JUICE PACKAGES</span>
+            </div>
+
+            <h2 className="font-display font-black text-3xl sm:text-5xl text-white leading-tight">
+              Customized Packages for Events &amp; Celebrations
+            </h2>
+
+            <p className="text-sm sm:text-base text-[#FFF8E7]/90 leading-relaxed">
+              Make your celebration unforgettable with custom-labeled botanical juices and refreshing elixirs. We cater custom orders for:
+            </p>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-xs sm:text-sm font-bold text-white">
+              <div className="flex items-center space-x-2 bg-white/10 p-3 rounded-xl border border-white/10">
+                <Check className="w-4 h-4 text-[#E1AD01] shrink-0" />
+                <span>Weddings</span>
+              </div>
+              <div className="flex items-center space-x-2 bg-white/10 p-3 rounded-xl border border-white/10">
+                <Check className="w-4 h-4 text-[#E1AD01] shrink-0" />
+                <span>Birthday Parties</span>
+              </div>
+              <div className="flex items-center space-x-2 bg-white/10 p-3 rounded-xl border border-white/10">
+                <Check className="w-4 h-4 text-[#E1AD01] shrink-0" />
+                <span>Corporate Events</span>
+              </div>
+              <div className="flex items-center space-x-2 bg-white/10 p-3 rounded-xl border border-white/10">
+                <Check className="w-4 h-4 text-[#E1AD01] shrink-0" />
+                <span>Private Parties</span>
+              </div>
+              <div className="flex items-center space-x-2 bg-white/10 p-3 rounded-xl border border-white/10">
+                <Check className="w-4 h-4 text-[#E1AD01] shrink-0" />
+                <span>Special Gatherings</span>
+              </div>
+              <div className="flex items-center space-x-2 bg-white/10 p-3 rounded-xl border border-white/10">
+                <Check className="w-4 h-4 text-[#E1AD01] shrink-0" />
+                <span>Reunions &amp; Galas</span>
+              </div>
+            </div>
+
+            <p className="text-xs sm:text-sm text-[#FFF8E7]/80 leading-relaxed pt-2">
+              Enquire about custom bottle labels with monograms or company logos, chilled insulated delivery, custom flavor assortments, and quantity calculators for 20 to 500+ guests.
+            </p>
+
+            <div className="pt-4 flex flex-wrap gap-4">
+              <button
+                type="button"
+                onClick={() => scrollToTarget('catering-proposal-form')}
+                className="inline-flex items-center space-x-2 bg-[#E1AD01] hover:bg-[#f0bc0e] text-[#1B4D2E] font-black text-sm px-7 py-4 rounded-xl shadow-lg transition-all cursor-pointer"
+              >
+                <span>Plan Your Event With Delightful Juices</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => scrollToTarget('catering-estimator')}
+                className="inline-flex items-center space-x-2 bg-white/15 hover:bg-white/25 text-white border border-white/30 font-bold text-sm px-6 py-4 rounded-xl transition-all cursor-pointer"
+              >
+                <span>Open Catering Calculator</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-4 mb-14">
+        <div id="catering-estimator" className="text-center max-w-3xl mx-auto space-y-4">
           <div className="inline-flex items-center space-x-2 text-xs font-extrabold uppercase tracking-[0.16em] text-[#1B4D2E]">
             <Sparkles className="w-4 h-4 text-[#E1AD01]" />
             <span>CELEBRATIONS & CORPORATE GATHERINGS</span>
@@ -142,7 +220,7 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
           </h2>
 
           <p className="text-sm sm:text-base text-[#1B4D2E]/80 leading-relaxed">
-            Elevate your wedding, birthday, family reunion, or corporate gathering with refreshing, chilled bottles of <strong>Delightful Juices</strong>. We provide custom bottle labeling, signature cold ice coolers, and bulk event pricing in <strong>11.8 oz</strong>, <strong>16.9 oz</strong>, and <strong>33.8 oz</strong> sizes.
+            Elevate your wedding, birthday, family reunion, or corporate gathering with refreshing, chilled bottles of <strong>Delightful Juices</strong>. We provide custom bottle labeling, signature cold ice coolers, and bulk event pricing in <strong>12oz</strong>, <strong>16oz</strong>, and <strong>18oz</strong> sizes.
           </p>
         </div>
 
@@ -230,7 +308,7 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
           </div>
 
           {/* Right: Booking Form */}
-          <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 border border-[#1B4D2E]/15 shadow-md">
+          <div id="catering-proposal-form" className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 border border-[#1B4D2E]/15 shadow-md">
             {submitted ? (
               <div className="text-center py-12 space-y-5">
                 <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center">
@@ -383,10 +461,10 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
                           }`}
                         >
                           {size === '35cl'
-                            ? '11.8 oz Pocket Sip'
+                            ? '12oz Pocket Sip'
                             : size === '50cl'
-                            ? '16.9 oz Standard'
-                            : '33.8 oz Family Jug'}
+                            ? '16oz Standard'
+                            : '18oz Family Jug'}
                         </button>
                       );
                     })}

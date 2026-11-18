@@ -114,7 +114,7 @@ export const EventProductShowcase: React.FC<EventProductShowcaseProps> = ({
                 Customized Event Packages &amp; Catering Setups
               </h3>
               <p className="text-xs sm:text-sm text-[#1B4D2E]/80 max-w-xl mx-auto leading-relaxed">
-                We prepare bespoke, chilled juice bars and monogrammed bottles for weddings, birthday celebrations, corporate events, private parties, and special gatherings.
+                We prepare delightful, chilled juice bars and monogrammed bottles for weddings, birthday celebrations, corporate events, private parties, and special gatherings.
               </p>
             </div>
             {onPlanEventClick && (

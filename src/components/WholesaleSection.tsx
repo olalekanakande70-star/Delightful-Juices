@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import { SiteContent, EventInquiry } from '../types';
+import { SiteContent } from '../types';
 import { dataRepo } from '../lib/storage';
-import { sanitizeBrandAndUnitsText } from '../lib/units';
-import { EventProductShowcase } from './EventProductShowcase';
 import { WholesaleProductGallery } from './WholesaleProductGallery';
 import {
   Building2,
@@ -11,8 +9,6 @@ import {
   CheckCircle2,
   ArrowRight,
   Truck,
-  Sparkles,
-  Calendar,
   Send,
   MessageCircle,
   ShieldCheck,
@@ -32,14 +28,15 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({ content, onC
     phone: '',
     location: '',
     businessType: 'Retail Store',
-    estimatedQuantity: '50-100 bottles',
+    estimatedQuantity: '24 bottles (2 cases)',
     message: '',
   });
 
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const eventShowcaseItems = dataRepo.getEventShowcase();
+  const wholesaleGalleryItems =
+    content.wholesaleGallery || content.branding?.wholesaleGallery || dataRepo.getWholesaleGallery();
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -79,9 +76,9 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({ content, onC
         phone: formData.phone.trim(),
         eventType: `Wholesale: ${formData.businessType} (${formData.businessName || 'Business'})`,
         eventDate: new Date().toISOString().split('T')[0],
-        guestCount: parseInt(formData.estimatedQuantity) || 50,
+        guestCount: parseInt(formData.estimatedQuantity) || 24,
         eventLocation: formData.location.trim() || 'PA / US',
-        bottleSizesNeeded: ['12oz', '16.9oz', '33.8oz'],
+        bottleSizesNeeded: ['12oz', '16oz', '18oz'],
         selectedFlavors: ['Zobo', 'Pure Ginger', 'Ginger Mango', 'Tigernut Milk'],
         customLabelingNeeded: false,
         budgetRange: formData.estimatedQuantity,
@@ -105,7 +102,7 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({ content, onC
           <div className="max-w-3xl space-y-4">
             <div className="inline-flex items-center space-x-2 text-xs font-extrabold uppercase tracking-[0.2em] text-[#E1AD01] bg-white/10 px-4 py-1.5 rounded-full border border-white/15">
               <Building2 className="w-4 h-4" />
-              <span>US-APPROVED WHOLESALE DISTRIBUTION</span>
+              <span>USDA-APPROVED WHOLESALE DISTRIBUTION</span>
             </div>
 
             <h1 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl text-white leading-tight">
@@ -113,7 +110,7 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({ content, onC
             </h1>
 
             <p className="text-sm sm:text-lg text-[#FFF8E7]/90 leading-relaxed">
-              Delightful Juices offers premium, small-batch botanical juices manufactured to strict US food safety standards. We supply retail stores, supermarkets, restaurants, food service businesses, distributors, and bulk buyers across Pennsylvania (PA) and select locations throughout the United States.
+              Delightful Juices offers premium, small-batch botanical juices manufactured to strict USDA food safety standards. We supply retail stores, supermarkets, restaurants, food service businesses, distributors, and bulk buyers across Pennsylvania (PA) and select locations throughout the United States.
             </p>
 
             <p className="text-xs sm:text-sm text-[#E1AD01] font-semibold italic">
@@ -179,7 +176,7 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({ content, onC
                   Retail Stores &amp; Supermarkets
                 </h3>
                 <p className="text-xs text-[#1B4D2E]/75 mb-6 leading-relaxed">
-                  Fast-moving grab-and-go 12 oz and 16.9 oz bottles with sealed safety bands, tamper seals, and barcode labels for natural grocery stores and boutique bodegas.
+                  Fast-moving grab-and-go 12oz and 16oz bottles with sealed safety bands, tamper seals, and barcode labels for natural grocery stores and boutique bodegas.
                 </p>
                 <div className="space-y-2.5 text-xs text-[#1B4D2E]/85">
                   <div className="flex items-center space-x-2">
@@ -227,7 +224,7 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({ content, onC
                 <div className="space-y-2.5 text-xs text-[#FFF8E7]/90">
                   <div className="flex items-center space-x-2">
                     <CheckCircle2 className="w-4 h-4 text-[#E1AD01] shrink-0" />
-                    <span>Available in 33.8 oz bar jugs &amp; single sips</span>
+                    <span>Available in 18oz bar jugs &amp; single sips</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <CheckCircle2 className="w-4 h-4 text-[#E1AD01] shrink-0" />
@@ -295,91 +292,34 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({ content, onC
         </div>
       </section>
 
-      {/* 3. Customized Packages for Events Section */}
-      <section className="py-20 bg-white border-b border-[#1B4D2E]/10">
+      {/* 3. Commercial Wholesale Product Gallery (Editable from Admin) */}
+      <WholesaleProductGallery
+        items={wholesaleGalleryItems}
+        onSelectForInquiry={handleSelectGalleryItem}
+      />
+
+      {/* 4. Need Custom Case Quantities Section */}
+      <section className="py-12 sm:py-16 bg-white border-b border-[#1B4D2E]/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-[#12351F] text-[#FFF8E7] rounded-3xl p-8 sm:p-14 border border-[#E1AD01]/30 shadow-2xl relative overflow-hidden">
-            <div className="max-w-3xl space-y-5 relative z-10">
-              <div className="inline-flex items-center space-x-2 text-xs font-extrabold uppercase tracking-[0.2em] text-[#E1AD01]">
-                <Calendar className="w-4 h-4" />
-                <span>BESPOKE EVENT JUICE PACKAGES</span>
-              </div>
-
-              <h2 className="font-display font-black text-3xl sm:text-5xl text-white leading-tight">
-                Customized Packages for Events &amp; Celebrations
-              </h2>
-
-              <p className="text-sm sm:text-base text-[#FFF8E7]/90 leading-relaxed">
-                Make your celebration unforgettable with custom-labeled botanical juices and refreshing elixirs. We cater custom orders for:
+          <div className="p-6 sm:p-8 bg-[#1B4D2E] text-[#FFF8E7] rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl border border-[#E1AD01]/25">
+            <div className="space-y-1 text-center md:text-left max-w-xl">
+              <h4 className="font-display font-bold text-lg sm:text-xl text-white">
+                Need Custom Case Quantities, Cold-Chain Delivery, or Samples?
+              </h4>
+              <p className="text-xs sm:text-sm text-[#FFF8E7]/80">
+                We provide sample tasting kits for qualifying retail buyers, cafés, and restaurant beverage directors across Pennsylvania and neighboring regions.
               </p>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-xs sm:text-sm font-bold text-white">
-                <div className="flex items-center space-x-2 bg-white/10 p-3 rounded-xl border border-white/10">
-                  <Check className="w-4 h-4 text-[#E1AD01] shrink-0" />
-                  <span>Weddings</span>
-                </div>
-                <div className="flex items-center space-x-2 bg-white/10 p-3 rounded-xl border border-white/10">
-                  <Check className="w-4 h-4 text-[#E1AD01] shrink-0" />
-                  <span>Birthday Parties</span>
-                </div>
-                <div className="flex items-center space-x-2 bg-white/10 p-3 rounded-xl border border-white/10">
-                  <Check className="w-4 h-4 text-[#E1AD01] shrink-0" />
-                  <span>Corporate Events</span>
-                </div>
-                <div className="flex items-center space-x-2 bg-white/10 p-3 rounded-xl border border-white/10">
-                  <Check className="w-4 h-4 text-[#E1AD01] shrink-0" />
-                  <span>Private Parties</span>
-                </div>
-                <div className="flex items-center space-x-2 bg-white/10 p-3 rounded-xl border border-white/10">
-                  <Check className="w-4 h-4 text-[#E1AD01] shrink-0" />
-                  <span>Special Gatherings</span>
-                </div>
-                <div className="flex items-center space-x-2 bg-white/10 p-3 rounded-xl border border-white/10">
-                  <Check className="w-4 h-4 text-[#E1AD01] shrink-0" />
-                  <span>Reunions &amp; Galas</span>
-                </div>
-              </div>
-
-              <p className="text-xs sm:text-sm text-[#FFF8E7]/80 leading-relaxed pt-2">
-                Enquire about custom bottle labels with monograms or company logos, chilled insulated delivery, custom flavor assortments, and quantity calculators for 20 to 500+ guests.
-              </p>
-
-              <div className="pt-4 flex flex-wrap gap-4">
-                <button
-                  type="button"
-                  onClick={scrollToInquiryForm}
-                  className="inline-flex items-center space-x-2 bg-[#E1AD01] hover:bg-[#f0bc0e] text-[#1B4D2E] font-black text-sm px-7 py-4 rounded-xl shadow-lg transition-all cursor-pointer"
-                >
-                  <span>Plan Your Event With Delightful Juices</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-
-                {onCateringClick && (
-                  <button
-                    type="button"
-                    onClick={onCateringClick}
-                    className="inline-flex items-center space-x-2 bg-white/15 hover:bg-white/25 text-white border border-white/30 font-bold text-sm px-6 py-4 rounded-xl transition-all cursor-pointer"
-                  >
-                    <span>Open Catering Calculator</span>
-                  </button>
-                )}
-              </div>
             </div>
+            <button
+              type="button"
+              onClick={() => handleSelectGalleryItem('Sample Tasting Kit / Wholesale')}
+              className="bg-[#E1AD01] hover:bg-[#f0bc0e] text-[#1B4D2E] font-black text-xs sm:text-sm px-6 py-3.5 rounded-xl shadow-md transition-all cursor-pointer whitespace-nowrap active:scale-95"
+            >
+              Request Wholesale Tasting Kit
+            </button>
           </div>
         </div>
       </section>
-
-      {/* 4. Commercial Wholesale Product Gallery */}
-      <WholesaleProductGallery onSelectForInquiry={handleSelectGalleryItem} />
-
-      {/* 5. Event Product Showcase: Motion Grid (Populated from Admin) */}
-      <EventProductShowcase
-        items={eventShowcaseItems}
-        heading="Event Product Showcase: Motion Grid"
-        subheading="A visual look at bespoke event presentations, custom branded bottles, and catering setups prepared fresh by our kitchen."
-        kicker="EVENT SHOWCASE GALLERY"
-        onPlanEventClick={scrollToInquiryForm}
-      />
 
       {/* 5. Dedicated Wholesale & Bulk Ordering Enquiry Form */}
       <section id="wholesale-inquiry-form" className="py-20 bg-[#FFF8E7] border-t border-[#1B4D2E]/10">
@@ -419,7 +359,7 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({ content, onC
                       phone: '',
                       location: '',
                       businessType: 'Retail Store',
-                      estimatedQuantity: '50-100 bottles',
+                      estimatedQuantity: '24 bottles (2 cases)',
                       message: '',
                     });
                   }}
@@ -534,7 +474,7 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({ content, onC
 
                 <div className="space-y-1.5">
                   <label className="block text-xs font-extrabold text-[#1B4D2E] uppercase tracking-wider">
-                    Estimated Order Quantity
+                    Estimated Order Quantity (Multiples of 12)
                   </label>
                   <select
                     name="estimatedQuantity"
@@ -542,11 +482,17 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({ content, onC
                     onChange={handleInputChange}
                     className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-3 text-xs sm:text-sm text-[#1B4D2E] focus:outline-hidden focus:ring-2 focus:ring-[#E1AD01] cursor-pointer"
                   >
-                    <option value="24-50 bottles (1-2 cases)">24 – 50 bottles (1–2 cases)</option>
-                    <option value="50-100 bottles (2-4 cases)">50 – 100 bottles (2–4 cases)</option>
-                    <option value="100-250 bottles (Quarter Pallet)">100 – 250 bottles (Quarter Pallet)</option>
-                    <option value="250-500 bottles (Half Pallet)">250 – 500 bottles (Half Pallet)</option>
-                    <option value="500+ bottles (Full Pallet / Recurring)">500+ bottles (Full Pallet / Recurring)</option>
+                    <option value="12 bottles (1 case)">12 bottles (1 case)</option>
+                    <option value="24 bottles (2 cases)">24 bottles (2 cases)</option>
+                    <option value="36 bottles (3 cases)">36 bottles (3 cases)</option>
+                    <option value="48 bottles (4 cases)">48 bottles (4 cases)</option>
+                    <option value="60 bottles (5 cases)">60 bottles (5 cases)</option>
+                    <option value="72 bottles (6 cases)">72 bottles (6 cases)</option>
+                    <option value="96 bottles (8 cases)">96 bottles (8 cases)</option>
+                    <option value="120 bottles (10 cases)">120 bottles (10 cases)</option>
+                    <option value="240 bottles (20 cases - Quarter Pallet)">240 bottles (20 cases – Quarter Pallet)</option>
+                    <option value="480 bottles (40 cases - Half Pallet)">480 bottles (40 cases – Half Pallet)</option>
+                    <option value="960+ bottles (80+ cases - Full Pallet / Recurring)">960+ bottles (80+ cases – Full Pallet / Recurring)</option>
                   </select>
                 </div>
 

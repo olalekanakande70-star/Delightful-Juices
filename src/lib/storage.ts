@@ -10,6 +10,7 @@ import {
   SizeOption,
   AboutShowcaseSettings,
   EventShowcaseItem,
+  WholesaleGalleryItem,
   PackPricingSettings,
   PackPricingTier,
   BrandSettings,
@@ -516,6 +517,121 @@ export const DEFAULT_PRODUCT_SLIDER: ProductSliderSettings = {
   autoplayInterval: 5000,
 };
 
+export const INITIAL_WHOLESALE_GALLERY: WholesaleGalleryItem[] = [
+  {
+    id: 'wg-zobo-bundle-1',
+    title: 'Home Made Hibiscus Juice (Zobo) – Shrink-Wrapped Case',
+    category: 'zobo',
+    categoryLabel: 'Signature Zobo',
+    imageUrl: '/assets/aistudio/juice8_a755766d.jpg',
+    badge: 'USDA-Approved',
+    sizes: '12oz • 16oz • 18oz',
+    barcode: 'UPC: 036000291452',
+    description: 'Small-batch hibiscus juice shrink-wrapped in commercial multi-packs with full nutrition & UPC labeling.',
+    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
+    displayOrder: 1,
+    published: true,
+  },
+  {
+    id: 'wg-ginger-case-2',
+    title: 'Home Made Ginger Juice – Refrigerated Retail Pack',
+    category: 'ginger',
+    categoryLabel: 'Ginger Elixirs',
+    imageUrl: '/assets/aistudio/juice6_cb0073a8.jpg',
+    badge: 'USDA-Approved',
+    sizes: '12oz • 16oz • 18oz',
+    barcode: 'UPC: 036000291452',
+    description: 'Chilled, ready-to-stock organic ginger juice bottles bundled in multiples of 12 for grocery cooler shelves.',
+    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
+    displayOrder: 2,
+    published: true,
+  },
+  {
+    id: 'wg-zobo-retail-shelf-3',
+    title: 'Home Made Hibiscus Juice – Shelf-Ready 18oz Bottles',
+    category: 'zobo',
+    categoryLabel: 'Signature Zobo',
+    imageUrl: '/assets/aistudio/juice12_ae6b4523.jpg',
+    badge: 'USDA-Approved',
+    sizes: '12oz • 16oz • 18oz',
+    barcode: 'UPC: 036000291452',
+    description: 'Commercial grocery aisle presentation featuring tamper-evident caps and scannable UPC barcodes.',
+    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
+    displayOrder: 3,
+    published: true,
+  },
+  {
+    id: 'wg-zobo-store-cooler-4',
+    title: 'Signature Hibiscus Juice – Supermarket Cooler Display',
+    category: 'zobo',
+    categoryLabel: 'Signature Zobo',
+    imageUrl: '/assets/aistudio/juice3_f8a4c21d.jpg',
+    badge: 'USDA-Approved',
+    sizes: '12oz • 16oz • 18oz',
+    barcode: 'UPC: 036000291452',
+    description: 'Stocked directly inside retail cold cases with bold shelf presence and fresh-pressed hibiscus appeal.',
+    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
+    displayOrder: 4,
+    published: true,
+  },
+  {
+    id: 'wg-zobo-shrinkpack-5',
+    title: 'Home Made Hibiscus Juice – Tamper-Sealed Multi-Pack',
+    category: 'zobo',
+    categoryLabel: 'Signature Zobo',
+    imageUrl: '/assets/aistudio/juice5_cf6461ae.jpg',
+    badge: 'USDA-Approved',
+    sizes: '12oz • 16oz • 18oz',
+    barcode: 'UPC: 036000291452',
+    description: 'Clear commercial shrink-wrap case staging crafted for quick stockroom intake and cold-chain handling.',
+    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
+    displayOrder: 5,
+    published: true,
+  },
+  {
+    id: 'wg-zobo-grab-go-6',
+    title: 'Chilled Hibiscus Juice – Grab-and-Go Beverage Merchandising',
+    category: 'zobo',
+    categoryLabel: 'Signature Zobo',
+    imageUrl: '/assets/aistudio/juice1_ba3e13ec.jpg',
+    badge: 'USDA-Approved',
+    sizes: '12oz • 16oz • 18oz',
+    barcode: 'UPC: 036000291452',
+    description: 'Merchandised on cold retail display racks for natural markets, health food stores, and specialty grocers.',
+    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
+    displayOrder: 6,
+    published: true,
+  },
+  {
+    id: 'wg-zobo-case-staging-7',
+    title: 'Home Made Hibiscus Juice – Bulk Countertop & Case Pack',
+    category: 'zobo',
+    categoryLabel: 'Signature Zobo',
+    imageUrl: '/assets/aistudio/juice4_eed970c6.jpg',
+    badge: 'USDA-Approved',
+    sizes: '12oz • 16oz • 18oz',
+    barcode: 'UPC: 036000291452',
+    description: 'Tightly sealed multi-bottle wholesale sleeves prepared for cafes, restaurants, and boutique retailers.',
+    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
+    displayOrder: 7,
+    published: true,
+  },
+  {
+    id: 'wg-freight-truck-8',
+    title: 'USDA Cold-Chain Wholesale Freight & Pallet Staging',
+    category: 'craft',
+    categoryLabel: 'Kitchen Staging',
+    imageUrl: '/assets/aistudio/juice7_2b296ac3.jpg',
+    badge: 'USDA-Approved',
+    sizes: '12oz • 16oz • 18oz',
+    barcode: 'UPC: 036000291452',
+    description: 'High-volume refrigerated truckload capacity delivering stacked commercial cases across PA and nationwide.',
+    packOptions: 'Quarter, Half & Full Pallets (Multiples of 12)',
+    displayOrder: 8,
+    published: true,
+  },
+];
+
 export const INITIAL_SITE_CONTENT: SiteContent = {
   businessName: 'Delightful Juices',
   ceoName: 'Kitchen Leadership',
@@ -546,6 +662,7 @@ export const INITIAL_SITE_CONTENT: SiteContent = {
   shopHeading: 'Shop Fresh, Natural Delightful Juices.',
   packPricing: DEFAULT_PACK_PRICING,
   eventShowcase: [],
+  wholesaleGallery: INITIAL_WHOLESALE_GALLERY,
   productSlider: DEFAULT_PRODUCT_SLIDER,
   branding: {
     logoUrl: '',
@@ -554,6 +671,7 @@ export const INITIAL_SITE_CONTENT: SiteContent = {
     showLogoIcon: true,
     aboutShowcase: DEFAULT_ABOUT_SHOWCASE,
     eventShowcase: [],
+    wholesaleGallery: INITIAL_WHOLESALE_GALLERY,
     packPricing: DEFAULT_PACK_PRICING,
     shopHeading: 'Shop Fresh, Natural Delightful Juices.',
     productSlider: DEFAULT_PRODUCT_SLIDER,
@@ -841,7 +959,7 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
         id: 'sec-events-hero',
         type: 'hero',
         kicker: 'WEDDINGS • CORPORATE • CELEBRATIONS',
-        heading: 'Bespoke Juice Catering & Custom Monogrammed Bottles',
+        heading: 'Delightful Juice Catering & Custom Monogrammed Bottles',
         subheading:
           'Treat your guests to chilled Zobo, Ginger Mango, and Tigernut Milk in 12oz, 16oz, or 18oz bottles tailored to your celebration.',
         imageUrl: '',
@@ -1056,12 +1174,12 @@ function normalizeCmsPage(page: CmsPage): CmsPage {
     seoTitle: cleanCeoMentions(sanitizeBrandText(page.seoTitle || '')),
     metaDescription: cleanCeoMentions(sanitizeBrandText(page.metaDescription || '')),
     sections: (page.sections || []).map((sec) => {
-      let heading = cleanCeoMentions(sec.heading || '');
+      let heading = cleanCeoMentions(sec.heading || '').replace(/\bBespoke\s+Event\b/gi, 'Delightful').replace(/\bBespoke\b/gi, 'Delightful');
       if (heading.includes('Crafted from Passion')) {
         heading = 'Authentic Heritage, Pure Botanicals & Uncompromised Quality';
       }
-      let body = cleanCeoMentions(sec.body);
-      let subheading = cleanCeoMentions(sec.subheading);
+      let body = cleanCeoMentions(sec.body).replace(/\bBespoke\s+Event\b/gi, 'Delightful').replace(/\bBespoke\b/gi, 'Delightful');
+      let subheading = cleanCeoMentions(sec.subheading).replace(/\bBespoke\s+Event\b/gi, 'Delightful').replace(/\bBespoke\b/gi, 'Delightful');
 
       if (isAbout) {
         body = body
@@ -1126,6 +1244,14 @@ function normalizeSiteContent(raw: SiteContent): SiteContent {
     displayOrder: item.displayOrder ?? idx + 1,
     published: item.published !== false,
   }));
+  const mappedWholesaleGallery = (raw.wholesaleGallery || raw.branding?.wholesaleGallery || []).map((item, idx) => ({
+    ...item,
+    imageUrl: sanitizeLiveImageUrl(item.imageUrl),
+    displayOrder: item.displayOrder ?? idx + 1,
+    published: item.published !== false,
+  }));
+  const rawWholesaleGallery =
+    mappedWholesaleGallery.length > 0 ? mappedWholesaleGallery : INITIAL_WHOLESALE_GALLERY;
 
   return {
     ...raw,
@@ -1138,6 +1264,7 @@ function normalizeSiteContent(raw: SiteContent): SiteContent {
     shopHeading: rawShopHeading,
     packPricing: rawPackPricing,
     eventShowcase: rawEventShowcase,
+    wholesaleGallery: rawWholesaleGallery,
     branding: {
       ...INITIAL_SITE_CONTENT.branding!,
       ...(raw.branding || {}),
@@ -1147,6 +1274,7 @@ function normalizeSiteContent(raw: SiteContent): SiteContent {
       shopHeading: rawShopHeading,
       packPricing: rawPackPricing,
       eventShowcase: rawEventShowcase,
+      wholesaleGallery: rawWholesaleGallery,
       aboutShowcase: {
         ...mergedShowcase,
         showCeoCard: false,
@@ -1746,6 +1874,33 @@ class DataRepository {
     const nextContent: SiteContent = {
       ...this.content,
       eventShowcase: sanitized,
+      branding: defaultBranding,
+    };
+    return this.saveContent(nextContent);
+  }
+
+  // --- WHOLESALE GALLERY ---
+  public getWholesaleGallery(): WholesaleGalleryItem[] {
+    const items = this.content.wholesaleGallery || this.content.branding?.wholesaleGallery || [];
+    return Array.isArray(items) ? [...items].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)) : [];
+  }
+
+  public async saveWholesaleGallery(items: WholesaleGalleryItem[]): Promise<SyncWriteResult> {
+    const sanitized = (items || []).map((item, idx) => ({
+      ...item,
+      imageUrl: sanitizeLiveImageUrl(item.imageUrl),
+      displayOrder: item.displayOrder ?? idx + 1,
+      published: item.published !== false,
+    }));
+    const defaultBranding: BrandSettings = {
+      logoText: 'Delightful Juices',
+      showLogoIcon: true,
+      ...(this.content.branding || {}),
+      wholesaleGallery: sanitized,
+    };
+    const nextContent: SiteContent = {
+      ...this.content,
+      wholesaleGallery: sanitized,
       branding: defaultBranding,
     };
     return this.saveContent(nextContent);

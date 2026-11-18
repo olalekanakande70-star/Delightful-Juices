@@ -216,6 +216,22 @@ export interface EventShowcaseItem {
   createdAt?: string;
 }
 
+export interface WholesaleGalleryItem {
+  id: string;
+  title: string;
+  category: 'all' | 'zobo' | 'ginger' | 'milks' | 'craft';
+  categoryLabel: string;
+  imageUrl: string;
+  badge?: string;
+  sizes: string;
+  barcode: string;
+  description: string;
+  packOptions: string;
+  displayOrder: number;
+  published: boolean;
+  createdAt?: string;
+}
+
 export interface PackPricingTier {
   id: string;
   name: string;
@@ -249,6 +265,7 @@ export interface BrandSettings {
   showLogoIcon: boolean;
   aboutShowcase?: AboutShowcaseSettings;
   eventShowcase?: EventShowcaseItem[];
+  wholesaleGallery?: WholesaleGalleryItem[];
   packPricing?: PackPricingSettings;
   shopHeading?: string;
   productSlider?: ProductSliderSettings;
@@ -311,6 +328,7 @@ export interface SiteContent {
   shopHeading?: string;
   packPricing?: PackPricingSettings;
   eventShowcase?: EventShowcaseItem[];
+  wholesaleGallery?: WholesaleGalleryItem[];
   productSlider?: ProductSliderSettings;
   branding?: BrandSettings;
   colors?: ColorThemeSettings;
