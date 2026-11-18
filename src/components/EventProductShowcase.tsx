@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { EventShowcaseItem } from '../types';
 import { sanitizeBrandAndUnitsText } from '../lib/units';
-import { Sparkles, Calendar, ArrowRight, Eye, X } from 'lucide-react';
+import { Sparkles, Calendar, ArrowRight, Eye, X, Image as ImageIcon } from 'lucide-react';
 
 interface EventProductShowcaseProps {
   items: EventShowcaseItem[];
@@ -23,6 +23,7 @@ export const EventProductShowcase: React.FC<EventProductShowcaseProps> = ({
     .sort((a, b) => (a.displayOrder || 99) - (b.displayOrder || 99));
 
   const [activeModalItem, setActiveModalItem] = useState<EventShowcaseItem | null>(null);
+  const [erroredUrls, setErroredUrls] = useState<Record<string, boolean>>({});
 
   return (
     <section id="event-showcase" className="py-16 sm:py-24 bg-white relative overflow-hidden">
@@ -66,12 +67,21 @@ export const EventProductShowcase: React.FC<EventProductShowcaseProps> = ({
                   }}
                   className="break-inside-avoid relative rounded-3xl overflow-hidden bg-[#FFF8E7] border border-[#1B4D2E]/12 shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer group"
                 >
-                  <img
-                    src={item.url}
-                    alt={cleanTitle || 'Event product showcase'}
-                    loading="lazy"
-                    className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                  />
+                  {!erroredUrls[item.url] ? (
+                    <img
+                      key={item.url}
+                      src={item.url}
+                      alt={cleanTitle || 'Event product showcase'}
+                      loading="lazy"
+                      onError={() => setErroredUrls((prev) => ({ ...prev, [item.url]: true }))}
+                      className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                    />
+                  ) : (
+                    <div className="aspect-4/3 bg-[#12351F] flex flex-col items-center justify-center p-6 text-center text-[#FFF8E7]">
+                      <ImageIcon className="w-8 h-8 text-[#E1AD01] mb-2" />
+                      <span className="text-xs font-bold">{cleanTitle || 'Event showcase'}</span>
+                    </div>
+                  )}
 
                   {/* Gradient Overlay on Hover */}
                   <div className="absolute inset-0 bg-gradient-to-t from-[#12351F]/90 via-[#1B4D2E]/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6 text-[#FFF8E7]">
@@ -153,12 +163,23 @@ export const EventProductShowcase: React.FC<EventProductShowcaseProps> = ({
             >
               <X className="w-5 h-5" />
             </button>
-            <div className="max-h-[70vh] bg-black flex items-center justify-center overflow-hidden">
-              <img
-                src={activeModalItem.url}
-                alt={activeModalItem.title || 'Event image'}
-                className="max-h-[70vh] w-auto object-contain"
-              />
+            <div className="max-h-[70vh] min-h-[240px] bg-black flex items-center justify-center overflow-hidden">
+              {!erroredUrls[activeModalItem.url] ? (
+                <img
+                  key={activeModalItem.url}
+                  src={activeModalItem.url}
+                  alt={activeModalItem.title || 'Event image'}
+                  onError={() =>
+                    setErroredUrls((prev) => ({ ...prev, [activeModalItem.url]: true }))
+                  }
+                  className="max-h-[70vh] w-auto object-contain"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center p-8 text-center text-[#FFF8E7]">
+                  <ImageIcon className="w-10 h-10 text-[#E1AD01] mb-2" />
+                  <span className="text-sm font-bold">{activeModalItem.title || 'Event image'}</span>
+                </div>
+              )}
             </div>
             {(activeModalItem.title || activeModalItem.caption) && (
               <div className="p-6 space-y-2 bg-[#12351F]">

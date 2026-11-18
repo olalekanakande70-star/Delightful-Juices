@@ -113,7 +113,8 @@ export const ProductSliderSection: React.FC<ProductSliderSectionProps> = ({
 
   const rawLiveImg = (currentProduct.imageUrl || '').trim();
   const liveImg = rawLiveImg || getFallbackLabelImage(currentProduct);
-  const hasImgError = imageErrors[currentProduct.id];
+  const imageErrorKey = `${currentProduct.id}::${liveImg}`;
+  const hasImgError = Boolean(liveImg && imageErrors[imageErrorKey]);
 
   // Pricing & Sizes string
   const minPrice = Math.min(...currentProduct.sizes.map((s) => s.price));
@@ -225,10 +226,10 @@ export const ProductSliderSection: React.FC<ProductSliderSectionProps> = ({
             >
               {liveImg && !hasImgError ? (
                 <img
-                  key={currentProduct.id}
+                  key={imageErrorKey}
                   src={liveImg}
                   alt={cleanName}
-                  onError={() => setImageErrors((prev) => ({ ...prev, [currentProduct.id]: true }))}
+                  onError={() => setImageErrors((prev) => ({ ...prev, [imageErrorKey]: true }))}
                   className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
                 />
               ) : (

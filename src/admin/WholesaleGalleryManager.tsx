@@ -100,8 +100,12 @@ export const WholesaleGalleryManager: React.FC<WholesaleGalleryManagerProps> = (
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, targetId?: string) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    const inputEl = e.target;
+    const files = inputEl.files;
+    if (!files || files.length === 0) {
+      inputEl.value = '';
+      return;
+    }
 
     setIsUploading(true);
     setUploadProgress(`Uploading ${files.length} image${files.length > 1 ? 's' : ''}...`);
@@ -113,8 +117,16 @@ export const WholesaleGalleryManager: React.FC<WholesaleGalleryManagerProps> = (
         const storagePath = `wholesale/${Date.now()}-replace.${ext}`;
         const res = await supabaseService.uploadAsset('delightful_assets', storagePath, file);
         if (res.url) {
-          handleUpdateItem(targetId, { imageUrl: res.url });
-          onToast('Wholesale gallery image uploaded! Click Save Gallery to publish.');
+          const nextItems = items.map((item) =>
+            item.id === targetId ? { ...item, imageUrl: res.url! } : item
+          );
+          setItems(nextItems);
+          const saveRes = await dataRepo.saveWholesaleGallery(nextItems);
+          if (saveRes.synced) {
+            onToast('Wholesale gallery image replaced and published live!');
+          } else {
+            onToast(`Uploaded image, but database save failed: ${saveRes.error || 'Check permissions'}`);
+          }
         } else {
           onToast(`Upload error: ${res.error || 'Failed to upload'}`);
         }
@@ -142,6 +154,8 @@ export const WholesaleGalleryManager: React.FC<WholesaleGalleryManagerProps> = (
               published: true,
               createdAt: new Date().toISOString(),
             });
+          } else {
+            onToast(`Upload error on "${file.name}": ${res.error || 'Failed to upload'}`);
           }
         }
 
@@ -151,7 +165,12 @@ export const WholesaleGalleryManager: React.FC<WholesaleGalleryManagerProps> = (
             displayOrder: idx + 1,
           }));
           setItems(merged);
-          onToast(`Added ${newUploadedItems.length} wholesale product images! Remember to click Save.`);
+          const saveRes = await dataRepo.saveWholesaleGallery(merged);
+          if (saveRes.synced) {
+            onToast(`Added & published ${newUploadedItems.length} wholesale product image${newUploadedItems.length > 1 ? 's' : ''} live!`);
+          } else {
+            onToast(`Images uploaded, but database save failed: ${saveRes.error || 'Check permissions'}`);
+          }
         }
       }
     } catch (err: any) {
@@ -159,7 +178,7 @@ export const WholesaleGalleryManager: React.FC<WholesaleGalleryManagerProps> = (
     } finally {
       setIsUploading(false);
       setUploadProgress(null);
-      e.target.value = '';
+      inputEl.value = '';
     }
   };
 
@@ -307,6 +326,7 @@ export const WholesaleGalleryManager: React.FC<WholesaleGalleryManagerProps> = (
                   <div className="relative aspect-16/10 bg-[#12351F] overflow-hidden">
                     {hasUrl ? (
                       <img
+                        key={item.imageUrl}
                         src={item.imageUrl}
                         alt={item.title || 'Wholesale product'}
                         className="w-full h-full object-contain p-2"

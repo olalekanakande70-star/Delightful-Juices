@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CmsPage, PageSection, Product, SiteContent } from '../types';
 import { sanitizeBrandAndUnitsText } from '../lib/units';
 import { ProductCard } from './ProductCard';
@@ -10,7 +10,7 @@ import { AboutProductsShowcase } from './AboutProductsShowcase';
 import { ProductSliderSection } from './ProductSliderSection';
 import { EventProductShowcase } from './EventProductShowcase';
 import { ShopHeaderBanner, ShopCatalogSection, ShopPackPricingSection } from './ShopPage';
-import { ArrowRight, ShoppingBag, Sparkles } from 'lucide-react';
+import { ArrowRight, Leaf, ShoppingBag, Sparkles } from 'lucide-react';
 
 interface DynamicPageRendererProps {
   page: CmsPage;
@@ -31,6 +31,11 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
   isPreview = false,
   isProductsLoading = false,
 }) => {
+  const [erroredUrls, setErroredUrls] = useState<Record<string, boolean>>({});
+  const markUrlErrored = (url: string) => {
+    if (!url) return;
+    setErroredUrls((prev) => (prev[url] ? prev : { ...prev, [url]: true }));
+  };
   // Dynamically sync SEO <title> and <meta name="description"> when viewing a page
   useEffect(() => {
     if (isPreview) return;
@@ -90,15 +95,18 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
         }
 
         const bgImg = (section.imageUrl || '').trim();
+        const showBgImg = Boolean(bgImg && !erroredUrls[bgImg]);
         return (
           <section
             key={section.id}
             className="relative min-h-[380px] sm:min-h-[450px] bg-gradient-to-br from-[#0e2918] via-[#12351F] to-[#1B4D2E] text-white flex items-center overflow-hidden"
           >
-            {bgImg && (
+            {showBgImg && (
               <img
+                key={bgImg}
                 src={bgImg}
                 alt={section.heading || page.title}
+                onError={() => markUrlErrored(bgImg)}
                 className="absolute inset-0 w-full h-full object-cover object-center"
               />
             )}
@@ -154,6 +162,7 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
         const isRight = section.imagePosition === 'right';
         const isDark = section.theme === 'dark';
         const splitImg = (section.imageUrl || '').trim();
+        const showSplitImg = Boolean(splitImg && !erroredUrls[splitImg]);
         const paragraphs = sanitizeBrandAndUnitsText(section.body || '')
           .split('\n\n')
           .filter(Boolean);
@@ -164,12 +173,23 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
                 {splitImg ? (
                   <div className={`lg:col-span-5 ${isRight ? 'lg:order-2' : 'lg:order-1'}`}>
-                    <div className="aspect-4/3 rounded-3xl overflow-hidden shadow-xl border-4 border-white bg-[#FFF8E7]">
-                      <img
-                        src={splitImg}
-                        alt={section.heading || page.title}
-                        className="w-full h-full object-cover"
-                      />
+                    <div className="aspect-4/3 rounded-3xl overflow-hidden shadow-xl border-4 border-white bg-[#12351F]">
+                      {showSplitImg ? (
+                        <img
+                          key={splitImg}
+                          src={splitImg}
+                          alt={section.heading || page.title}
+                          onError={() => markUrlErrored(splitImg)}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center text-[#FFF8E7]">
+                          <Leaf className="w-8 h-8 text-[#E1AD01] mb-2" />
+                          <span className="font-display font-bold text-base">
+                            {sanitizeBrandAndUnitsText(section.heading || page.title)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : null}
@@ -227,7 +247,7 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
 
       case 'full_image': {
         const fullImg = (section.imageUrl || '').trim();
-        if (!fullImg) return null;
+        if (!fullImg || erroredUrls[fullImg]) return null;
         return (
           <section key={section.id} className={`py-12 sm:py-16 ${getThemeClasses(section.theme)}`}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
@@ -238,8 +258,10 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
               )}
               <div className="aspect-16/9 sm:aspect-21/9 rounded-3xl overflow-hidden shadow-lg border border-[#1B4D2E]/15 bg-[#FFF8E7]">
                 <img
+                  key={fullImg}
                   src={fullImg}
                   alt={section.heading || page.title}
+                  onError={() => markUrlErrored(fullImg)}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -440,25 +462,39 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {items.map((img, i) => (
-                  <figure
-                    key={i}
-                    className="bg-white rounded-3xl overflow-hidden border border-[#1B4D2E]/12 shadow-xs"
-                  >
-                    <div className="aspect-4/3 overflow-hidden bg-[#FFF8E7]">
-                      <img
-                        src={img.url}
-                        alt={img.caption || `Gallery image ${i + 1}`}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                      />
-                    </div>
-                    {img.caption && (
-                      <figcaption className="p-4 text-xs font-bold text-[#1B4D2E]">
-                        {sanitizeBrandAndUnitsText(img.caption)}
-                      </figcaption>
-                    )}
-                  </figure>
-                ))}
+                {items.map((img, i) => {
+                  const hasErr = erroredUrls[img.url];
+                  return (
+                    <figure
+                      key={img.url || i}
+                      className="bg-white rounded-3xl overflow-hidden border border-[#1B4D2E]/12 shadow-xs"
+                    >
+                      <div className="aspect-4/3 overflow-hidden bg-[#12351F] flex items-center justify-center">
+                        {!hasErr ? (
+                          <img
+                            key={img.url}
+                            src={img.url}
+                            alt={img.caption || `Gallery image ${i + 1}`}
+                            onError={() => markUrlErrored(img.url)}
+                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center p-4 text-center text-[#FFF8E7]">
+                            <Leaf className="w-7 h-7 text-[#E1AD01] mb-1.5" />
+                            <span className="text-xs font-bold">
+                              {img.caption || `Gallery image ${i + 1}`}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {img.caption && (
+                        <figcaption className="p-4 text-xs font-bold text-[#1B4D2E]">
+                          {sanitizeBrandAndUnitsText(img.caption)}
+                        </figcaption>
+                      )}
+                    </figure>
+                  );
+                })}
               </div>
             </div>
           </section>
@@ -505,14 +541,17 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
       case 'catering_calculator':
         return <EventsCateringSection key={section.id} content={content} />;
 
-      case 'wholesale_tiers':
+      case 'wholesale_tiers': {
+        const wholesaleHeroSection = (page.sections || []).find((s) => s.type === 'hero');
         return (
           <WholesaleSection
             key={section.id}
             content={content}
+            heroSection={wholesaleHeroSection}
             onCateringClick={() => onNavigate('/events-catering')}
           />
         );
+      }
 
       case 'shop_catalog':
         return (

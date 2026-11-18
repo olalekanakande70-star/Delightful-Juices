@@ -223,27 +223,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
 
   // Upload Logo file handler (strictly live Supabase Storage)
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>, isMobile = false) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('Logo file exceeds 5MB limit. Please upload an image under 5MB.');
+    const inputEl = e.target;
+    const file = inputEl.files?.[0];
+    if (!file) {
+      inputEl.value = '';
       return;
     }
 
-    const ext = file.name.split('.').pop() || 'png';
-    const path = `logos/${Date.now()}-${isMobile ? 'mobile' : 'desktop'}.${ext}`;
-    const res = await supabaseService.uploadAsset('delightful_assets', path, file);
-    if (res.url) {
-      const updatedBranding: BrandSettings = {
-        ...(content.branding || { logoText: 'Delightful Juices', showLogoIcon: true }),
-        [isMobile ? 'mobileLogoUrl' : 'logoUrl']: res.url,
-      };
-      const updatedContent = { ...content, branding: updatedBranding };
-      setContent(updatedContent);
-      await handlePersistContent(updatedContent, 'Logo uploaded to live Supabase Storage and published!');
-    } else {
-      showToast(`Logo upload failed: ${res.error || 'Ensure delightful_assets bucket is active in Supabase.'}`);
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Logo file exceeds 5MB limit. Please upload an image under 5MB.');
+      inputEl.value = '';
+      return;
+    }
+
+    try {
+      const ext = file.name.split('.').pop() || 'png';
+      const path = `logos/${Date.now()}-${isMobile ? 'mobile' : 'desktop'}.${ext}`;
+      const res = await supabaseService.uploadAsset('delightful_assets', path, file);
+      if (res.url) {
+        const updatedBranding: BrandSettings = {
+          ...(content.branding || { logoText: 'Delightful Juices', showLogoIcon: true }),
+          [isMobile ? 'mobileLogoUrl' : 'logoUrl']: res.url,
+        };
+        const updatedContent = { ...content, branding: updatedBranding };
+        setContent(updatedContent);
+        await handlePersistContent(updatedContent, 'Logo uploaded to live Supabase Storage and published!');
+      } else {
+        showToast(`Logo upload failed: ${res.error || 'Ensure delightful_assets bucket is active in Supabase.'}`);
+      }
+    } catch (err: any) {
+      showToast(`Logo upload failed: ${err?.message || 'Unexpected error.'}`);
+    } finally {
+      inputEl.value = '';
     }
   };
 
@@ -275,47 +286,70 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
     e: React.ChangeEvent<HTMLInputElement>,
     targetField: 'imageUrl' | 'ceoAvatarUrl'
   ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('Image file exceeds 5MB limit. Please choose an image under 5MB.');
+    const inputEl = e.target;
+    const file = inputEl.files?.[0];
+    if (!file) {
+      inputEl.value = '';
       return;
     }
 
-    const ext = file.name.split('.').pop() || 'jpg';
-    const path = `about/${targetField}-${Date.now()}.${ext}`;
-    const res = await supabaseService.uploadAsset('delightful_assets', path, file);
-    if (res.url) {
-      updateAboutShowcase({ [targetField]: res.url }, true);
-    } else {
-      showToast(`Showcase image upload failed: ${res.error || 'Check Supabase Storage policies.'}`);
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image file exceeds 5MB limit. Please choose an image under 5MB.');
+      inputEl.value = '';
+      return;
+    }
+
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `about/${targetField}-${Date.now()}.${ext}`;
+      const res = await supabaseService.uploadAsset('delightful_assets', path, file);
+      if (res.url) {
+        updateAboutShowcase({ [targetField]: res.url }, true);
+      } else {
+        showToast(`Showcase image upload failed: ${res.error || 'Check Supabase Storage policies.'}`);
+      }
+    } catch (err: any) {
+      showToast(`Showcase image upload failed: ${err?.message || 'Unexpected error.'}`);
+    } finally {
+      inputEl.value = '';
     }
   };
 
   // Upload Product Image file handler (strictly live Supabase Storage)
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isGallery = false) => {
-    const file = e.target.files?.[0];
-    if (!file || !editingProduct) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('Image file exceeds 5MB limit.');
+    const inputEl = e.target;
+    const file = inputEl.files?.[0];
+    if (!file || !editingProduct) {
+      inputEl.value = '';
       return;
     }
 
-    const ext = file.name.split('.').pop() || 'jpg';
-    const path = `products/${editingProduct.slug || 'drink'}-${Date.now()}.${ext}`;
-    const res = await supabaseService.uploadAsset('delightful_assets', path, file);
-    if (res.url) {
-      if (isGallery) {
-        const current = editingProduct.galleryImages || [];
-        setEditingProduct({ ...editingProduct, galleryImages: [...current, res.url] });
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image file exceeds 5MB limit.');
+      inputEl.value = '';
+      return;
+    }
+
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `products/${editingProduct.slug || 'drink'}-${Date.now()}.${ext}`;
+      const res = await supabaseService.uploadAsset('delightful_assets', path, file);
+      if (res.url) {
+        setEditingProduct((prev) => {
+          if (!prev) return prev;
+          if (isGallery) {
+            return { ...prev, galleryImages: [...(prev.galleryImages || []), res.url!] };
+          }
+          return { ...prev, imageUrl: res.url! };
+        });
+        showToast('Product image uploaded! Click Save Changes below to publish live.');
       } else {
-        setEditingProduct({ ...editingProduct, imageUrl: res.url });
+        showToast(`Product image upload failed: ${res.error || 'Check Supabase Storage policies.'}`);
       }
-      showToast('Product image uploaded to live Supabase Storage!');
-    } else {
-      showToast(`Product image upload failed: ${res.error || 'Check Supabase Storage policies.'}`);
+    } catch (err: any) {
+      showToast(`Product image upload failed: ${err?.message || 'Unexpected error.'}`);
+    } finally {
+      inputEl.value = '';
     }
   };
 
@@ -3476,6 +3510,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                   {editingProduct.imageUrl ? (
                     <img
+                      key={editingProduct.imageUrl}
                       src={editingProduct.imageUrl}
                       alt={editingProduct.name}
                       className="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-xs shrink-0"
@@ -3485,7 +3520,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                       <ImageIcon className="w-6 h-6" />
                     </div>
                   )}
-                  <div className="flex-1 space-y-1 w-full">
+                  <div className="flex-1 space-y-1.5 w-full">
                     <input
                       type="url"
                       value={editingProduct.imageUrl}
@@ -3493,7 +3528,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                       placeholder="Upload from device to Supabase Storage or paste live URL"
                       className="w-full bg-white border rounded-xl px-3 py-2 text-xs text-[#1B4D2E]"
                     />
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <label className="bg-[#1B4D2E] hover:bg-[#143822] text-white font-bold text-[11px] py-1.5 px-3 rounded-lg flex items-center space-x-1.5 cursor-pointer">
                         <Upload className="w-3 h-3 text-[#E1AD01]" />
                         <span>Upload to Supabase Storage</span>
@@ -3504,6 +3539,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                           className="hidden"
                         />
                       </label>
+                      {editingProduct.imageUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingProduct({ ...editingProduct, imageUrl: '' })}
+                          className="text-[11px] font-bold text-red-600 hover:underline cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      )}
                       <span className="text-[10px] text-gray-500">PNG, JPG, WebP supported</span>
                     </div>
                   </div>

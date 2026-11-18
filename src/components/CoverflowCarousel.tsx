@@ -235,7 +235,8 @@ export const CoverflowCarousel: React.FC<CoverflowCarouselProps> = ({
             const cleanName = sanitizeBrandAndUnitsText(product.name);
             const rawImg = (product.imageUrl || '').trim();
             const liveImg = rawImg || getFallbackLabelImage(product);
-            const hasError = imageErrors[product.id];
+            const imageErrorKey = `${product.id}::${liveImg}`;
+            const hasError = Boolean(liveImg && imageErrors[imageErrorKey]);
 
             // 3D positioning parameters based on offset
             // d = 0: Center, large, front, prominent
@@ -331,9 +332,10 @@ export const CoverflowCarousel: React.FC<CoverflowCarouselProps> = ({
                 <div className="flex-1 w-full flex items-center justify-center p-3 relative overflow-hidden">
                   {liveImg && !hasError ? (
                     <img
+                      key={liveImg}
                       src={liveImg}
                       alt={cleanName}
-                      onError={() => setImageErrors((prev) => ({ ...prev, [product.id]: true }))}
+                      onError={() => setImageErrors((prev) => ({ ...prev, [imageErrorKey]: true }))}
                       className="max-h-[190px] sm:max-h-[230px] md:max-h-[250px] w-auto object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.55)] transition-transform duration-500 hover:scale-105"
                       draggable={false}
                     />

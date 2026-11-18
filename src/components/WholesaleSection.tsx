@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SiteContent } from '../types';
+import { PageSection, SiteContent } from '../types';
 import { dataRepo } from '../lib/storage';
 import { WholesaleProductGallery } from './WholesaleProductGallery';
 import {
@@ -17,10 +17,15 @@ import {
 
 interface WholesaleSectionProps {
   content: SiteContent;
+  heroSection?: PageSection;
   onCateringClick?: () => void;
 }
 
-export const WholesaleSection: React.FC<WholesaleSectionProps> = ({ content, onCateringClick }) => {
+export const WholesaleSection: React.FC<WholesaleSectionProps> = ({
+  content,
+  heroSection,
+  onCateringClick,
+}) => {
   const [formData, setFormData] = useState({
     businessName: '',
     contactName: '',
@@ -34,6 +39,10 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({ content, onC
 
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [heroImgErrorUrl, setHeroImgErrorUrl] = useState<string | null>(null);
+
+  const heroBgImg = (heroSection?.imageUrl || '').trim();
+  const showHeroBgImg = Boolean(heroBgImg && heroImgErrorUrl !== heroBgImg);
 
   const wholesaleGalleryItems =
     content.wholesaleGallery || content.branding?.wholesaleGallery || dataRepo.getWholesaleGallery();
@@ -96,7 +105,19 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({ content, onC
   return (
     <div className="bg-white">
       {/* 1. Commercial Wholesale & Distribution Opportunities Hero */}
-      <section className="py-20 bg-gradient-to-br from-[#0e2918] via-[#12351F] to-[#1B4D2E] text-[#FFF8E7] relative overflow-hidden">
+      <section className="py-20 sm:py-24 bg-gradient-to-br from-[#0e2918] via-[#12351F] to-[#1B4D2E] text-[#FFF8E7] relative overflow-hidden">
+        {showHeroBgImg && (
+          <>
+            <img
+              key={heroBgImg}
+              src={heroBgImg}
+              alt={heroSection?.heading || 'Wholesale & Distribution Opportunities'}
+              onError={() => setHeroImgErrorUrl(heroBgImg)}
+              className="absolute inset-0 w-full h-full object-cover object-center"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0e2918]/92 via-[#12351F]/78 to-[#1B4D2E]/55" />
+          </>
+        )}
         <div className="absolute -right-20 -bottom-20 w-96 h-96 rounded-full bg-[#E1AD01]/10 blur-3xl pointer-events-none" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-3xl space-y-4">

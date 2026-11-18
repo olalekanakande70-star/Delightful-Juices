@@ -81,8 +81,12 @@ export const EventShowcaseManager: React.FC<EventShowcaseManagerProps> = ({
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, targetId?: string) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    const inputEl = e.target;
+    const files = inputEl.files;
+    if (!files || files.length === 0) {
+      inputEl.value = '';
+      return;
+    }
 
     setIsUploading(true);
     setUploadProgress(`Uploading ${files.length} image${files.length > 1 ? 's' : ''}...`);
@@ -95,8 +99,16 @@ export const EventShowcaseManager: React.FC<EventShowcaseManagerProps> = ({
         const storagePath = `events/${Date.now()}-replace.${ext}`;
         const res = await supabaseService.uploadAsset('delightful_assets', storagePath, file);
         if (res.url) {
-          handleUpdateItem(targetId, { url: res.url });
-          onToast('Event showcase image uploaded successfully!');
+          const nextItems = items.map((item) =>
+            item.id === targetId ? { ...item, url: res.url! } : item
+          );
+          setItems(nextItems);
+          const saveRes = await dataRepo.saveEventShowcase(nextItems);
+          if (saveRes.synced) {
+            onToast('Event showcase image replaced and published live!');
+          } else {
+            onToast(`Uploaded image, but database save failed: ${saveRes.error || 'Check permissions'}`);
+          }
         } else {
           onToast(`Upload error: ${res.error || 'Failed to upload'}`);
         }
@@ -119,6 +131,8 @@ export const EventShowcaseManager: React.FC<EventShowcaseManagerProps> = ({
               published: true,
               createdAt: new Date().toISOString(),
             });
+          } else {
+            onToast(`Upload error on "${file.name}": ${res.error || 'Failed to upload'}`);
           }
         }
 
@@ -128,7 +142,12 @@ export const EventShowcaseManager: React.FC<EventShowcaseManagerProps> = ({
             displayOrder: idx + 1,
           }));
           setItems(merged);
-          onToast(`Added ${newUploadedItems.length} new event showcase images! Remember to click Save.`);
+          const saveRes = await dataRepo.saveEventShowcase(merged);
+          if (saveRes.synced) {
+            onToast(`Added & published ${newUploadedItems.length} event showcase image${newUploadedItems.length > 1 ? 's' : ''} live!`);
+          } else {
+            onToast(`Images uploaded, but database save failed: ${saveRes.error || 'Check permissions'}`);
+          }
         }
       }
     } catch (err: any) {
@@ -136,7 +155,7 @@ export const EventShowcaseManager: React.FC<EventShowcaseManagerProps> = ({
     } finally {
       setIsUploading(false);
       setUploadProgress(null);
-      e.target.value = '';
+      inputEl.value = '';
     }
   };
 
@@ -285,6 +304,7 @@ export const EventShowcaseManager: React.FC<EventShowcaseManagerProps> = ({
                   <div className="relative aspect-16/10 bg-[#12351F] overflow-hidden">
                     {hasUrl ? (
                       <img
+                        key={item.url}
                         src={item.url}
                         alt={item.title || 'Event image'}
                         className="w-full h-full object-cover"

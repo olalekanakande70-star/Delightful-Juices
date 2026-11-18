@@ -85,6 +85,7 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [uploadingSectionId, setUploadingSectionId] = useState<string | null>(null);
+  const [sectionImgErrors, setSectionImgErrors] = useState<Record<string, boolean>>({});
 
   const dropdownParents = navItems.filter((n) => !n.parentId && n.isDropdown);
 
@@ -165,36 +166,72 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
       maxProducts: type === 'featured_products' ? 3 : undefined,
       theme: type === 'hero' || type === 'cta' ? 'dark' : type === 'promo_banner' ? 'gold' : 'cream',
     };
-    setEditingPage({
-      ...editingPage,
-      sections: [...editingPage.sections, newSec],
-    });
+    setEditingPage((prev) =>
+      prev ? { ...prev, sections: [...prev.sections, newSec] } : prev
+    );
   };
 
   const handleUpdateSection = (secId: string, patch: Partial<PageSection>) => {
-    if (!editingPage) return;
-    setEditingPage({
-      ...editingPage,
-      sections: editingPage.sections.map((s) => (s.id === secId ? { ...s, ...patch } : s)),
+    setEditingPage((prev) =>
+      prev
+        ? {
+            ...prev,
+            sections: prev.sections.map((s) => (s.id === secId ? { ...s, ...patch } : s)),
+          }
+        : prev
+    );
+  };
+
+  const persistSectionImageChange = async (
+    secId: string,
+    patch: Partial<PageSection>,
+    successMsg: string
+  ) => {
+    let updatedSnapshot: CmsPage | null = null;
+    setEditingPage((prev) => {
+      if (!prev) return prev;
+      updatedSnapshot = {
+        ...prev,
+        sections: prev.sections.map((s) => (s.id === secId ? { ...s, ...patch } : s)),
+      };
+      return updatedSnapshot;
     });
+
+    if (updatedSnapshot && !isNewPage) {
+      const saveRes = await dataRepo.saveCmsPage(updatedSnapshot);
+      if (supabaseConnected && !saveRes.synced) {
+        setFormError(
+          `Image updated locally, but live database rejected save: ${saveRes.error || 'Ensure you are signed in as admin.'}`
+        );
+        return;
+      }
+      onToast(successMsg);
+    } else {
+      onToast(`${successMsg} Remember to click Publish Page to create the page.`);
+    }
   };
 
   const handleMoveSection = (idx: number, dir: -1 | 1) => {
-    if (!editingPage) return;
-    const target = idx + dir;
-    if (target < 0 || target >= editingPage.sections.length) return;
-    const next = [...editingPage.sections];
-    const [moved] = next.splice(idx, 1);
-    next.splice(target, 0, moved);
-    setEditingPage({ ...editingPage, sections: next });
+    setEditingPage((prev) => {
+      if (!prev) return prev;
+      const target = idx + dir;
+      if (target < 0 || target >= prev.sections.length) return prev;
+      const next = [...prev.sections];
+      const [moved] = next.splice(idx, 1);
+      next.splice(target, 0, moved);
+      return { ...prev, sections: next };
+    });
   };
 
   const handleRemoveSection = (secId: string) => {
-    if (!editingPage) return;
-    setEditingPage({
-      ...editingPage,
-      sections: editingPage.sections.filter((s) => s.id !== secId),
-    });
+    setEditingPage((prev) =>
+      prev
+        ? {
+            ...prev,
+            sections: prev.sections.filter((s) => s.id !== secId),
+          }
+        : prev
+    );
   };
 
   const handleSectionImageUpload = async (
@@ -202,39 +239,58 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
     secId: string,
     isGallery = false
   ) => {
-    const file = e.target.files?.[0];
-    if (!file || !editingPage) return;
+    const inputEl = e.target;
+    const file = inputEl.files?.[0];
+    if (!file || !editingPage) {
+      inputEl.value = '';
+      return;
+    }
     if (file.size > 8 * 1024 * 1024) {
       setFormError('Image exceeds 8MB limit.');
+      inputEl.value = '';
       return;
     }
 
+    const pageSlug = editingPage.slug || 'page';
     setUploadingSectionId(secId);
     setFormError(null);
 
-    const applyUrl = (url: string) => {
-      const targetSec = editingPage.sections.find((s) => s.id === secId);
-      if (!targetSec) return;
-      if (isGallery) {
-        const nextGallery = [
-          ...(targetSec.galleryImages || []),
-          { url, caption: file.name.replace(/\.[^.]+$/, '') },
-        ];
-        handleUpdateSection(secId, { galleryImages: nextGallery });
-      } else {
-        handleUpdateSection(secId, { imageUrl: url });
-      }
-    };
-
     try {
       const ext = file.name.split('.').pop() || 'jpg';
-      const path = `pages/${editingPage.slug || 'page'}-${Date.now()}.${ext}`;
+      const path = `pages/${pageSlug}-${Date.now()}.${ext}`;
       const res = await supabaseService.uploadAsset('delightful_assets', path, file);
-      setUploadingSectionId(null);
 
       if (res.url) {
-        applyUrl(res.url);
-        onToast('Section image uploaded to live Supabase Storage!');
+        let updatedSnapshot: CmsPage | null = null;
+        setEditingPage((prev) => {
+          if (!prev) return prev;
+          const nextSections = prev.sections.map((s) => {
+            if (s.id !== secId) return s;
+            if (isGallery) {
+              const nextGallery = [
+                ...(s.galleryImages || []),
+                { url: res.url!, caption: file.name.replace(/\.[^.]+$/, '') },
+              ];
+              return { ...s, galleryImages: nextGallery };
+            }
+            return { ...s, imageUrl: res.url! };
+          });
+          updatedSnapshot = { ...prev, sections: nextSections };
+          return updatedSnapshot;
+        });
+
+        if (updatedSnapshot && !isNewPage) {
+          const saveRes = await dataRepo.saveCmsPage(updatedSnapshot);
+          if (supabaseConnected && !saveRes.synced) {
+            setFormError(
+              `Image uploaded to Storage, but live database rejected page update: ${saveRes.error || 'Permission error.'}`
+            );
+          } else {
+            onToast('Section image uploaded and published live!');
+          }
+        } else {
+          onToast('Section image uploaded! Click Publish Page to save this new page.');
+        }
         return;
       }
 
@@ -242,8 +298,10 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
         `Live Supabase Storage upload failed: ${res.error || 'Ensure delightful_assets bucket is enabled.'}`
       );
     } catch (err: any) {
-      setUploadingSectionId(null);
       setFormError(err?.message || 'Live image upload failed.');
+    } finally {
+      setUploadingSectionId(null);
+      inputEl.value = '';
     }
   };
 
@@ -702,10 +760,17 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
                       sec.type === 'image_text' ||
                       sec.type === 'full_image') && (
                       <div className="p-3 bg-[#FFF8E7] rounded-2xl border border-gray-200 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                        {sec.imageUrl ? (
+                        {sec.imageUrl && !sectionImgErrors[sec.imageUrl] ? (
                           <img
+                            key={sec.imageUrl}
                             src={sec.imageUrl}
                             alt=""
+                            onError={() =>
+                              setSectionImgErrors((prev) => ({
+                                ...prev,
+                                [sec.imageUrl!]: true,
+                              }))
+                            }
                             className="w-20 h-14 rounded-xl object-cover border bg-white shrink-0"
                           />
                         ) : (
@@ -723,20 +788,41 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
                             placeholder="Live Supabase Storage URL or upload file..."
                             className="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-[#1B4D2E]"
                           />
-                          <label className="inline-flex items-center space-x-1.5 bg-[#1B4D2E] text-white font-bold text-[11px] px-3 py-1.5 rounded-lg cursor-pointer">
-                            <Upload className="w-3 h-3 text-[#E1AD01]" />
-                            <span>
-                              {uploadingSectionId === sec.id
-                                ? 'Uploading...'
-                                : 'Upload Image from Device'}
-                            </span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => handleSectionImageUpload(e, sec.id, false)}
-                              className="hidden"
-                            />
-                          </label>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <label className="inline-flex items-center space-x-1.5 bg-[#1B4D2E] text-white font-bold text-[11px] px-3 py-1.5 rounded-lg cursor-pointer">
+                              <Upload className="w-3 h-3 text-[#E1AD01]" />
+                              <span>
+                                {uploadingSectionId === sec.id
+                                  ? 'Uploading...'
+                                  : sec.imageUrl
+                                  ? 'Replace Image'
+                                  : 'Upload Image from Device'}
+                              </span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                disabled={uploadingSectionId === sec.id}
+                                onChange={(e) => handleSectionImageUpload(e, sec.id, false)}
+                                className="hidden"
+                              />
+                            </label>
+                            {sec.imageUrl && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  persistSectionImageChange(
+                                    sec.id,
+                                    { imageUrl: '' },
+                                    'Section image cleared from live page!'
+                                  )
+                                }
+                                className="inline-flex items-center space-x-1 bg-white hover:bg-red-50 text-red-600 border border-red-200 font-bold text-[11px] px-2.5 py-1.5 rounded-lg cursor-pointer"
+                              >
+                                <X className="w-3 h-3" />
+                                <span>Clear Image</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -756,6 +842,7 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
                             <input
                               type="file"
                               accept="image/*"
+                              disabled={uploadingSectionId === sec.id}
                               onChange={(e) => handleSectionImageUpload(e, sec.id, true)}
                               className="hidden"
                             />
@@ -764,14 +851,21 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           {(sec.galleryImages || []).map((gItem, gIdx) => (
                             <div
-                              key={gIdx}
+                              key={gItem.url || gIdx}
                               className="bg-white p-2 rounded-xl border border-gray-200 space-y-1.5"
                             >
                               <div className="relative aspect-4/3 rounded-lg overflow-hidden bg-[#12351F] flex items-center justify-center">
-                                {gItem.url ? (
+                                {gItem.url && !sectionImgErrors[gItem.url] ? (
                                   <img
+                                    key={gItem.url}
                                     src={gItem.url}
                                     alt=""
+                                    onError={() =>
+                                      setSectionImgErrors((prev) => ({
+                                        ...prev,
+                                        [gItem.url]: true,
+                                      }))
+                                    }
                                     className="w-full h-full object-cover"
                                   />
                                 ) : (
@@ -783,7 +877,11 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
                                     const filtered = (sec.galleryImages || []).filter(
                                       (_, i) => i !== gIdx
                                     );
-                                    handleUpdateSection(sec.id, { galleryImages: filtered });
+                                    persistSectionImageChange(
+                                      sec.id,
+                                      { galleryImages: filtered },
+                                      'Gallery image removed from live page!'
+                                    );
                                   }}
                                   className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full cursor-pointer"
                                 >

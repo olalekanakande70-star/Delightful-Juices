@@ -29,6 +29,7 @@ export function sanitizeLiveImageUrl(url?: string | null): string {
   const trimmed = url.trim();
   if (!trimmed) return '';
   if (
+    trimmed.startsWith('blob:') ||
     trimmed.startsWith('/src/assets/') ||
     trimmed.startsWith('src/assets/') ||
     trimmed.startsWith('/assets/hero_') ||
@@ -990,12 +991,12 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
       {
         id: 'sec-wholesale-hero',
         type: 'hero',
-        kicker: 'COMMERCIAL & RETAIL DISTRIBUTION',
-        heading: 'Stock Delightful Juices in Your Store, Café, or Office',
+        kicker: 'USDA-APPROVED WHOLESALE DISTRIBUTION',
+        heading: 'Wholesale & Distribution Opportunities',
         subheading:
-          'High-margin, fast-moving natural beverages delivered fresh weekly from our Quakertown commercial kitchen.',
+          'Delightful Juices offers premium, small-batch botanical juices manufactured to strict USDA food safety standards for retail stores, supermarkets, restaurants, food service businesses, and distributors.',
         imageUrl: '',
-        buttonLabel: 'Contact Wholesale Team',
+        buttonLabel: 'Enquire About Wholesale',
         buttonUrl: '/contact-us',
         secondaryButtonLabel: 'Browse Retail Flavors',
         secondaryButtonUrl: '/shop',
@@ -1299,14 +1300,18 @@ function normalizeSiteContent(raw: SiteContent): SiteContent {
     displayOrder: item.displayOrder ?? idx + 1,
     published: item.published !== false,
   }));
-  const mappedWholesaleGallery = (raw.wholesaleGallery || raw.branding?.wholesaleGallery || []).map((item, idx) => ({
+  const rawWholesaleSource =
+    raw.wholesaleGallery !== undefined
+      ? raw.wholesaleGallery
+      : raw.branding?.wholesaleGallery;
+  const mappedWholesaleGallery = (rawWholesaleSource || []).map((item, idx) => ({
     ...item,
     imageUrl: sanitizeLiveImageUrl(item.imageUrl),
     displayOrder: item.displayOrder ?? idx + 1,
     published: item.published !== false,
   }));
   const rawWholesaleGallery =
-    mappedWholesaleGallery.length > 0 ? mappedWholesaleGallery : INITIAL_WHOLESALE_GALLERY;
+    rawWholesaleSource !== undefined ? mappedWholesaleGallery : INITIAL_WHOLESALE_GALLERY;
 
   return {
     ...raw,

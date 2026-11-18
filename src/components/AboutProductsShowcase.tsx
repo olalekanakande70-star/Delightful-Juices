@@ -22,8 +22,8 @@ export const AboutProductsShowcase: React.FC<AboutProductsShowcaseProps> = ({
 }) => {
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
-  const handleImageError = (id: string) => {
-    setImageErrors((prev) => ({ ...prev, [id]: true }));
+  const handleImageError = (errorKey: string) => {
+    setImageErrors((prev) => ({ ...prev, [errorKey]: true }));
   };
 
   const getFallbackLabelImage = (p: Product) => {
@@ -81,7 +81,8 @@ export const AboutProductsShowcase: React.FC<AboutProductsShowcaseProps> = ({
             const fallbackImg = getFallbackLabelImage(product);
             const rawLiveImg = (product.imageUrl || '').trim();
             const liveImg = rawLiveImg || fallbackImg;
-            const hasImgError = imageErrors[product.id];
+            const imageErrorKey = `${product.id}::${liveImg}`;
+            const hasImgError = Boolean(liveImg && imageErrors[imageErrorKey]);
             const isTigernut = (product.id || '').includes('tigernut') || (product.name || '').toLowerCase().includes('tigernut');
 
             return (
@@ -94,9 +95,10 @@ export const AboutProductsShowcase: React.FC<AboutProductsShowcaseProps> = ({
                   <div className="relative aspect-16/10 sm:aspect-16/9 bg-[#12351F] overflow-hidden flex items-center justify-center">
                     {liveImg && !hasImgError ? (
                       <img
+                        key={liveImg}
                         src={liveImg}
                         alt={cleanName}
-                        onError={() => handleImageError(product.id)}
+                        onError={() => handleImageError(imageErrorKey)}
                         className="w-full h-full object-cover sm:object-contain group-hover:scale-105 transition-transform duration-500"
                       />
                     ) : (

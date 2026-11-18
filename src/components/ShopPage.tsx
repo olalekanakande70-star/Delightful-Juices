@@ -47,14 +47,18 @@ export const ShopHeaderBanner: React.FC<ShopHeaderBannerProps> = ({
     kicker?.trim() || 'DELIGHTFUL JUICES ONLINE STORE'
   );
   const bgImg = (imageUrl || '').trim();
+  const [erroredBgUrl, setErroredBgUrl] = useState<string | null>(null);
+  const showBgImg = Boolean(bgImg && erroredBgUrl !== bgImg);
 
   return (
     <section className="bg-[#1B4D2E] text-[#FFF8E7] py-14 sm:py-18 border-b border-[#E1AD01]/30 relative overflow-hidden">
-      {bgImg && (
+      {showBgImg && (
         <>
           <img
+            key={bgImg}
             src={bgImg}
             alt={resolvedHeading}
+            onError={() => setErroredBgUrl(bgImg)}
             className="absolute inset-0 w-full h-full object-cover object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0e2918]/92 via-[#12351F]/80 to-[#1B4D2E]/65" />

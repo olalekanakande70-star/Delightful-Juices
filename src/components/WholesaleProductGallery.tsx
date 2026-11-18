@@ -33,6 +33,7 @@ export const WholesaleProductGallery: React.FC<WholesaleProductGalleryProps> = (
   const [windowWidth, setWindowWidth] = useState<number>(() =>
     typeof window !== 'undefined' ? window.innerWidth : 1200
   );
+  const [erroredUrls, setErroredUrls] = useState<Record<string, boolean>>({});
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -289,12 +290,23 @@ export const WholesaleProductGallery: React.FC<WholesaleProductGalleryProps> = (
                   >
                     {/* Top Image Container */}
                     <div className="relative h-[220px] sm:h-[245px] bg-[#12351F] overflow-hidden flex items-center justify-center p-4 shrink-0">
-                      <img
-                        src={item.imageUrl}
-                        alt={item.title}
-                        draggable={false}
-                        className="w-full h-full object-contain transition-transform duration-500 hover:scale-105"
-                      />
+                      {!erroredUrls[item.imageUrl] ? (
+                        <img
+                          key={item.imageUrl}
+                          src={item.imageUrl}
+                          alt={item.title}
+                          draggable={false}
+                          onError={() =>
+                            setErroredUrls((prev) => ({ ...prev, [item.imageUrl]: true }))
+                          }
+                          className="w-full h-full object-contain transition-transform duration-500 hover:scale-105"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-center p-4 text-[#FFF8E7]">
+                          <ImageIcon className="w-8 h-8 text-[#E1AD01] mb-2" />
+                          <span className="text-xs font-bold">{item.title}</span>
+                        </div>
+                      )}
 
                       <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start">
                         <span className="bg-[#1B4D2E] text-[#E1AD01] border border-[#E1AD01]/40 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg shadow-xs flex items-center space-x-1">
@@ -464,11 +476,22 @@ export const WholesaleProductGallery: React.FC<WholesaleProductGalleryProps> = (
             <div className="grid grid-cols-1 sm:grid-cols-2">
               {/* Product Label Zoom Area */}
               <div className="bg-[#12351F] p-6 flex items-center justify-center min-h-[300px]">
-                <img
-                  src={activeModalItem.imageUrl}
-                  alt={activeModalItem.title}
-                  className="max-h-[360px] w-auto object-contain drop-shadow-2xl"
-                />
+                {!erroredUrls[activeModalItem.imageUrl] ? (
+                  <img
+                    key={activeModalItem.imageUrl}
+                    src={activeModalItem.imageUrl}
+                    alt={activeModalItem.title}
+                    onError={() =>
+                      setErroredUrls((prev) => ({ ...prev, [activeModalItem.imageUrl]: true }))
+                    }
+                    className="max-h-[360px] w-auto object-contain drop-shadow-2xl"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center p-4 text-[#FFF8E7]">
+                    <ImageIcon className="w-10 h-10 text-[#E1AD01] mb-2" />
+                    <span className="text-sm font-bold">{activeModalItem.title}</span>
+                  </div>
+                )}
               </div>
 
               {/* Specifications */}

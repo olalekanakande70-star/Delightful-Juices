@@ -497,17 +497,38 @@ class SupabaseService {
       return { url: null, error: 'Live Supabase client is not connected.' };
     }
     try {
-      const { data, error } = await client.storage.from(bucket).upload(filePath, file, {
+      const cleanPath = filePath
+        .split('/')
+        .map((seg) => seg.trim().replace(/[^a-zA-Z0-9._-]/g, '-'))
+        .filter(Boolean)
+        .join('/');
+      const uploadOptions: {
+        upsert: boolean;
+        cacheControl: string;
+        contentType?: string;
+      } = {
         upsert: true,
         cacheControl: '3600',
-      });
+      };
+      if (file instanceof File && file.type) {
+        uploadOptions.contentType = file.type;
+      } else if (file.type) {
+        uploadOptions.contentType = file.type;
+      }
+
+      const { data, error } = await client.storage
+        .from(bucket)
+        .upload(cleanPath || `asset-${Date.now()}`, file, uploadOptions);
       if (error) {
         return { url: null, error: error.message };
       }
       const { data: publicData } = client.storage.from(bucket).getPublicUrl(data.path);
+      if (!publicData?.publicUrl) {
+        return { url: null, error: 'Upload succeeded, but public URL could not be resolved.' };
+      }
       return { url: publicData.publicUrl };
     } catch (err: any) {
-      return { url: null, error: err.message || 'Failed to upload asset to live storage' };
+      return { url: null, error: err?.message || 'Failed to upload asset to live storage' };
     }
   }
 

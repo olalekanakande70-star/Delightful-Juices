@@ -123,47 +123,55 @@ export const HeroSliderManager: React.FC<HeroSliderManagerProps> = ({
     e: React.ChangeEvent<HTMLInputElement>,
     field: 'desktop' | 'mobile'
   ) => {
-    const file = e.target.files?.[0];
-    if (!file || !editingSlide) return;
+    const inputEl = e.target;
+    const file = inputEl.files?.[0];
+    if (!file || !editingSlide) {
+      inputEl.value = '';
+      return;
+    }
 
     setUploadError(null);
     if (!file.type.startsWith('image/')) {
       setUploadError('Please select a valid image file (JPG, PNG, WebP).');
+      inputEl.value = '';
       return;
     }
     if (file.size > 8 * 1024 * 1024) {
       setUploadError('Image exceeds 8MB limit. Please choose a smaller high-resolution photo.');
+      inputEl.value = '';
       return;
     }
 
+    const slideId = editingSlide.id;
     setUploadingField(field);
 
     try {
       const ext = file.name.split('.').pop() || 'jpg';
-      const storagePath = `sliders/${editingSlide.id}-${field}-${Date.now()}.${ext}`;
+      const storagePath = `sliders/${slideId}-${field}-${Date.now()}.${ext}`;
       const res = await supabaseService.uploadAsset('delightful_assets', storagePath, file);
-      setUploadingField(null);
 
       if (res.url) {
-        if (field === 'desktop') {
-          const prevMobile = (editingSlide.mobileImageUrl || '').trim();
-          const shouldClearLegacyMobile =
-            prevMobile === editingSlide.desktopImageUrl ||
-            prevMobile.startsWith('/src/assets/') ||
-            prevMobile.startsWith('/assets/hero_');
-          setEditingSlide({
-            ...editingSlide,
-            desktopImageUrl: res.url,
-            mobileImageUrl: shouldClearLegacyMobile ? '' : editingSlide.mobileImageUrl,
-          });
-        } else {
-          setEditingSlide({
-            ...editingSlide,
-            mobileImageUrl: res.url,
-          });
-        }
+        setEditingSlide((prev) => {
+          if (!prev) return prev;
+          if (field === 'desktop') {
+            const prevMobile = (prev.mobileImageUrl || '').trim();
+            const shouldClearLegacyMobile =
+              prevMobile === prev.desktopImageUrl ||
+              prevMobile.startsWith('/src/assets/') ||
+              prevMobile.startsWith('/assets/hero_');
+            return {
+              ...prev,
+              desktopImageUrl: res.url!,
+              mobileImageUrl: shouldClearLegacyMobile ? '' : prev.mobileImageUrl,
+            };
+          }
+          return {
+            ...prev,
+            mobileImageUrl: res.url!,
+          };
+        });
         onToast(
-          `${field === 'desktop' ? 'Desktop' : 'Mobile'} slider image uploaded to live Supabase Storage!`
+          `${field === 'desktop' ? 'Desktop' : 'Mobile'} slider image uploaded! Click Save below to publish.`
         );
         return;
       }
@@ -172,8 +180,10 @@ export const HeroSliderManager: React.FC<HeroSliderManagerProps> = ({
         `Live Supabase Storage upload failed (${res.error || 'Unknown error'}). Ensure the SQL migration has been run to initialize the public 'delightful_assets' bucket.`
       );
     } catch (err: any) {
-      setUploadingField(null);
       setUploadError(err?.message || 'Failed to upload slider image to live storage.');
+    } finally {
+      setUploadingField(null);
+      inputEl.value = '';
     }
   };
 
@@ -448,6 +458,7 @@ export const HeroSliderManager: React.FC<HeroSliderManagerProps> = ({
             <div className="rounded-2xl overflow-hidden border border-[#1B4D2E]/20 relative aspect-21/9 bg-gradient-to-br from-[#0E2918] via-[#12351F] to-[#1B4D2E]">
               {editingSlide.desktopImageUrl && (
                 <img
+                  key={editingSlide.desktopImageUrl}
                   src={editingSlide.desktopImageUrl}
                   alt="Slide preview"
                   className="w-full h-full object-cover"
