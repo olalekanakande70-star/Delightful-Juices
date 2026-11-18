@@ -46,6 +46,8 @@ const SECTION_TEMPLATES: { type: PageSectionType; label: string; desc: string }[
   { type: 'full_image', label: 'Full-Width Image', desc: 'Large showcase photograph with caption' },
   { type: 'promo_banner', label: 'Promo / Announcement Strip', desc: 'Bold gold or forest green offer bar' },
   { type: 'featured_products', label: 'Featured Juices Grid', desc: 'Interactive shoppable product cards' },
+  { type: 'shop_catalog', label: 'Interactive Shop Product Grid', desc: 'Filterable, searchable juice store with category tabs & cart' },
+  { type: 'shop_pack_pricing', label: 'Value Pack Pricing Tiers', desc: '6-pack, 12-pack & 24-pack bundle pricing cards & pricing note' },
   { type: 'image_gallery', label: 'Photo Gallery Grid', desc: 'Multi-image showcase with captions' },
   { type: 'cta', label: 'Call-to-Action Section', desc: 'Conversion block with primary & secondary buttons' },
   { type: 'catering_calculator', label: 'Live Catering Estimator', desc: 'Interactive event bottle calculator & inquiry form' },
@@ -159,6 +161,7 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
           : '',
       buttonUrl: '/shop',
       galleryImages: [],
+      productCategory: type === 'shop_catalog' ? 'all' : undefined,
       maxProducts: type === 'featured_products' ? 3 : undefined,
       theme: type === 'hero' || type === 'cta' ? 'dark' : type === 'promo_banner' ? 'gold' : 'cream',
     };
@@ -259,7 +262,7 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
       setFormError('Please provide a valid URL slug (e.g. our-story or delivery-info).');
       return;
     }
-    if (['admin', 'shop', 'api'].includes(cleanSlug)) {
+    if (['admin', 'api'].includes(cleanSlug)) {
       setFormError(`The slug "/${cleanSlug}" is reserved by a core system route. Choose another slug.`);
       return;
     }
@@ -600,6 +603,29 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
                         </div>
                       )}
 
+                      {sec.type === 'shop_catalog' && (
+                        <div>
+                          <label className="block font-bold text-gray-600 mb-1">
+                            Default Store Category Tab
+                          </label>
+                          <select
+                            value={sec.productCategory || 'all'}
+                            onChange={(e) =>
+                              handleUpdateSection(sec.id, {
+                                productCategory: e.target.value as PageSection['productCategory'],
+                              })
+                            }
+                            className="w-full bg-[#FFF8E7] border border-gray-200 rounded-xl px-3 py-2 font-bold text-[#1B4D2E]"
+                          >
+                            <option value="all">All Fresh Sips</option>
+                            <option value="zobo">Signature Zobo</option>
+                            <option value="ginger">Ginger Elixirs</option>
+                            <option value="other">Artisanal Milks</option>
+                            <option value="bundles">Party &amp; Sampler Packs</option>
+                          </select>
+                        </div>
+                      )}
+
                       {sec.type === 'featured_products' && (
                         <div>
                           <label className="block font-bold text-gray-600 mb-1">
@@ -633,6 +659,8 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
                     {(sec.type === 'hero' ||
                       sec.type === 'full_image' ||
                       sec.type === 'featured_products' ||
+                      sec.type === 'shop_catalog' ||
+                      sec.type === 'shop_pack_pricing' ||
                       sec.type === 'image_gallery') && (
                       <div>
                         <label className="block font-bold text-gray-600 mb-1">
@@ -652,13 +680,16 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
                     {(sec.type === 'image_text' ||
                       sec.type === 'text_only' ||
                       sec.type === 'promo_banner' ||
+                      sec.type === 'shop_pack_pricing' ||
                       sec.type === 'cta') && (
                       <div>
                         <label className="block font-bold text-gray-600 mb-1">
-                          Body Copy (Use blank lines for paragraphs)
+                          {sec.type === 'shop_pack_pricing'
+                            ? 'Pricing Conditions Note'
+                            : 'Body Copy (Use blank lines for paragraphs)'}
                         </label>
                         <textarea
-                          rows={4}
+                          rows={sec.type === 'shop_pack_pricing' ? 2 : 4}
                           value={sec.body || ''}
                           onChange={(e) => handleUpdateSection(sec.id, { body: e.target.value })}
                           className="w-full bg-[#FFF8E7] border border-gray-200 rounded-xl p-3 text-[#1B4D2E]"
@@ -898,14 +929,14 @@ export const PagesManager: React.FC<PagesManagerProps> = ({
         </button>
       </div>
 
-      {/* Built-in Core Storefront Routes Info */}
+      {/* Built-in & CMS Storefront Routes Info */}
       <div className="bg-white p-4 rounded-2xl border border-[#1B4D2E]/12 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center space-x-2 text-[#1B4D2E]">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>
-            <strong>Core Storefront Routes Active:</strong>{' '}
-            <code className="bg-[#FFF8E7] px-1.5 py-0.5 rounded font-mono">/</code> (Home Slider & Featured) and{' '}
-            <code className="bg-[#FFF8E7] px-1.5 py-0.5 rounded font-mono">/shop</code> (Full Online Juice Store)
+            <strong>Editable Storefront Pages:</strong>{' '}
+            Edit <code className="bg-[#FFF8E7] px-1.5 py-0.5 rounded font-mono">/shop</code> and all content pages below, or configure{' '}
+            <code className="bg-[#FFF8E7] px-1.5 py-0.5 rounded font-mono">/</code> via Hero Slider &amp; Products.
           </span>
         </div>
         <button

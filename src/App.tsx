@@ -203,12 +203,11 @@ function MainApp() {
       )
     : undefined;
 
-  // Resolve active CMS page when currentPath is not '/', '/shop', or a product route
+  // Resolve active CMS page when currentPath is not '/' or '/admin' or a product route
   const rawActiveSlug = currentPath.replace(/^\/+/, '').toLowerCase();
   const activeSlug = rawActiveSlug === 'our-story' ? 'about-us' : rawActiveSlug;
   const matchedPublishedPage =
     currentPath !== '/' &&
-    currentPath !== '/shop' &&
     currentPath !== '/admin' &&
     !productRouteSlug
       ? cmsPages.find(
@@ -319,13 +318,24 @@ function MainApp() {
             <TestimonialsSection content={content} onNavigate={navigate} />
           </>
         ) : currentPath === '/shop' ? (
-          <ShopPage
-            products={products}
-            content={content}
-            onOpenDetails={openProductPage}
-            onNavigate={navigate}
-            isLoading={!productsLoaded && products.length === 0}
-          />
+          matchedPublishedPage ? (
+            <DynamicPageRenderer
+              page={matchedPublishedPage}
+              products={products}
+              content={content}
+              onNavigate={navigate}
+              onOpenProductDetails={openProductPage}
+              isProductsLoading={!productsLoaded && products.length === 0}
+            />
+          ) : (
+            <ShopPage
+              products={products}
+              content={content}
+              onOpenDetails={openProductPage}
+              onNavigate={navigate}
+              isLoading={!productsLoaded && products.length === 0}
+            />
+          )
         ) : productRouteSlug && !productsLoaded && !matchedProduct ? (
           <section className="py-16 px-4 bg-[#FFF8E7] min-h-[65vh]">
             <div className="max-w-7xl mx-auto bg-white rounded-3xl border border-[#1B4D2E]/15 p-6 sm:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 animate-pulse">

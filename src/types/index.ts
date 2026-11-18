@@ -136,6 +136,8 @@ export type PageSectionType =
   | 'text_only'
   | 'promo_banner'
   | 'featured_products'
+  | 'shop_catalog'
+  | 'shop_pack_pricing'
   | 'product_ingredients'
   | 'product_slider'
   | 'image_gallery'

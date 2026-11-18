@@ -1035,6 +1035,61 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: 'page-shop',
+    title: 'Shop Fresh Juices',
+    slug: 'shop',
+    seoTitle: 'Shop Fresh, Natural Delightful Juices | Quakertown, PA',
+    metaDescription:
+      'Order fresh, small-batch Delightful Juices online—signature Zobo (Hibiscus), Organic Ginger Elixirs, and Dairy-Free Tigernut Milk with affordable doorstep delivery.',
+    status: 'published',
+    showInNav: false,
+    parentNavId: null,
+    isSystemRoute: true,
+    sections: [
+      {
+        id: 'sec-shop-hero',
+        type: 'hero',
+        kicker: 'DELIGHTFUL JUICES ONLINE STORE',
+        heading: 'Shop Fresh, Natural Delightful Juices.',
+        subheading:
+          'Handcrafted to order in Quakertown, PA using whole hibiscus calyces, organic ginger root, ripe tropical fruit, and soaked tigernuts. Enjoy affordable delivery directly to your door in 12oz, 16oz, and 18oz bottles.',
+        imageUrl: '',
+        theme: 'dark',
+      },
+      {
+        id: 'sec-shop-catalog',
+        type: 'shop_catalog',
+        kicker: '',
+        heading: '',
+        subheading: '',
+        productCategory: 'all',
+        theme: 'cream',
+      },
+      {
+        id: 'sec-shop-packs',
+        type: 'shop_pack_pricing',
+        kicker: 'PACK PRICING & VARIETY BUNDLES',
+        heading: 'Delightful Juice Value Packs',
+        subheading:
+          'Stock up your fridge, office, or event with curated multi-packs handcrafted daily.',
+        body: 'Prices vary depending on delivery location and order quantity. Wholesale discounts are available for bulk purchases.',
+        theme: 'cream',
+      },
+      {
+        id: 'sec-shop-catering-cta',
+        type: 'cta',
+        kicker: 'ORDERING FOR 20+ GUESTS?',
+        heading: 'Custom Branded Bottles & Wholesale Event Packages',
+        body: 'Use our interactive Event Catering Estimator to calculate bottle quantities for weddings, birthdays, and corporate retreats with wholesale tier discounts.',
+        buttonLabel: 'Open Catering Estimator',
+        buttonUrl: '/events-catering',
+        theme: 'dark',
+      },
+    ],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
 ];
 
 export const INITIAL_ORDERS: Order[] = [];

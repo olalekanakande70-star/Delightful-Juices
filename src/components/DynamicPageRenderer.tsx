@@ -9,6 +9,7 @@ import { ContactSection } from './ContactSection';
 import { AboutProductsShowcase } from './AboutProductsShowcase';
 import { ProductSliderSection } from './ProductSliderSection';
 import { EventProductShowcase } from './EventProductShowcase';
+import { ShopHeaderBanner, ShopCatalogSection, ShopPackPricingSection } from './ShopPage';
 import { ArrowRight, ShoppingBag, Sparkles } from 'lucide-react';
 
 interface DynamicPageRendererProps {
@@ -65,13 +66,29 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
     }
   };
 
-  const isAboutPage =
-    (page.slug || '').replace(/^\/+/, '').toLowerCase() === 'about-us' ||
-    (page.slug || '').replace(/^\/+/, '').toLowerCase() === 'our-story';
+  const normalizedPageSlug = (page.slug || '').replace(/^\/+/, '').toLowerCase();
+  const isAboutPage = normalizedPageSlug === 'about-us' || normalizedPageSlug === 'our-story';
+  const isShopPage = normalizedPageSlug === 'shop';
 
   const renderSection = (section: PageSection) => {
     switch (section.type) {
       case 'hero': {
+        if (isShopPage) {
+          return (
+            <ShopHeaderBanner
+              key={section.id}
+              content={content}
+              kicker={section.kicker}
+              heading={section.heading}
+              subheading={section.subheading}
+              imageUrl={section.imageUrl}
+              buttonLabel={section.buttonLabel}
+              buttonUrl={section.buttonUrl}
+              onNavigate={onNavigate}
+            />
+          );
+        }
+
         const bgImg = (section.imageUrl || '').trim();
         return (
           <section
@@ -494,6 +511,38 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
             key={section.id}
             content={content}
             onCateringClick={() => onNavigate('/events-catering')}
+          />
+        );
+
+      case 'shop_catalog':
+        return (
+          <ShopCatalogSection
+            key={section.id}
+            products={products}
+            content={content}
+            onOpenDetails={onOpenProductDetails}
+            kicker={section.kicker}
+            heading={section.heading}
+            subheading={section.subheading}
+            defaultCategory={section.productCategory || 'all'}
+            theme={section.theme || 'cream'}
+            isLoading={isProductsLoading}
+          />
+        );
+
+      case 'shop_pack_pricing':
+        return (
+          <ShopPackPricingSection
+            key={section.id}
+            products={products}
+            content={content}
+            onOpenDetails={onOpenProductDetails}
+            onNavigate={onNavigate}
+            kicker={section.kicker}
+            heading={section.heading}
+            subheading={section.subheading}
+            pricingNote={section.body}
+            theme={section.theme || 'cream'}
           />
         );
 
