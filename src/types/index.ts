@@ -213,6 +213,11 @@ export interface EventShowcaseItem {
   url: string;
   title: string;
   caption?: string;
+  category?: 'all' | 'pouches' | 'weddings' | 'birthdays' | 'coolers';
+  categoryLabel?: string;
+  badge?: string;
+  priceLabel?: string;
+  customizationNote?: string;
   displayOrder: number;
   published: boolean;
   createdAt?: string;
@@ -267,6 +272,7 @@ export interface BrandSettings {
   showLogoIcon: boolean;
   aboutShowcase?: AboutShowcaseSettings;
   eventShowcase?: EventShowcaseItem[];
+  eventShowcaseInitialized?: boolean;
   wholesaleGallery?: WholesaleGalleryItem[];
   packPricing?: PackPricingSettings;
   shopHeading?: string;

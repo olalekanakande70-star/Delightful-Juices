@@ -134,7 +134,17 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
                     {section.buttonLabel && (
                       <button
                         type="button"
-                        onClick={() => onNavigate(section.buttonUrl || '/shop')}
+                        onClick={() => {
+                          const target = section.buttonUrl || '/shop';
+                          if (target.startsWith('#')) {
+                            const el = document.getElementById(target.slice(1));
+                            if (el) {
+                              el.scrollIntoView({ behavior: 'smooth' });
+                              return;
+                            }
+                          }
+                          onNavigate(target);
+                        }}
                         className="inline-flex items-center space-x-2 bg-[#E1AD01] hover:bg-[#f0bc0e] text-[#1B4D2E] font-extrabold text-sm px-6 py-3.5 rounded-xl shadow-md transition-all cursor-pointer"
                       >
                         <span>{section.buttonLabel}</span>
@@ -144,7 +154,17 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
                     {section.secondaryButtonLabel && (
                       <button
                         type="button"
-                        onClick={() => onNavigate(section.secondaryButtonUrl || '/contact-us')}
+                        onClick={() => {
+                          const target = section.secondaryButtonUrl || '/contact-us';
+                          if (target.startsWith('#')) {
+                            const el = document.getElementById(target.slice(1));
+                            if (el) {
+                              el.scrollIntoView({ behavior: 'smooth' });
+                              return;
+                            }
+                          }
+                          onNavigate(target);
+                        }}
                         className="inline-flex items-center space-x-2 bg-white/15 hover:bg-white/25 backdrop-blur-xs text-white border border-white/35 font-bold text-sm px-6 py-3.5 rounded-xl transition-all cursor-pointer"
                       >
                         <span>{section.secondaryButtonLabel}</span>
@@ -534,7 +554,19 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
             heading={section.heading}
             subheading={section.subheading}
             kicker={section.kicker}
-            onPlanEventClick={() => onNavigate('/wholesale')}
+            onPlanEventClick={(selectedItem) => {
+              if (selectedItem && typeof window !== 'undefined') {
+                window.dispatchEvent(
+                  new CustomEvent('delightful:select-event-showcase', { detail: selectedItem })
+                );
+              }
+              const formEl = document.getElementById('catering-proposal-form');
+              if (formEl) {
+                formEl.scrollIntoView({ behavior: 'smooth' });
+              } else {
+                onNavigate('/events-catering');
+              }
+            }}
           />
         );
 
@@ -605,6 +637,24 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
       rawSections.some((s) => s.type === 'wholesale_tiers')
     ) {
       return rawSections.filter((s) => s.type !== 'hero');
+    }
+
+    if (normalizedSlug === 'events-catering') {
+      const existingGallery = rawSections.find((s) => s.type === 'event_motion_grid');
+      const gallerySection: PageSection = existingGallery || {
+        id: 'sec-events-showcase-auto',
+        type: 'event_motion_grid',
+        kicker: 'EVENT PRODUCT GALLERY',
+        heading: 'Custom Event Pouches & Catering Gallery',
+        subheading:
+          'Browse real celebrations featuring our custom-themed juice pouches, monogrammed bottles, and chilled cooler setups. Custom Event Pouches base order: 100 pieces for $300 — well customized for any event theme.',
+        theme: 'white',
+      };
+      const withoutGallery = rawSections.filter((s) => s.type !== 'event_motion_grid');
+      const heroIdx = withoutGallery.findIndex((s) => s.type === 'hero');
+      const reordered = [...withoutGallery];
+      reordered.splice(heroIdx >= 0 ? heroIdx + 1 : 0, 0, gallerySection);
+      return reordered;
     }
 
     const isAboutPage = normalizedSlug === 'about-us';

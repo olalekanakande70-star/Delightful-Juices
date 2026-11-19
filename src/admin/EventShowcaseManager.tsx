@@ -41,8 +41,13 @@ export const EventShowcaseManager: React.FC<EventShowcaseManagerProps> = ({
     const newItem: EventShowcaseItem = {
       id: `event-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       url,
-      title: 'Delightful Celebration Setup',
-      caption: 'Handcrafted juices and custom monogrammed bottles for special occasions.',
+      title: 'Custom Event Pouches & Setup',
+      caption: 'Handcrafted juices and custom-themed pouches for special occasions.',
+      category: 'pouches',
+      categoryLabel: 'Custom Spouted Pouches',
+      badge: '100 Pieces — $300',
+      priceLabel: 'Base Order: 100 pcs — $300',
+      customizationNote: 'Custom Event Theme & Colors',
       displayOrder: items.length + 1,
       published: true,
       createdAt: new Date().toISOString(),
@@ -186,10 +191,10 @@ export const EventShowcaseManager: React.FC<EventShowcaseManagerProps> = ({
             <span>WHOLESALE &amp; EVENTS CMS</span>
           </div>
           <h2 className="font-display font-black text-2xl sm:text-3xl text-[#1B4D2E]">
-            Event Product Showcase (Motion Grid)
+            Event Product Showcase (3D Gallery)
           </h2>
           <p className="text-xs sm:text-sm text-[#1B4D2E]/80 leading-relaxed">
-            Manage the animated image grid displayed on the Wholesale &amp; Events sections. Upload photos of custom monogrammed bottles, wedding bars, and event catering displays directly to Supabase Storage.
+            Manage the 3D coverflow gallery displayed right below the Hero section on the Events &amp; Catering page. Upload photos of custom-themed event pouches ($300 for 100 pcs base order), monogrammed bottles, and chilled catering coolers.
           </p>
           <div className="text-xs font-semibold text-[#1B4D2E]/70 flex items-center gap-2 pt-1">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -281,7 +286,7 @@ export const EventShowcaseManager: React.FC<EventShowcaseManagerProps> = ({
               Event Showcase is Currently Empty
             </h3>
             <p className="text-xs text-[#1B4D2E]/75 max-w-md mx-auto">
-              Per requirements, no random stock photos are populated by default. Upload photos above when you have delightful event or catering pictures ready to display.
+              Upload custom event pouch and catering setup photos above to populate the 3D coverflow gallery on the Events &amp; Catering page.
             </p>
           </div>
         </div>
@@ -405,6 +410,49 @@ export const EventShowcaseManager: React.FC<EventShowcaseManagerProps> = ({
                         placeholder="Brief caption describing the setup, bottles, or occasion..."
                         className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs text-[#1B4D2E] focus:outline-hidden focus:ring-2 focus:ring-[#E1AD01]"
                       />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#1B4D2E]/70">
+                          Category
+                        </label>
+                        <select
+                          value={item.category || 'pouches'}
+                          onChange={(e) => {
+                            const val = e.target.value as EventShowcaseItem['category'];
+                            const labelMap: Record<string, string> = {
+                              pouches: 'Custom Spouted Pouches',
+                              weddings: 'Weddings & Couple Themes',
+                              birthdays: 'Birthdays & Milestones',
+                              coolers: 'Coolers & Bulk Setups',
+                            };
+                            handleUpdateItem(item.id, {
+                              category: val,
+                              categoryLabel: labelMap[val || 'pouches'] || 'Custom Event Theme',
+                            });
+                          }}
+                          className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-[#1B4D2E] focus:outline-hidden focus:ring-2 focus:ring-[#E1AD01]"
+                        >
+                          <option value="pouches">Custom Pouches</option>
+                          <option value="weddings">Weddings &amp; Couples</option>
+                          <option value="birthdays">Birthdays &amp; Milestones</option>
+                          <option value="coolers">Coolers &amp; Bulk</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-extrabold uppercase tracking-wider text-[#1B4D2E]/70">
+                          Pricing / Base Label
+                        </label>
+                        <input
+                          type="text"
+                          value={item.priceLabel || ''}
+                          onChange={(e) => handleUpdateItem(item.id, { priceLabel: e.target.value })}
+                          placeholder="Base Order: 100 pcs — $300"
+                          className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-[#1B4D2E] focus:outline-hidden focus:ring-2 focus:ring-[#E1AD01]"
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-1">

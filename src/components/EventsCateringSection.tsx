@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { SiteContent, BottleSize } from '../types';
+import React, { useState, useEffect } from 'react';
+import { SiteContent, BottleSize, EventShowcaseItem } from '../types';
 import { dataRepo } from '../lib/storage';
 import { formatBottleCodeToOz } from '../lib/units';
 import {
@@ -11,6 +11,7 @@ import {
   Calendar,
   Check,
   ArrowRight,
+  Tag,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -26,16 +27,33 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
-  const [customLabeling, setCustomLabeling] = useState(false);
+  const [customLabeling, setCustomLabeling] = useState(true);
   const [selectedFlavors, setSelectedFlavors] = useState<string[]>([
     'Zobo (Hibiscus / Sorrel)',
     'Ginger Mango',
     'Tigernut Milk (Kunu Aya)',
   ]);
-  const [selectedSizes, setSelectedSizes] = useState<BottleSize[]>(['35cl', '50cl']);
+  const [selectedSizes, setSelectedSizes] = useState<BottleSize[]>(['pouches-100', '16oz']);
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const handleSelectShowcase = (evt: Event) => {
+      const customEvt = evt as CustomEvent<EventShowcaseItem>;
+      const item = customEvt.detail;
+      if (!item) return;
+      setCustomLabeling(true);
+      setSelectedSizes((prev) => (prev.includes('pouches-100') ? prev : ['pouches-100', ...prev]));
+      setMessage(
+        `Interested in: ${item.title} (${item.priceLabel || 'Custom Pouches Base Order: 100 pieces — $300'}).`
+      );
+    };
+    window.addEventListener('delightful:select-event-showcase', handleSelectShowcase);
+    return () => {
+      window.removeEventListener('delightful:select-event-showcase', handleSelectShowcase);
+    };
+  }, []);
 
   const eventTypesList = [
     'Wedding Reception',
@@ -57,9 +75,14 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
     'Tigernut Milk (Kunu Aya)',
   ];
 
+  const includesPouches = selectedSizes.includes('pouches-100');
   const recommendedBottles = Math.ceil(guestCount * 1.5);
-  const estimatedMinBudget = Math.round(recommendedBottles * 4.25);
-  const estimatedMaxBudget = Math.round(recommendedBottles * 5.75);
+  const pouchPacksNeeded = Math.max(1, Math.ceil(guestCount / 100));
+  const pouchBaseTotal = pouchPacksNeeded * 300;
+  const estimatedMinBudget = includesPouches ? pouchBaseTotal : Math.round(recommendedBottles * 4.25);
+  const estimatedMaxBudget = includesPouches
+    ? pouchBaseTotal + Math.round(Math.max(0, guestCount - pouchPacksNeeded * 100) * 3)
+    : Math.round(recommendedBottles * 5.75);
 
   const toggleFlavor = (flavor: string) => {
     if (selectedFlavors.includes(flavor)) {
@@ -98,8 +121,14 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
         bottleSizesNeeded: selectedSizes,
         selectedFlavors,
         customLabelingNeeded: customLabeling,
-        budgetRange: `$${estimatedMinBudget} - $${estimatedMaxBudget}`,
-        message: message || `Estimated ${recommendedBottles} bottles requested for ${guestCount} guests.`,
+        budgetRange: includesPouches
+          ? `$${pouchBaseTotal} (${pouchPacksNeeded * 100} Custom Pouches)`
+          : `$${estimatedMinBudget} - $${estimatedMaxBudget}`,
+        message:
+          message ||
+          (includesPouches
+            ? `Estimated ${pouchPacksNeeded * 100} custom event pouches ($300 per 100-piece base) for ${guestCount} guests.`
+            : `Estimated ${recommendedBottles} bottles requested for ${guestCount} guests.`),
       });
 
       setIsSubmitting(false);
@@ -117,13 +146,17 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
     }, 600);
   };
 
+  const formattedSizesSummary = selectedSizes
+    .map((s) => (s === 'pouches-100' ? 'Custom Event Pouches (100 pcs — $300 Base)' : formatBottleCodeToOz(s)))
+    .join(', ');
+
   const whatsappInquiryUrl = `https://wa.me/${content.whatsappNumber}?text=${encodeURIComponent(
     `Hello Delightful Juices! I would like to request an Event Catering Quote.\n\n` +
       `*Event Type:* ${eventType}\n` +
       `*Date:* ${eventDate || 'TBD'}\n` +
-      `*Guest Count:* ${guestCount} (~${recommendedBottles} bottles recommended)\n` +
+      `*Guest Count:* ${guestCount} (${includesPouches ? `${pouchPacksNeeded * 100} custom pouches` : `~${recommendedBottles} bottles recommended`})\n` +
       `*Selected Flavors:* ${selectedFlavors.join(', ')}\n` +
-      `*Bottle Sizes:* ${selectedSizes.map((s) => formatBottleCodeToOz(s)).join(', ')}\n` +
+      `*Packaging & Sizes:* ${formattedSizesSummary}\n` +
       `*Custom Branded Labels:* ${customLabeling ? 'Yes' : 'No'}\n` +
       `*Location:* ${location || 'PA / Regional'}\n` +
       `*Contact:* ${fullName || 'Event Host'} (${phone || 'TBD'})\n\n` +
@@ -184,8 +217,36 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
             </div>
 
             <p className="text-xs sm:text-sm text-[#FFF8E7]/80 leading-relaxed pt-2">
-              Enquire about custom bottle labels with monograms or company logos, chilled insulated delivery, custom flavor assortments, and quantity calculators for 20 to 500+ guests.
+              Enquire about custom spouted pouches and bottle labels with monograms, portraits, or company logos, chilled insulated delivery, custom flavor assortments, and quantity calculators for 20 to 500+ guests.
             </p>
+
+            {/* Featured Custom Pouches Pricing Box */}
+            <div className="bg-[#1B4D2E] border border-[#E1AD01]/50 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
+              <div className="space-y-1">
+                <div className="inline-flex items-center space-x-2 text-[11px] font-extrabold uppercase tracking-widest text-[#E1AD01]">
+                  <Tag className="w-3.5 h-3.5" />
+                  <span>CUSTOM EVENT POUCHES PRICING</span>
+                </div>
+                <div className="font-display font-black text-xl sm:text-2xl text-white">
+                  Base Order: 100 Pieces — $300
+                </div>
+                <p className="text-xs text-[#FFF8E7]/85">
+                  Well customized with your photos, monograms, and colors for various event themes.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedSizes((prev) => (prev.includes('pouches-100') ? prev : ['pouches-100', ...prev]));
+                  setCustomLabeling(true);
+                  scrollToTarget('catering-proposal-form');
+                }}
+                className="inline-flex items-center justify-center space-x-2 bg-[#E1AD01] hover:bg-[#f0bc0e] text-[#1B4D2E] font-black text-xs px-5 py-3 rounded-xl transition-all cursor-pointer shrink-0 whitespace-nowrap"
+              >
+                <span>Order 100-Piece Pouch Base</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
 
             <div className="pt-4 flex flex-wrap gap-4">
               <button
@@ -248,22 +309,30 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xs text-[#FFF8E7]/70">Recommended Sips</div>
+                    <div className="text-xs text-[#FFF8E7]/70">
+                      {includesPouches ? 'Recommended Pouches' : 'Recommended Sips'}
+                    </div>
                     <div className="font-black text-xl text-[#E1AD01] tabular-nums">
-                      ~{recommendedBottles} Bottles
+                      {includesPouches
+                        ? `${pouchPacksNeeded * 100} Pouches`
+                        : `~${recommendedBottles} Bottles`}
                     </div>
                   </div>
                 </div>
 
                 <div className="bg-[#143822] p-4 rounded-2xl flex items-center justify-between border border-[#E1AD01]/20">
                   <div>
-                    <div className="text-xs text-[#FFF8E7]/70">Estimated Package Tier</div>
+                    <div className="text-xs text-[#FFF8E7]/70">
+                      {includesPouches ? 'Pouches Base Pricing' : 'Estimated Package Tier'}
+                    </div>
                     <div className="font-extrabold text-base text-white tabular-nums">
-                      ${estimatedMinBudget} - ${estimatedMaxBudget}
+                      {includesPouches
+                        ? `$${pouchBaseTotal} (${pouchPacksNeeded * 100} pcs)`
+                        : `$${estimatedMinBudget} - $${estimatedMaxBudget}`}
                     </div>
                   </div>
                   <span className="text-[11px] font-semibold bg-[#E1AD01] text-[#1B4D2E] px-2.5 py-1 rounded-md">
-                    Wholesale Tier Rate
+                    {includesPouches ? '100 pcs = $300 Base' : 'Wholesale Tier Rate'}
                   </span>
                 </div>
               </div>
@@ -441,30 +510,33 @@ export const EventsCateringSection: React.FC<EventsCateringSectionProps> = ({ co
                   </div>
                 </div>
 
-                {/* Bottle Sizes Needed (Displayed in Ounces) */}
+                {/* Event Packaging & Bottle Sizes Needed */}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-2">
-                    Preferred Bottle Sizes (US Fluid Ounces):
+                    Preferred Packaging &amp; Sizes:
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {(['35cl', '50cl', '1L'] as BottleSize[]).map((size) => {
-                      const isChecked = selectedSizes.includes(size);
+                    {(
+                      [
+                        { key: 'pouches-100', label: 'Custom Pouches (100 pcs — $300 Base)' },
+                        { key: '12oz', label: '12oz Pocket Sip' },
+                        { key: '16oz', label: '16oz Standard' },
+                        { key: '18oz', label: '18oz Family Jug' },
+                      ] as { key: BottleSize; label: string }[]
+                    ).map(({ key, label }) => {
+                      const isChecked = selectedSizes.includes(key);
                       return (
                         <button
                           type="button"
-                          key={size}
-                          onClick={() => toggleSize(size)}
+                          key={key}
+                          onClick={() => toggleSize(key)}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
                             isChecked
                               ? 'bg-[#E1AD01] text-[#1B4D2E] border-[#E1AD01]'
                               : 'bg-[#FFF8E7] text-[#1B4D2E]/80 border-[#1B4D2E]/20'
                           }`}
                         >
-                          {size === '35cl'
-                            ? '12oz Pocket Sip'
-                            : size === '50cl'
-                            ? '16oz Standard'
-                            : '18oz Family Jug'}
+                          {label}
                         </button>
                       );
                     })}

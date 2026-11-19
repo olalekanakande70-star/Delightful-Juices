@@ -633,6 +633,113 @@ export const INITIAL_WHOLESALE_GALLERY: WholesaleGalleryItem[] = [
   },
 ];
 
+export const INITIAL_EVENT_SHOWCASE: EventShowcaseItem[] = [
+  {
+    id: 'ev-concert-zobo-pouches-1',
+    url: '/assets/aistudio/WhatsApp_Image_2026-11-03_at_17.44.49__2__e200fcf2.jpeg',
+    title: 'Custom Event & Concert Zobo Spouted Pouches',
+    caption: 'Custom-themed spouted pouches prepared fresh for benefit concerts, galas, and community celebrations.',
+    category: 'pouches',
+    categoryLabel: 'Custom Spouted Pouches',
+    badge: '100 Pieces — $300',
+    priceLabel: 'Base Order: 100 pcs — $300',
+    customizationNote: 'Custom Event Theme & Colors',
+    displayOrder: 1,
+    published: true,
+  },
+  {
+    id: 'ev-wedding-pineapple-pouches-2',
+    url: '/assets/aistudio/WhatsApp_Image_2026-11-03_at_17.44.49__17__ee8dbf20.jpeg',
+    title: 'Wedding Couple Portrait Ginger Pineapple Pouches',
+    caption: 'Bespoke couple-monogrammed golden Ginger Pineapple juice pouches tailored for wedding receptions & traditional ceremonies.',
+    category: 'weddings',
+    categoryLabel: 'Weddings & Couple Themes',
+    badge: '100 Pieces — $300',
+    priceLabel: 'Base Order: 100 pcs — $300',
+    customizationNote: 'Custom Couple Portrait Label',
+    displayOrder: 2,
+    published: true,
+  },
+  {
+    id: 'ev-wedding-zobo-pouches-3',
+    url: '/assets/aistudio/WhatsApp_Image_2026-11-03_at_17.44.49__19__0b265120.jpeg',
+    title: 'Wedding Couple Portrait Signature Zobo Pouches',
+    caption: 'Matching ruby-red Hibiscus Zobo spouted pouches sealed with full-color custom wedding artwork and event branding.',
+    category: 'weddings',
+    categoryLabel: 'Weddings & Couple Themes',
+    badge: '100 Pieces — $300',
+    priceLabel: 'Base Order: 100 pcs — $300',
+    customizationNote: 'Custom Wedding Artwork',
+    displayOrder: 3,
+    published: true,
+  },
+  {
+    id: 'ev-birthday-70th-pouches-4',
+    url: '/assets/aistudio/WhatsApp_Image_2026-11-03_at_17.44.49__5__0db9e0c2.jpeg',
+    title: 'Milestone 70+ Birthday Party Straw Pouches',
+    caption: 'Festive party pouches with colorful straws and personalized birthday tribute labels ready for instant guest service.',
+    category: 'birthdays',
+    categoryLabel: 'Birthdays & Milestones',
+    badge: '100 Pieces — $300',
+    priceLabel: 'Base Order: 100 pcs — $300',
+    customizationNote: 'Personalized Photo & Straws',
+    displayOrder: 4,
+    published: true,
+  },
+  {
+    id: 'ev-celebration-mix-pouches-5',
+    url: '/assets/aistudio/3aa0986a-b1d2-4ad7-94eb-a9b19f041e63_ee425a64.jpeg',
+    title: 'Celebration of Life Mixed Zobo & Ginger Pouches',
+    caption: 'Assorted Hibiscus Zobo and fresh Ginger Pineapple spouted pouches thoughtfully customized for memorial tributes and family gatherings.',
+    category: 'pouches',
+    categoryLabel: 'Custom Spouted Pouches',
+    badge: '100 Pieces — $300',
+    priceLabel: 'Base Order: 100 pcs — $300',
+    customizationNote: 'Multi-Flavor Event Assortment',
+    displayOrder: 5,
+    published: true,
+  },
+  {
+    id: 'ev-coolers-packed-pouches-6',
+    url: '/assets/aistudio/WhatsApp_Image_2026-11-03_at_17.44.49__15__af47bc99.jpeg',
+    title: 'Chilled Event Coolers Packed With Custom Pouches',
+    caption: 'Insulated event coolers loaded with ice-cold Zobo and Ginger pouches, delivered fresh and venue-ready.',
+    category: 'coolers',
+    categoryLabel: 'Coolers & Bulk Setups',
+    badge: '100 Pieces — $300',
+    priceLabel: 'Base Order: 100 pcs — $300',
+    customizationNote: 'Chilled Cooler Ready Delivery',
+    displayOrder: 6,
+    published: true,
+  },
+  {
+    id: 'ev-bulk-vehicle-catering-7',
+    url: '/assets/aistudio/imgi_14_672456308_2794860274218140_6513744869247893225_n_f7ebc58c.jpg',
+    title: 'Large-Scale Event Load & Bulk Dispenser Bags',
+    caption: 'Full catering transport featuring bulk spouted Zobo dispenser bags paired with hundreds of individual Hibiscus & Ginger bottles.',
+    category: 'coolers',
+    categoryLabel: 'Coolers & Bulk Setups',
+    badge: 'High-Volume Catering',
+    priceLabel: 'Custom Event Packages',
+    customizationNote: 'Bulk Bags + Bottled Packs',
+    displayOrder: 7,
+    published: true,
+  },
+  {
+    id: 'ev-fridge-custom-bottles-8',
+    url: '/assets/aistudio/imgi_30_656047659_18125431657572521_5572800787949178733_n_005c5b4a.jpg',
+    title: 'Chilled Fridge Stocked With Custom Event Bottles',
+    caption: 'Refrigerated event beverage station filled with custom-branded Hibiscus Zobo bottles crafted fresh for 100+ guests.',
+    category: 'coolers',
+    categoryLabel: 'Coolers & Bulk Setups',
+    badge: 'Custom Event Bottles',
+    priceLabel: '12oz • 16oz • 18oz Sizes',
+    customizationNote: 'Chilled Reception Ready',
+    displayOrder: 8,
+    published: true,
+  },
+];
+
 export const INITIAL_SITE_CONTENT: SiteContent = {
   businessName: 'Delightful Juices',
   ceoName: 'Kitchen Leadership',
@@ -662,7 +769,7 @@ export const INITIAL_SITE_CONTENT: SiteContent = {
   chatButtonLabel: 'Chat with Kitchen',
   shopHeading: 'Shop Fresh, Natural Delightful Juices.',
   packPricing: DEFAULT_PACK_PRICING,
-  eventShowcase: [],
+  eventShowcase: INITIAL_EVENT_SHOWCASE,
   wholesaleGallery: INITIAL_WHOLESALE_GALLERY,
   productSlider: DEFAULT_PRODUCT_SLIDER,
   branding: {
@@ -671,7 +778,7 @@ export const INITIAL_SITE_CONTENT: SiteContent = {
     logoText: 'Delightful Juices',
     showLogoIcon: true,
     aboutShowcase: DEFAULT_ABOUT_SHOWCASE,
-    eventShowcase: [],
+    eventShowcase: INITIAL_EVENT_SHOWCASE,
     wholesaleGallery: INITIAL_WHOLESALE_GALLERY,
     packPricing: DEFAULT_PACK_PRICING,
     shopHeading: 'Shop Fresh, Natural Delightful Juices.',
@@ -960,13 +1067,24 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
         id: 'sec-events-hero',
         type: 'hero',
         kicker: 'WEDDINGS • CORPORATE • CELEBRATIONS',
-        heading: 'Delightful Juice Catering & Custom Monogrammed Bottles',
+        heading: 'Delightful Juice Catering & Custom Event Pouches',
         subheading:
-          'Treat your guests to chilled Zobo, Ginger Mango, and Tigernut Milk in 12oz, 16oz, or 18oz bottles tailored to your celebration.',
+          'Treat your guests to chilled Zobo, Ginger Mango, and Tigernut Milk in custom-themed spouted pouches (100 pcs base order — $300) or 12oz, 16oz, and 18oz bottles tailored to your celebration.',
         imageUrl: '',
-        buttonLabel: 'Shop Ready-Made Packs',
-        buttonUrl: '/shop',
+        buttonLabel: 'Explore Event Pouches',
+        buttonUrl: '#event-showcase',
+        secondaryButtonLabel: 'Shop Ready-Made Packs',
+        secondaryButtonUrl: '/shop',
         theme: 'dark',
+      },
+      {
+        id: 'sec-events-showcase',
+        type: 'event_motion_grid',
+        kicker: 'EVENT PRODUCT GALLERY',
+        heading: 'Custom Event Pouches & Catering Gallery',
+        subheading:
+          'Browse real celebrations featuring our custom-themed juice pouches, monogrammed bottles, and chilled cooler setups. Custom Event Pouches base order: 100 pieces for $300 — well customized for any event theme.',
+        theme: 'white',
       },
       {
         id: 'sec-events-calc',
@@ -1294,12 +1412,17 @@ function normalizeSiteContent(raw: SiteContent): SiteContent {
 
   const rawPackPricing = raw.packPricing || raw.branding?.packPricing || DEFAULT_PACK_PRICING;
   const rawShopHeading = raw.shopHeading || raw.branding?.shopHeading || 'Shop Fresh, Natural Delightful Juices.';
-  const rawEventShowcase = (raw.eventShowcase || raw.branding?.eventShowcase || []).map((item, idx) => ({
+  const rawEventSource = raw.eventShowcase || raw.branding?.eventShowcase || [];
+  const mappedEventShowcase = rawEventSource.map((item, idx) => ({
     ...item,
     url: sanitizeLiveImageUrl(item.url),
     displayOrder: item.displayOrder ?? idx + 1,
     published: item.published !== false,
   }));
+  const rawEventShowcase =
+    mappedEventShowcase.length > 0 || raw.branding?.eventShowcaseInitialized
+      ? mappedEventShowcase
+      : INITIAL_EVENT_SHOWCASE;
   const rawWholesaleSource =
     raw.wholesaleGallery !== undefined
       ? raw.wholesaleGallery
@@ -1930,6 +2053,7 @@ class DataRepository {
       showLogoIcon: true,
       ...(this.content.branding || {}),
       eventShowcase: sanitized,
+      eventShowcaseInitialized: true,
     };
     const nextContent: SiteContent = {
       ...this.content,
