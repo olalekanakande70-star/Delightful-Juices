@@ -83,17 +83,43 @@ export const Footer: React.FC<FooterProps> = ({ content, navItems, onNavigate })
                 rel="noopener noreferrer"
                 className="w-9 h-9 rounded-xl bg-[#1B4D2E] text-[#E1AD01] flex items-center justify-center hover:bg-[#E1AD01] hover:text-[#1B4D2E] transition-all"
                 title="WhatsApp Us"
+                aria-label="WhatsApp Us"
               >
                 <MessageCircle className="w-4 h-4" />
               </a>
               <a
-                href="https://instagram.com/delightful_juicecreation"
+                href={
+                  content.instagram?.startsWith('http')
+                    ? content.instagram
+                    : 'https://www.instagram.com/delightful_juicescreation/'
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-9 h-9 rounded-xl bg-[#1B4D2E] text-[#E1AD01] flex items-center justify-center hover:bg-[#E1AD01] hover:text-[#1B4D2E] transition-all"
-                title="Instagram"
+                title="Instagram @delightful_juicescreation"
+                aria-label="Instagram"
               >
                 <Instagram className="w-4 h-4" />
+              </a>
+              <a
+                href={
+                  content.tiktok?.startsWith('http')
+                    ? content.tiktok
+                    : 'https://www.tiktok.com/@delightful_juices'
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-xl bg-[#1B4D2E] text-[#E1AD01] flex items-center justify-center hover:bg-[#E1AD01] hover:text-[#1B4D2E] transition-all"
+                title="TikTok @delightful_juices"
+                aria-label="TikTok"
+              >
+                <svg
+                  className="w-4 h-4 fill-current"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 0 0-.79-.05A6.34 6.34 0 0 0 3.15 15a6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.73a8.19 8.19 0 0 0 4.76 1.52V6.8a4.84 4.84 0 0 1-1-.11Z" />
+                </svg>
               </a>
             </div>
           </div>

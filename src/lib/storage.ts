@@ -750,8 +750,8 @@ export const INITIAL_SITE_CONTENT: SiteContent = {
   email: 'orders@delightfuljuices.com',
   address: '500 W Broad St',
   cityStateZip: 'Quakertown, PA 18951, USA',
-  instagram: '@delightful_juicecreation',
-  tiktok: '@delightfuljuice',
+  instagram: 'https://www.instagram.com/delightful_juicescreation/',
+  tiktok: 'https://www.tiktok.com/@delightful_juices',
   websiteDomain: 'www.delightfuljuices.com',
   heroHeadline: 'Savor the Pure Goodness.',
   heroSubheadline:
@@ -1436,9 +1436,30 @@ function normalizeSiteContent(raw: SiteContent): SiteContent {
   const rawWholesaleGallery =
     rawWholesaleSource !== undefined ? mappedWholesaleGallery : INITIAL_WHOLESALE_GALLERY;
 
+  const rawInsta = (raw.instagram || '').trim();
+  const cleanInstagram =
+    !rawInsta ||
+    /delightful_juicecreation/i.test(rawInsta)
+      ? 'https://www.instagram.com/delightful_juicescreation/'
+      : rawInsta.startsWith('http')
+      ? rawInsta
+      : `https://www.instagram.com/${rawInsta.replace(/^@/, '')}/`;
+
+  const rawTikTok = (raw.tiktok || '').trim();
+  const cleanTiktok =
+    !rawTikTok ||
+    /^@?delightfuljuice$/i.test(rawTikTok) ||
+    /tiktok\.com\/@delightfuljuice\/?$/i.test(rawTikTok)
+      ? 'https://www.tiktok.com/@delightful_juices'
+      : rawTikTok.startsWith('http')
+      ? rawTikTok
+      : `https://www.tiktok.com/@${rawTikTok.replace(/^@/, '')}`;
+
   return {
     ...raw,
     businessName: cleanName,
+    instagram: cleanInstagram,
+    tiktok: cleanTiktok,
     heroHeadline: sanitizeBrandText(raw.heroHeadline),
     heroSubheadline: sanitizeBrandText(raw.heroSubheadline).replace(/\bDelightful Juice\b(?!s)/g, 'Delightful Juices'),
     announcementTicker: sanitizeBrandText(raw.announcementTicker),
