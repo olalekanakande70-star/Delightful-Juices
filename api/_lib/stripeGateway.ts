@@ -69,6 +69,7 @@ export interface SanitizedGatewayStatus {
   serverReady: boolean;
   missingServerRequirements: string[];
   encryptionActive: boolean;
+  encryptionMismatch: boolean;
   envReadiness: {
     supabaseUrl: boolean;
     supabaseServiceRoleKey: boolean;
@@ -95,9 +96,33 @@ export interface SanitizedGatewayStatus {
   };
 }
 
+export function getConfiguredSupabaseUrl(): string {
+  return (
+    process.env.SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    ''
+  ).trim();
+}
+
+export function getConfiguredServiceRoleKey(): string {
+  return (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_KEY ||
+    ''
+  ).trim();
+}
+
+export function getMissingServiceCredentialNames(): string[] {
+  const missing: string[] = [];
+  if (!getConfiguredSupabaseUrl()) missing.push('SUPABASE_URL');
+  if (!getConfiguredServiceRoleKey()) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+  return missing;
+}
+
 export function getServiceSupabaseClient(): SupabaseClient | null {
-  const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim();
-  const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const supabaseUrl = getConfiguredSupabaseUrl();
+  const serviceKey = getConfiguredServiceRoleKey();
   if (!supabaseUrl || !serviceKey) {
     return null;
   }
@@ -540,15 +565,15 @@ export function buildSanitizedGatewayStatus(params: {
   row: GatewaySecretRow | null;
   tableExists: boolean;
 }): SanitizedGatewayStatus {
-  const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim();
-  const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const supabaseUrl = getConfiguredSupabaseUrl();
+  const serviceKey = getConfiguredServiceRoleKey();
   const encryptionConfigured = isEncryptionKeyConfigured();
   const missingServerRequirements: string[] = [];
 
   if (!supabaseUrl) missingServerRequirements.push('SUPABASE_URL');
   if (!serviceKey) missingServerRequirements.push('SUPABASE_SERVICE_ROLE_KEY');
   if (!encryptionConfigured) missingServerRequirements.push('PAYMENT_ENCRYPTION_KEY');
-  if (!params.tableExists) {
+  if (serviceKey && !params.tableExists) {
     missingServerRequirements.push('Supabase migration: payment_gateway_secrets table');
   }
 
@@ -570,36 +595,53 @@ export function buildSanitizedGatewayStatus(params: {
 
   const row = params.row;
   if (row) {
+    const activeMode: StripeMode = row.active_mode === 'live' ? 'live' : 'test';
+    const testSkOk = Boolean(row.test_secret_key_enc && decryptSecret(row.test_secret_key_enc));
+    const testWhOk = Boolean(row.test_webhook_secret_enc && decryptSecret(row.test_webhook_secret_enc));
+    const liveSkOk = Boolean(row.live_secret_key_enc && decryptSecret(row.live_secret_key_enc));
+    const liveWhOk = Boolean(row.live_webhook_secret_enc && decryptSecret(row.live_webhook_secret_enc));
+
+    const testSkMismatch = Boolean(encryptionConfigured && row.test_secret_key_enc && !testSkOk);
+    const testWhMismatch = Boolean(encryptionConfigured && row.test_webhook_secret_enc && !testWhOk);
+    const liveSkMismatch = Boolean(encryptionConfigured && row.live_secret_key_enc && !liveSkOk);
+    const liveWhMismatch = Boolean(encryptionConfigured && row.live_webhook_secret_enc && !liveWhOk);
+    const encryptionMismatch = testSkMismatch || testWhMismatch || liveSkMismatch || liveWhMismatch;
+
+    const activeModeSkOk = activeMode === 'live' ? liveSkOk : testSkOk;
+
     return {
-      connected: Boolean(row.connected),
-      activeMode: row.active_mode || 'test',
+      connected: Boolean(row.connected && activeModeSkOk),
+      activeMode,
       source: 'cms',
       accountId: row.account_id || null,
       accountName: row.account_name || null,
       webhookUrl: row.webhook_url || CANONICAL_WEBHOOK_URL,
-      webhookStatus: row.webhook_status || 'not_configured',
-      webhookLastError: row.webhook_last_error || null,
+      webhookStatus: encryptionMismatch ? 'manual_required' : row.webhook_status || 'not_configured',
+      webhookLastError: encryptionMismatch
+        ? 'PAYMENT_ENCRYPTION_KEY changed. Re-enter your Stripe Secret Key and Webhook Signing Secret below and click Connect Stripe.'
+        : row.webhook_last_error || null,
       lastValidatedAt: row.last_validated_at || null,
       connectedByEmail: row.connected_by_email || null,
       serverReady: missingServerRequirements.length === 0,
       missingServerRequirements,
       encryptionActive: encryptionConfigured,
+      encryptionMismatch,
       envReadiness,
       modes: {
         test: {
           publishableKey: row.test_publishable_key || '',
-          hasSecretKey: Boolean(row.test_secret_key_enc),
-          secretKeyHint: row.test_secret_key_hint || null,
-          hasWebhookSecret: Boolean(row.test_webhook_secret_enc),
-          webhookSecretHint: row.test_webhook_secret_hint || null,
+          hasSecretKey: testSkOk,
+          secretKeyHint: testSkOk ? row.test_secret_key_hint || null : null,
+          hasWebhookSecret: testWhOk,
+          webhookSecretHint: testWhOk ? row.test_webhook_secret_hint || null : null,
           webhookEndpointId: row.test_webhook_endpoint_id || null,
         },
         live: {
           publishableKey: row.live_publishable_key || '',
-          hasSecretKey: Boolean(row.live_secret_key_enc),
-          secretKeyHint: row.live_secret_key_hint || null,
-          hasWebhookSecret: Boolean(row.live_webhook_secret_enc),
-          webhookSecretHint: row.live_webhook_secret_hint || null,
+          hasSecretKey: liveSkOk,
+          secretKeyHint: liveSkOk ? row.live_secret_key_hint || null : null,
+          hasWebhookSecret: liveWhOk,
+          webhookSecretHint: liveWhOk ? row.live_webhook_secret_hint || null : null,
           webhookEndpointId: row.live_webhook_endpoint_id || null,
         },
       },
@@ -620,6 +662,7 @@ export function buildSanitizedGatewayStatus(params: {
     serverReady: missingServerRequirements.length === 0,
     missingServerRequirements,
     encryptionActive: encryptionConfigured,
+    encryptionMismatch: false,
     envReadiness,
     modes: {
       test: {
@@ -664,17 +707,33 @@ export async function requireAdminUser(req: any): Promise<
     };
   }
 
-  const supabase = getServiceSupabaseClient();
-  if (!supabase) {
-    return {
-      authorized: false,
-      statusCode: 500,
-      error:
-        'Server credentials (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY) must be configured in your deployment environment.',
-    };
+  const serviceSupabase = getServiceSupabaseClient();
+  let authClient = serviceSupabase;
+
+  if (!authClient) {
+    const supabaseUrl = getConfiguredSupabaseUrl();
+    const anonKey = (
+      process.env.VITE_SUPABASE_ANON_KEY ||
+      process.env.SUPABASE_ANON_KEY ||
+      ''
+    ).trim();
+
+    if (!supabaseUrl || !anonKey) {
+      const missingNames = getMissingServiceCredentialNames();
+      return {
+        authorized: false,
+        statusCode: 500,
+        error: `Missing server credential(s): ${missingNames.join(', ')}. Configure them in Vercel Project Settings → Environment Variables (Production) and redeploy.`,
+      };
+    }
+
+    authClient = createClient(supabaseUrl, anonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
   }
 
-  const { data, error } = await supabase.auth.getUser(token);
+  const { data, error } = await authClient.auth.getUser(token);
   if (error || !data?.user) {
     return {
       authorized: false,
@@ -685,12 +744,12 @@ export async function requireAdminUser(req: any): Promise<
 
   // Enforce admin_profiles role check whenever admin_profiles contains records
   try {
-    const { count, error: countErr } = await supabase
+    const { count, error: countErr } = await authClient
       .from('admin_profiles')
       .select('id', { count: 'exact', head: true });
 
     if (!countErr && typeof count === 'number' && count > 0) {
-      const { data: profile } = await supabase
+      const { data: profile } = await authClient
         .from('admin_profiles')
         .select('role')
         .eq('id', data.user.id)

@@ -45,6 +45,7 @@ interface SanitizedGatewayStatus {
   serverReady: boolean;
   missingServerRequirements: string[];
   encryptionActive: boolean;
+  encryptionMismatch?: boolean;
   envReadiness?: {
     supabaseUrl: boolean;
     supabaseServiceRoleKey: boolean;
@@ -128,6 +129,9 @@ export const StripeGatewayManager: React.FC<StripeGatewayManagerProps> = ({
   const [clearSecretsOnDisconnect, setClearSecretsOnDisconnect] = useState(false);
   const [showManualWebhookSetup, setShowManualWebhookSetup] = useState(false);
   const [copiedWebhookUrl, setCopiedWebhookUrl] = useState(false);
+  const [showKeyRotationHelper, setShowKeyRotationHelper] = useState(false);
+  const [generatedEncryptionKey, setGeneratedEncryptionKey] = useState('');
+  const [copiedGeneratedKey, setCopiedGeneratedKey] = useState(false);
   const [actionBanner, setActionBanner] = useState<{
     success: boolean;
     message: string;
@@ -396,6 +400,21 @@ export const StripeGatewayManager: React.FC<StripeGatewayManagerProps> = ({
     setTimeout(() => setCopiedWebhookUrl(false), 2000);
   };
 
+  const handleGenerateEncryptionKey = () => {
+    const bytes = new Uint8Array(32);
+    window.crypto.getRandomValues(bytes);
+    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+    setGeneratedEncryptionKey(hex);
+    setCopiedGeneratedKey(false);
+  };
+
+  const handleCopyGeneratedKey = () => {
+    if (!generatedEncryptionKey) return;
+    navigator.clipboard?.writeText(generatedEncryptionKey);
+    setCopiedGeneratedKey(true);
+    setTimeout(() => setCopiedGeneratedKey(false), 2000);
+  };
+
   // Fallback/merged payment stats combining server summary and live CMS orders state
   const localStripeStats = useMemo(() => {
     const stripeOrders = orders.filter((o) => o.paymentMethod === 'stripe_card');
@@ -483,16 +502,24 @@ export const StripeGatewayManager: React.FC<StripeGatewayManagerProps> = ({
                 One-Time Server Environment &amp; Vault Setup Required
               </div>
               <p className="leading-relaxed text-amber-900">
-                Secret credentials stay strictly on the server—never in browser storage or public database tables. Configure missing variables in <strong>Vercel Environment Variables</strong> for production (or <strong>Google AI Studio Secrets</strong> for server development):
+                Secret credentials stay strictly on the server—never in browser storage or public database tables. Configure missing variables in <strong>Vercel Project Settings → Environment Variables</strong> (for production) or <strong>Google AI Studio Secrets</strong> (for preview). If you already added them in Vercel, ensure <strong>Production</strong> is checked and trigger a <strong>Redeploy</strong> so the live backend picks them up:
               </p>
 
               {gateway.envReadiness && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                   {[
-                    { label: 'SUPABASE_URL', ok: gateway.envReadiness.supabaseUrl },
-                    { label: 'SUPABASE_SERVICE_ROLE_KEY', ok: gateway.envReadiness.supabaseServiceRoleKey },
-                    { label: 'PAYMENT_ENCRYPTION_KEY', ok: gateway.envReadiness.paymentEncryptionKey },
-                    { label: 'payment_gateway_secrets table', ok: gateway.envReadiness.gatewaySecretsTable },
+                    { label: 'SUPABASE_URL', ok: gateway.envReadiness.supabaseUrl, status: gateway.envReadiness.supabaseUrl ? 'Ready' : 'Missing' },
+                    { label: 'SUPABASE_SERVICE_ROLE_KEY', ok: gateway.envReadiness.supabaseServiceRoleKey, status: gateway.envReadiness.supabaseServiceRoleKey ? 'Ready' : 'Missing' },
+                    { label: 'PAYMENT_ENCRYPTION_KEY', ok: gateway.envReadiness.paymentEncryptionKey, status: gateway.envReadiness.paymentEncryptionKey ? 'Ready' : 'Missing' },
+                    {
+                      label: 'payment_gateway_secrets table',
+                      ok: gateway.envReadiness.gatewaySecretsTable,
+                      status: !gateway.envReadiness.supabaseServiceRoleKey
+                        ? 'Needs Service Key'
+                        : gateway.envReadiness.gatewaySecretsTable
+                        ? 'Ready'
+                        : 'Missing',
+                    },
                   ].map((item) => (
                     <div
                       key={item.label}
@@ -504,7 +531,7 @@ export const StripeGatewayManager: React.FC<StripeGatewayManagerProps> = ({
                     >
                       <span>{item.label}</span>
                       <span className="font-sans font-bold uppercase text-[10px]">
-                        {item.ok ? 'Ready' : 'Missing'}
+                        {item.status}
                       </span>
                     </div>
                   ))}
@@ -520,6 +547,22 @@ export const StripeGatewayManager: React.FC<StripeGatewayManagerProps> = ({
                   Open Supabase SQL Migration Script
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {gateway?.encryptionMismatch && (
+        <div className="p-5 rounded-3xl bg-red-50 border-2 border-red-300 text-red-950 space-y-2 text-xs">
+          <div className="flex items-start space-x-3">
+            <AlertCircle className="w-5 h-5 text-red-700 shrink-0 mt-0.5" />
+            <div className="space-y-1.5">
+              <div className="font-extrabold text-sm">
+                New Encryption Key Detected — Re-enter Stripe Secret Key
+              </div>
+              <p className="leading-relaxed text-red-900">
+                Your server&apos;s <code className="font-mono font-bold">PAYMENT_ENCRYPTION_KEY</code> changed and can no longer decrypt the previously saved Stripe credentials. Enter your Stripe Secret Key (and Webhook Signing Secret if using manual setup) in the form below and click <strong>Connect Stripe</strong> to re-encrypt them with your new server key.
+              </p>
             </div>
           </div>
         </div>
@@ -628,6 +671,113 @@ export const StripeGatewayManager: React.FC<StripeGatewayManagerProps> = ({
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Server Encryption Key Setup & Rotation Card */}
+      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#1B4D2E]/10 shadow-sm space-y-3 text-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start space-x-3">
+            <div className="w-9 h-9 rounded-xl bg-[#FFF8E7] border border-[#1B4D2E]/15 flex items-center justify-center shrink-0">
+              <Lock className="w-4 h-4 text-[#1B4D2E]" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-display font-bold text-sm text-[#1B4D2E]">
+                  Server Encryption Key (<code className="font-mono">PAYMENT_ENCRYPTION_KEY</code>)
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${
+                    gateway?.encryptionActive
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : 'bg-amber-50 text-amber-900 border-amber-300'
+                  }`}
+                >
+                  {gateway?.encryptionActive ? 'Active on Server' : 'Not Set on Server'}
+                </span>
+              </div>
+              <p className="text-[11px] text-[#1B4D2E]/70 mt-0.5">
+                To keep encrypted Stripe secrets isolated, <code className="font-mono">PAYMENT_ENCRYPTION_KEY</code> is managed strictly in server secrets—never stored in browser storage or the database.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowKeyRotationHelper(!showKeyRotationHelper)}
+            className="self-start sm:self-auto bg-[#FFF8E7] hover:bg-[#F4E8CB] border border-[#1B4D2E]/20 text-[#1B4D2E] font-bold px-3.5 py-2 rounded-xl text-[11px] shrink-0 cursor-pointer"
+          >
+            {showKeyRotationHelper
+              ? 'Hide Rotation Guide'
+              : gateway?.encryptionActive
+              ? 'Rotate / Re-enter Key'
+              : 'Generate & Set Key'}
+          </button>
+        </div>
+
+        {(showKeyRotationHelper || (gateway && !gateway.encryptionActive) || gateway?.encryptionMismatch) && (
+          <div className="pt-3 border-t border-gray-100 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleGenerateEncryptionKey}
+                className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold px-3.5 py-2 rounded-xl text-[11px] flex items-center space-x-1.5 cursor-pointer"
+              >
+                <KeyRound className="w-3.5 h-3.5 text-[#E1AD01]" />
+                <span>Generate Strong 256-bit Key</span>
+              </button>
+
+              {generatedEncryptionKey && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleCopyGeneratedKey}
+                    className="bg-[#FFF8E7] hover:bg-[#F4E8CB] border border-[#1B4D2E]/20 text-[#1B4D2E] font-bold px-3 py-2 rounded-xl text-[11px] flex items-center space-x-1.5 cursor-pointer"
+                  >
+                    {copiedGeneratedKey ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                    <span>{copiedGeneratedKey ? 'Copied to Clipboard' : 'Copy Key'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGeneratedEncryptionKey('');
+                      setCopiedGeneratedKey(false);
+                    }}
+                    className="text-gray-500 hover:text-[#1B4D2E] font-semibold px-2 py-1.5 text-[11px] cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                </>
+              )}
+            </div>
+
+            {generatedEncryptionKey && (
+              <div className="p-3 rounded-xl bg-[#FFF8E7] border border-[#1B4D2E]/20 space-y-1">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[#1B4D2E]/70">
+                  Temporary Generated 64-Char Key (never saved to browser or database)
+                </div>
+                <code className="block font-mono text-[11px] text-[#1B4D2E] break-all select-all">
+                  {generatedEncryptionKey}
+                </code>
+              </div>
+            )}
+
+            <ol className="list-decimal pl-5 space-y-1.5 text-[11px] text-[#1B4D2E]/85 leading-relaxed">
+              <li>
+                <strong>In Google AI Studio (Preview):</strong> Open the <strong>Secrets</strong> panel in AI Studio, add or update <code className="font-mono font-bold">PAYMENT_ENCRYPTION_KEY</code> with your key, and restart/reload the preview server.
+              </li>
+              <li>
+                <strong>On Vercel (Live Site):</strong> Go to <strong>Vercel Project Settings → Environment Variables</strong>, update <code className="font-mono font-bold">PAYMENT_ENCRYPTION_KEY</code> (with <strong>Production</strong> selected), and trigger a <strong>Redeploy</strong>.
+              </li>
+              <li>
+                Click <strong>Refresh Gateway Status</strong> above, then re-enter your Stripe Secret Key below and click <strong>Connect Stripe</strong> so stored Stripe keys are encrypted with your new key.
+              </li>
+            </ol>
+          </div>
+        )}
       </div>
 
       {/* Action Feedback Banner */}

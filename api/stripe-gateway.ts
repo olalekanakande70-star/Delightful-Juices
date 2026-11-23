@@ -8,6 +8,7 @@ import {
   detectStripeSecretMode,
   encryptSecret,
   GatewaySecretRow,
+  getMissingServiceCredentialNames,
   getServiceSupabaseClient,
   isEncryptionKeyConfigured,
   maskSecret,
@@ -107,14 +108,15 @@ export default async function handler(req: any, res: any) {
   }
 
   const supabase = getServiceSupabaseClient();
-  if (!supabase) {
-    return res.status(500).json({
-      error: 'SUPABASE_NOT_CONFIGURED',
-      message: 'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required on the server.',
-    });
-  }
 
   if (req.method === 'GET') {
+    if (!supabase) {
+      return res.status(200).json({
+        gateway: buildSanitizedGatewayStatus({ row: null, tableExists: false }),
+        transactions: await loadTransactionSummary(),
+      });
+    }
+
     try {
       const [{ row, tableExists }, transactions] = await Promise.all([
         readGatewaySecretRow(supabase),
@@ -136,6 +138,14 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'GET, POST');
     return res.status(405).json({ error: 'Method Not Allowed' });
+  }
+
+  if (!supabase) {
+    const missingNames = getMissingServiceCredentialNames();
+    return res.status(500).json({
+      error: 'SUPABASE_NOT_CONFIGURED',
+      message: `Missing server environment variable(s): ${missingNames.join(', ')}. Add them in Vercel Project Settings → Environment Variables (Production) and redeploy your site so serverless functions receive them.`,
+    });
   }
 
   const body = req.body || {};
@@ -332,6 +342,13 @@ export default async function handler(req: any, res: any) {
         });
       }
 
+      if (!decryptSecret(targetEnc)) {
+        return res.status(400).json({
+          error: 'ENCRYPTION_KEY_MISMATCH',
+          message: `Stored Stripe ${targetMode.toUpperCase()} credentials cannot be decrypted with the current PAYMENT_ENCRYPTION_KEY. Re-enter your ${targetMode.toUpperCase()} Secret Key and click Connect Stripe to re-encrypt them.`,
+        });
+      }
+
       const nowIso = new Date().toISOString();
       const { data: updatedRow, error: upErr } = await supabase
         .from('payment_gateway_secrets')
@@ -455,11 +472,17 @@ export default async function handler(req: any, res: any) {
         body.mode === 'live' || body.mode === 'test'
           ? body.mode
           : existingRow.active_mode || 'test';
-      const sk = decryptSecret(
-        targetMode === 'live' ? existingRow.live_secret_key_enc : existingRow.test_secret_key_enc
-      );
+      const targetEnc =
+        targetMode === 'live' ? existingRow.live_secret_key_enc : existingRow.test_secret_key_enc;
+      const sk = decryptSecret(targetEnc);
 
       if (!sk) {
+        if (targetEnc) {
+          return res.status(400).json({
+            error: 'ENCRYPTION_KEY_MISMATCH',
+            message: `Stored Stripe ${targetMode.toUpperCase()} credentials could not be decrypted with the current PAYMENT_ENCRYPTION_KEY. Re-enter your ${targetMode.toUpperCase()} Secret Key below and click Connect Stripe to re-encrypt them.`,
+          });
+        }
         return res.status(400).json({
           error: 'NOT_CONNECTED',
           message: `No ${targetMode.toUpperCase()} Stripe Secret Key stored yet. Connect Stripe first.`,
