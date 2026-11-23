@@ -1,3 +1,5 @@
+import { resolveStripeRuntimeConfig } from './_lib/stripeGateway.ts';
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -15,20 +17,24 @@ export default async function handler(req: any, res: any) {
     process.env.SUPABASE_ANON_KEY ||
     '';
 
+  const resolvedStripe = await resolveStripeRuntimeConfig();
   const stripePublishableKey =
+    resolvedStripe.publishableKey ||
     process.env.VITE_STRIPE_PUBLISHABLE_KEY ||
     process.env.STRIPE_PUBLISHABLE_KEY ||
     '';
 
-  const stripeConfigured = Boolean(process.env.STRIPE_SECRET_KEY);
-  const stripeWebhookConfigured = Boolean(process.env.STRIPE_WEBHOOK_SECRET);
+  const stripeConfigured = Boolean(resolvedStripe.connected && resolvedStripe.secretKey);
+  const stripeWebhookConfigured = Boolean(resolvedStripe.webhookSecret);
 
-  res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=30');
+  res.setHeader('Cache-Control', 'no-store');
   return res.status(200).json({
     environment: 'live',
     supabaseUrl,
     supabaseAnonKey,
     stripePublishableKey,
+    stripeMode: resolvedStripe.mode,
+    stripeConnected: stripeConfigured,
     stripeConfigured,
     stripeWebhookConfigured,
   });

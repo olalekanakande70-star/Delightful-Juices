@@ -4,42 +4,55 @@ This guide covers the production environment configuration, idempotent database 
 
 ---
 
-## 1. Live Environment Variables
+## 1. Environment Variables & Secrets Handling
 
-All credentials are managed strictly via server/deployment environment variables (no local credentials or API key inputs exist in the browser UI):
+- **Production:** Configure all server secrets in **Vercel Project Settings → Environment Variables**.
+- **Server-side development:** Configure development secrets in **Google AI Studio Secrets**.
+- Never commit `.env` files or secret values to GitHub, and never prefix secret credentials with `VITE_`.
 
+### Public Client Variables (`VITE_*` — safe for browser)
 ```env
-APP_URL="https://www.delightfuljuices.com"
 VITE_SUPABASE_URL="https://<your-project-ref>.supabase.co"
 VITE_SUPABASE_ANON_KEY="<your-supabase-anon-public-key>"
-SUPABASE_SERVICE_ROLE_KEY="<your-supabase-service-role-key>"
-STRIPE_SECRET_KEY="<your-live-stripe-secret-key>"
-STRIPE_WEBHOOK_SECRET="<your-live-stripe-webhook-secret>"
 ```
 
-- `/api/public-config` automatically supplies public runtime connection metadata to every visitor browser while keeping `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, and `STRIPE_WEBHOOK_SECRET` strictly server-side.
-- `/api/create-checkout-session` creates live Stripe Checkout Sessions for card, Apple Pay, and Google Pay orders.
-- `/api/stripe-webhook` verifies `Stripe-Signature` against `STRIPE_WEBHOOK_SECRET` and marks orders paid (`preparing`) in `public.orders`.
+### Strictly Server-Side Secrets (never exposed to the browser)
+```env
+APP_URL="https://www.delightfuljuices.com"
+SUPABASE_URL="https://<your-project-ref>.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="<your-supabase-service-role-key>"
+PAYMENT_ENCRYPTION_KEY="<random-32-plus-char-secret-for-aes-256-gcm>"
+
+# Optional fallback Stripe credentials (only needed if not configured via Admin CMS vault):
+STRIPE_SECRET_KEY=""
+STRIPE_WEBHOOK_SECRET=""
+```
+
+- `PAYMENT_ENCRYPTION_KEY` is used **only** on the server (`/api/_lib/stripeGateway.ts`) to AES-256-GCM encrypt and decrypt Stripe secret credentials stored in the RLS-locked `public.payment_gateway_secrets` table.
+- `/api/public-config` returns only non-secret public metadata (`supabaseUrl`, `supabaseAnonKey`, active `stripePublishableKey`, `stripeMode`, and boolean readiness flags).
+- `/api/stripe-gateway` requires a verified Supabase Auth administrator token (`Authorization: Bearer <jwt>`) and manages encrypted Stripe Test/Live credentials and automatic webhook registration.
+- `/api/create-checkout-session` creates Stripe Checkout Sessions server-side.
+- `/api/stripe-webhook` verifies `Stripe-Signature` against the encrypted webhook signing secret (or `STRIPE_WEBHOOK_SECRET` fallback) before updating `public.orders`.
 
 ---
 
-## 2. Database Schema & Seed Setup
+## 2. Database Schema & Migrations
 
-1. Open your Supabase project's **SQL Editor**.
-2. Run `supabase/migrations/20261016000000_init_delightful_juice.sql` (initial tables, RLS policies, and `delightful_assets` storage bucket).
-3. Run `supabase/migrations/20261030000000_cms_expansion_delightful_juices.sql` (idempotent CMS expansion for `hero_slides`, `cms_pages`, nested `navigation_items`, and Stripe order columns).
-4. Optionally run `supabase/seed.sql` if initializing a fresh project for the first time.
+Execute these idempotent SQL migrations in **Supabase Dashboard → SQL Editor** in order:
+1. `supabase/migrations/20261016000000_init_delightful_juice.sql`
+2. `supabase/migrations/20261030000000_cms_expansion_delightful_juices.sql`
+3. `supabase/migrations/20261122000000_stripe_webhook_orders_columns.sql`
+4. `supabase/migrations/20261122010000_stripe_gateway_secrets.sql`
 
 ---
 
 ## 3. Live Administrator Authentication (Supabase Auth)
 
-Administrator access at `/admin` is authenticated exclusively through **Supabase Auth**:
+Administrator access at `/admin` is authenticated through **Supabase Auth**:
 
-1. In your Supabase Dashboard, navigate to **Authentication → Users**.
-2. Click **Add User → Create new user**.
-3. Enter your administrator email (e.g., `orders@delightfuljuices.com`) and a strong password, with **Auto Confirm User** enabled.
-4. Register the user in `public.admin_profiles` if needed:
+1. In Supabase Dashboard, navigate to **Authentication → Users**.
+2. Click **Add User → Create new user** with your administrator email and strong password (**Auto Confirm User** enabled).
+3. Ensure your administrator account is listed in `public.admin_profiles`:
    ```sql
    INSERT INTO public.admin_profiles (id, email, role)
    SELECT id, email, 'admin'
@@ -47,4 +60,4 @@ Administrator access at `/admin` is authenticated exclusively through **Supabase
    WHERE email = 'orders@delightfuljuices.com'
    ON CONFLICT (id) DO NOTHING;
    ```
-5. Visit `/admin` on the live website and sign in with your Supabase Auth email and password.
+4. Visit `/admin`, sign in, and open **CMS Settings → Payment Gateway**.

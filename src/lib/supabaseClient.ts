@@ -18,6 +18,9 @@ const LEGACY_LOCAL_CREDENTIAL_KEYS = [
 export interface LiveServerStatus {
   stripeConfigured: boolean;
   stripeWebhookConfigured: boolean;
+  stripeConnected: boolean;
+  stripeMode: 'test' | 'live';
+  stripePublishableKey?: string;
 }
 
 class SupabaseService {
@@ -34,6 +37,9 @@ class SupabaseService {
     anonKey: string;
     stripeConfigured: boolean;
     stripeWebhookConfigured: boolean;
+    stripeConnected: boolean;
+    stripeMode: 'test' | 'live';
+    stripePublishableKey: string;
   } | null = null;
   private runtimeConfigPromise: Promise<boolean> | null = null;
   private lastTestedAt: string | undefined = undefined;
@@ -63,6 +69,9 @@ class SupabaseService {
     return {
       stripeConfigured: Boolean(this.runtimePublicConfig?.stripeConfigured),
       stripeWebhookConfigured: Boolean(this.runtimePublicConfig?.stripeWebhookConfigured),
+      stripeConnected: Boolean(this.runtimePublicConfig?.stripeConnected),
+      stripeMode: this.runtimePublicConfig?.stripeMode === 'test' ? 'test' : 'live',
+      stripePublishableKey: this.runtimePublicConfig?.stripePublishableKey || '',
     };
   }
 
@@ -219,6 +228,9 @@ class SupabaseService {
               anonKey: data?.supabaseAnonKey || '',
               stripeConfigured: Boolean(data?.stripeConfigured),
               stripeWebhookConfigured: Boolean(data?.stripeWebhookConfigured),
+              stripeConnected: Boolean(data?.stripeConnected ?? data?.stripeConfigured),
+              stripeMode: data?.stripeMode === 'test' ? 'test' : 'live',
+              stripePublishableKey: data?.stripePublishableKey || '',
             };
             this.init();
           }
@@ -278,6 +290,21 @@ class SupabaseService {
 
   public getCurrentUser(): User | null {
     return this.currentUser;
+  }
+
+  public async getAccessToken(): Promise<string | null> {
+    const client = this.getClient();
+    if (!client) return this.currentSession?.access_token || null;
+    try {
+      const { data } = await client.auth.getSession();
+      if (data?.session?.access_token) {
+        this.currentSession = data.session;
+        return data.session.access_token;
+      }
+    } catch {
+      // fall back to cached session token
+    }
+    return this.currentSession?.access_token || null;
   }
 
   public isAuthInitialized(): boolean {
@@ -846,8 +873,20 @@ class SupabaseService {
         updated_at: order.updatedAt,
       };
 
-      const { error } = await client.from('orders').insert([baseRow]);
+      const fullRow = {
+        ...baseRow,
+        payment_status: order.paymentStatus || 'pending',
+      };
+
+      let { error } = await client.from('orders').insert([fullRow]);
       if (!error) return true;
+
+      // Fallback if payment_status column has not yet been added to orders
+      if (error.code === 'PGRST204' || error.code === '42703' || (error.message || '').includes('payment_status')) {
+        const fallbackRes = await client.from('orders').insert([baseRow]);
+        error = fallbackRes.error;
+        if (!error) return true;
+      }
 
       // Compatibility fallback if legacy orders_payment_method_check constraint hasn't been dropped yet
       if (

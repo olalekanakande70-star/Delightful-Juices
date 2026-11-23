@@ -1492,7 +1492,7 @@ function normalizeSiteContent(raw: SiteContent): SiteContent {
     stripe: {
       ...INITIAL_SITE_CONTENT.stripe!,
       ...(raw.stripe || {}),
-      mode: 'live',
+      mode: raw.stripe?.mode === 'test' ? 'test' : 'live',
       publishableKey: undefined,
     },
   };
@@ -2705,7 +2705,40 @@ CREATE POLICY "Allow Assets Update" ON storage.objects FOR UPDATE USING (bucket_
 DROP POLICY IF EXISTS "Allow Assets Delete" ON storage.objects;
 CREATE POLICY "Allow Assets Delete" ON storage.objects FOR DELETE USING (bucket_id = 'delightful_assets' AND auth.role() = 'authenticated');
 
--- 10. Safe Brand Update (DelightOil -> Delightful Juices)
+-- 10. Server-Only Encrypted Payment Gateway Secrets Table (NO client RLS access)
+CREATE TABLE IF NOT EXISTS public.payment_gateway_secrets (
+  id TEXT PRIMARY KEY DEFAULT 'stripe',
+  provider TEXT NOT NULL DEFAULT 'stripe',
+  connected BOOLEAN NOT NULL DEFAULT false,
+  active_mode TEXT NOT NULL DEFAULT 'test' CHECK (active_mode IN ('test', 'live')),
+  account_id TEXT,
+  account_name TEXT,
+  test_publishable_key TEXT,
+  test_secret_key_enc TEXT,
+  test_secret_key_hint TEXT,
+  test_webhook_secret_enc TEXT,
+  test_webhook_secret_hint TEXT,
+  test_webhook_endpoint_id TEXT,
+  live_publishable_key TEXT,
+  live_secret_key_enc TEXT,
+  live_secret_key_hint TEXT,
+  live_webhook_secret_enc TEXT,
+  live_webhook_secret_hint TEXT,
+  live_webhook_endpoint_id TEXT,
+  webhook_url TEXT NOT NULL DEFAULT 'https://www.delightfuljuices.com/api/stripe-webhook',
+  webhook_status TEXT NOT NULL DEFAULT 'not_configured',
+  webhook_last_error TEXT,
+  last_validated_at TIMESTAMPTZ,
+  connected_by_email TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.payment_gateway_secrets ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.payment_gateway_secrets FROM anon;
+REVOKE ALL ON TABLE public.payment_gateway_secrets FROM authenticated;
+
+-- 11. Safe Brand Update (DelightOil -> Delightful Juices)
 UPDATE public.site_content
 SET
   business_name = 'Delightful Juices',

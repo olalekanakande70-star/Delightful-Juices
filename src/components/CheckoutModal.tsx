@@ -101,8 +101,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
             customerEmail: customerEmail.trim() || undefined,
             deliveryFee,
             currency: content.stripe?.currency || 'usd',
-            successUrl: `${window.location.origin}/?order_success=true&order_number=${newOrder.orderNumber}`,
-            cancelUrl: `${window.location.origin}/?order_cancelled=true&order_number=${newOrder.orderNumber}`,
+            successUrl: `${window.location.origin}/?order_success=true&order_number=${encodeURIComponent(newOrder.orderNumber)}&session_id={CHECKOUT_SESSION_ID}`,
+            cancelUrl: `${window.location.origin}/?order_cancelled=true&order_number=${encodeURIComponent(newOrder.orderNumber)}`,
           }),
         });
 

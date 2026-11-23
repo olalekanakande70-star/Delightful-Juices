@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import createCheckoutSessionHandler from './api/create-checkout-session.ts';
 import publicConfigHandler from './api/public-config.ts';
+import stripeGatewayHandler from './api/stripe-gateway.ts';
 import stripeWebhookHandler from './api/stripe-webhook.ts';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -28,6 +29,15 @@ async function startServer() {
   app.all('/api/public-config', async (req, res) => {
     try {
       await publicConfigHandler(req, res);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Internal server error';
+      res.status(500).json({ error: 'SERVER_ERROR', message });
+    }
+  });
+
+  app.all('/api/stripe-gateway', async (req, res) => {
+    try {
+      await stripeGatewayHandler(req, res);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Internal server error';
       res.status(500).json({ error: 'SERVER_ERROR', message });

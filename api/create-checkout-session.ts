@@ -1,4 +1,8 @@
 import Stripe from 'stripe';
+import {
+  getServiceSupabaseClient,
+  resolveStripeRuntimeConfig,
+} from './_lib/stripeGateway.ts';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -6,7 +10,6 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
   const {
     orderId,
     orderNumber,
@@ -23,16 +26,39 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: 'Invalid order items.' });
   }
 
-  if (!stripeSecretKey) {
+  for (const item of items) {
+    const unitPrice = Number(item?.unitPrice);
+    const qty = Number(item?.quantity);
+    if (
+      !item?.productName ||
+      !Number.isFinite(unitPrice) ||
+      unitPrice < 0 ||
+      !Number.isInteger(qty) ||
+      qty < 1
+    ) {
+      return res.status(400).json({ error: 'Invalid order item pricing or quantity.' });
+    }
+  }
+
+  const stripeConfig = await resolveStripeRuntimeConfig();
+  if (stripeConfig.explicitlyDisconnected) {
+    return res.status(400).json({
+      error: 'STRIPE_DISCONNECTED',
+      message:
+        'Stripe checkout is currently disconnected in the Admin CMS. Reconnect Stripe in CMS Settings to accept card payments.',
+    });
+  }
+
+  if (!stripeConfig.secretKey) {
     return res.status(400).json({
       error: 'STRIPE_NOT_CONFIGURED',
       message:
-        'STRIPE_SECRET_KEY is not configured in the live server environment variables.',
+        'Stripe is not configured yet. Connect your Stripe API keys in the Admin CMS Payment Gateway settings.',
     });
   }
 
   try {
-    const stripe = new Stripe(stripeSecretKey, {
+    const stripe = new Stripe(stripeConfig.secretKey, {
       apiVersion: '2025-02-24.acacia' as any,
     });
 
@@ -74,16 +100,26 @@ export default async function handler(req: any, res: any) {
       (req.headers.host ? `${proto}://${req.headers.host}` : 'https://www.delightfuljuices.com');
     const host = String(rawOrigin).replace(/\/+$/, '');
 
+    const sessionMetadata = {
+      orderId: orderId ? String(orderId) : '',
+      orderNumber: orderNumber ? String(orderNumber) : '',
+      customerName: customerName ? String(customerName) : '',
+      stripeMode: stripeConfig.mode,
+    };
+
     const sessionParams: any = {
       payment_method_types: ['card'],
       line_items,
       mode: 'payment',
       customer_email: customerEmail || undefined,
-      client_reference_id: orderId || orderNumber,
-      metadata: {
-        orderId: orderId || '',
-        orderNumber: orderNumber || '',
-        customerName: customerName || '',
+      client_reference_id: orderId || orderNumber || undefined,
+      metadata: sessionMetadata,
+      payment_intent_data: {
+        metadata: {
+          orderId: sessionMetadata.orderId,
+          orderNumber: sessionMetadata.orderNumber,
+          stripeMode: stripeConfig.mode,
+        },
       },
       success_url:
         successUrl ||
@@ -95,9 +131,31 @@ export default async function handler(req: any, res: any) {
 
     const session = await stripe.checkout.sessions.create(sessionParams);
 
+    // Best-effort link of stripe_session_id to the pending Supabase order
+    const supabase = getServiceSupabaseClient();
+    if (supabase && (orderNumber || orderId)) {
+      try {
+        const updateQuery = supabase
+          .from('orders')
+          .update({
+            stripe_session_id: session.id,
+            payment_status: 'pending',
+            updated_at: new Date().toISOString(),
+          });
+        if (orderNumber) {
+          await updateQuery.eq('order_number', orderNumber);
+        } else if (orderId) {
+          await updateQuery.eq('id', orderId);
+        }
+      } catch {
+        // Non-blocking best-effort metadata link
+      }
+    }
+
     return res.status(200).json({
       sessionId: session.id,
       url: session.url,
+      mode: stripeConfig.mode,
     });
   } catch (err: any) {
     console.error('Stripe session creation error:', err);

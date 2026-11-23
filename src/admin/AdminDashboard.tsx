@@ -28,6 +28,7 @@ import { PagesManager } from './PagesManager';
 import { NavigationManager } from './NavigationManager';
 import { EventShowcaseManager } from './EventShowcaseManager';
 import { WholesaleGalleryManager } from './WholesaleGalleryManager';
+import { StripeGatewayManager } from './StripeGatewayManager';
 import { 
   ShieldCheck, 
   LogOut, 
@@ -104,10 +105,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
   const [isTestingSupabase, setIsTestingSupabase] = useState(false);
   const [saveSuccessNotice, setSaveSuccessNotice] = useState<string | null>(null);
   const [confirmDeleteProdId, setConfirmDeleteProdId] = useState<string | null>(null);
-
-  // Stripe test endpoint state
-  const [isTestingStripe, setIsTestingStripe] = useState(false);
-  const [stripeTestResult, setStripeTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Subscribe to live repository & Supabase Auth changes
   useEffect(() => {
@@ -448,49 +445,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
     }
   };
 
-  // Test Stripe Endpoint
-  const handleTestStripeEndpoint = async () => {
-    setIsTestingStripe(true);
-    setStripeTestResult(null);
-    try {
-      const res = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId: 'test-' + Date.now(),
-          orderNumber: 'DJ-TEST',
-          items: [{ productName: 'Zobo Test Sip', size: '11.8 oz', unitPrice: 5.50, quantity: 1 }],
-          customerEmail: 'test@delightfuljuices.com',
-          customerName: 'Test Customer',
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data.url) {
-        setStripeTestResult({
-          success: true,
-          message: `Stripe integration verified! Successfully created live checkout session (ID: ${data.sessionId}).`,
-        });
-      } else if (data.error === 'STRIPE_NOT_CONFIGURED') {
-        setStripeTestResult({
-          success: false,
-          message: 'Server endpoint reached, but STRIPE_SECRET_KEY is not yet added in your Vercel Project Environment Variables.',
-        });
-      } else {
-        setStripeTestResult({
-          success: false,
-          message: data.message || data.error || 'Server responded with an error.',
-        });
-      }
-    } catch (err: any) {
-      setStripeTestResult({
-        success: false,
-        message: 'Endpoint /api/create-checkout-session could not be reached. Ensure Vercel or local API server is active.',
-      });
-    } finally {
-      setIsTestingStripe(false);
-    }
-  };
-
   // Wait briefly for live Supabase Auth session check before showing login prompt
   if (!isAuthReady) {
     return (
@@ -807,16 +761,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
               )}
             </button>
 
+            <div className="hidden md:block pt-3 pb-1 px-3 text-[10px] font-black uppercase tracking-widest text-[#1B4D2E]/45">
+              CMS Settings
+            </div>
+
             <button
               onClick={() => setActiveTab('stripe')}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
                 activeTab === 'stripe'
                   ? 'bg-[#1B4D2E] text-[#FFF8E7] shadow-xs'
                   : 'text-[#1B4D2E]/75 hover:bg-[#FFF8E7]'
               }`}
             >
-              <CreditCard className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
-              <span className="hidden md:inline">Stripe Payment</span>
+              <div className="flex items-center space-x-3">
+                <CreditCard className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
+                <span className="hidden md:inline">Payment Gateway</span>
+              </div>
+              <span
+                className={`hidden md:inline w-2 h-2 rounded-full ${
+                  serverStatus.stripeConfigured ? 'bg-emerald-400' : 'bg-amber-400'
+                }`}
+                title={serverStatus.stripeConfigured ? 'Stripe Connected' : 'Setup Required'}
+              />
             </button>
 
             <button
@@ -1770,232 +1736,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
             </div>
           )}
 
-          {/* TAB: STRIPE PAYMENTS */}
+          {/* TAB: PAYMENT GATEWAY SETTINGS & MANAGEMENT */}
           {activeTab === 'stripe' && (
-            <div className="space-y-6 max-w-4xl">
-              <div>
-                <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-[#1B4D2E]">
-                  Live Stripe Payment Integration
-                </h2>
-                <p className="text-xs sm:text-sm text-[#1B4D2E]/70">
-                  Manage live card checkout, Apple Pay, and Google Pay powered by server-side Stripe Checkout Sessions &amp; Webhooks
-                </p>
-              </div>
-
-              {/* Live Server & Checkout Status Banner */}
-              <div className="space-y-3">
-                <div
-                  className={`p-5 rounded-3xl border flex items-start space-x-4 ${
-                    content.stripe?.enabled && serverStatus.stripeConfigured
-                      ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
-                      : content.stripe?.enabled
-                      ? 'bg-amber-50 border-amber-300 text-amber-900'
-                      : 'bg-gray-50 border-gray-300 text-gray-800'
-                  }`}
-                >
-                  <CreditCard className="w-6 h-6 shrink-0 mt-0.5 text-[#1B4D2E]" />
-                  <div className="space-y-1 text-xs flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-extrabold text-sm">
-                        {content.stripe?.enabled
-                          ? 'Stripe Card Checkout is Enabled at Storefront'
-                          : 'Stripe Card Checkout is Disabled'}
-                      </span>
-                      <span
-                        className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
-                          serverStatus.stripeConfigured
-                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                            : 'bg-amber-100 text-amber-900 border-amber-300'
-                        }`}
-                      >
-                        {serverStatus.stripeConfigured
-                          ? 'STRIPE_SECRET_KEY Detected on Server'
-                          : 'STRIPE_SECRET_KEY Not Set on Server Yet'}
-                      </span>
-                      {serverStatus.stripeWebhookConfigured && (
-                        <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-300">
-                          Webhook Active
-                        </span>
-                      )}
-                    </div>
-                    <p>
-                      {content.stripe?.enabled
-                        ? `Customers see "${content.stripe.customerFacingName || 'Credit / Debit Card (Stripe)'}" in the live checkout modal. All secret keys are read securely from server environment variables.`
-                        : 'Card checkout is currently hidden from customers. Enable the toggle below whenever you wish to accept online card payments.'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Stripe Storefront Presentation Settings */}
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#1B4D2E]/10 shadow-sm space-y-5">
-                <div className="flex items-center justify-between pb-3 border-b">
-                  <div>
-                    <h3 className="font-display font-bold text-lg text-[#1B4D2E]">
-                      Storefront Card Checkout Settings
-                    </h3>
-                    <p className="text-xs text-gray-500">
-                      Configure currency and customer-facing labels for live Stripe Checkout
-                    </p>
-                  </div>
-
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={content.stripe?.enabled !== false}
-                      onChange={(e) => {
-                        const updated: StripePaymentSettings = {
-                          ...(content.stripe || {
-                            mode: 'live',
-                            currency: 'USD',
-                            customerFacingName: 'Credit / Debit Card (Stripe)',
-                            description: 'Instant secure checkout with Visa, Mastercard, Amex, Apple Pay & Google Pay',
-                          }),
-                          enabled: e.target.checked,
-                        };
-                        setContent({ ...content, stripe: updated });
-                      }}
-                      className="w-5 h-5 accent-[#1B4D2E]"
-                    />
-                    <span className="text-xs font-bold text-[#1B4D2E]">Enable Stripe</span>
-                  </label>
-                </div>
-
-                {/* Currency */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
-                    Settlement Currency
-                  </label>
-                  <select
-                    value={content.stripe?.currency || 'USD'}
-                    onChange={(e) => {
-                      const updated: StripePaymentSettings = {
-                        ...(content.stripe || {
-                          enabled: true,
-                          mode: 'live',
-                          customerFacingName: 'Credit / Debit Card (Stripe)',
-                          description: '',
-                        }),
-                        currency: e.target.value,
-                      };
-                      setContent({ ...content, stripe: updated });
-                    }}
-                    className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E] font-bold"
-                  >
-                    <option value="USD">USD ($ - United States Dollar)</option>
-                    <option value="CAD">CAD ($ - Canadian Dollar)</option>
-                    <option value="GBP">GBP (£ - British Pound)</option>
-                    <option value="EUR">EUR (€ - Euro)</option>
-                  </select>
-                </div>
-
-                {/* Customer-Facing Label */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
-                    Customer Facing Method Name
-                  </label>
-                  <input
-                    type="text"
-                    value={content.stripe?.customerFacingName || 'Credit / Debit Card (Stripe)'}
-                    onChange={(e) => {
-                      const updated: StripePaymentSettings = {
-                        ...(content.stripe || {
-                          enabled: true,
-                          mode: 'live',
-                          currency: 'USD',
-                          description: '',
-                        }),
-                        customerFacingName: e.target.value,
-                      };
-                      setContent({ ...content, stripe: updated });
-                    }}
-                    className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E]"
-                  />
-                </div>
-
-                {/* Customer-Facing Description */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
-                    Customer Facing Description
-                  </label>
-                  <input
-                    type="text"
-                    value={content.stripe?.description || 'Instant secure payment via Visa, Mastercard, Amex, Apple Pay & Google Pay'}
-                    onChange={(e) => {
-                      const updated: StripePaymentSettings = {
-                        ...(content.stripe || {
-                          enabled: true,
-                          mode: 'live',
-                          currency: 'USD',
-                          customerFacingName: 'Credit / Debit Card (Stripe)',
-                        }),
-                        description: e.target.value,
-                      };
-                      setContent({ ...content, stripe: updated });
-                    }}
-                    className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-4 py-2.5 text-xs text-[#1B4D2E]"
-                  />
-                </div>
-
-                {/* Live Server Environment Variable Reference (No Secrets or Key Inputs in UI) */}
-                <div className="p-4 bg-[#FFF8E7] rounded-2xl border border-[#1B4D2E]/15 text-xs space-y-2 text-[#1B4D2E]">
-                  <div className="font-bold flex items-center space-x-1.5">
-                    <ShieldCheck className="w-4 h-4 text-[#1B4D2E]" />
-                    <span>Live Server Environment Variables</span>
-                  </div>
-                  <p className="text-[11px] text-[#1B4D2E]/80 leading-relaxed">
-                    All payment credentials stay strictly on the server (never stored in browser storage or client code). Configure your live keys in your hosting provider&apos;s Environment Variables:
-                  </p>
-                  <div className="bg-white p-2.5 rounded-xl font-mono text-[11px] border border-[#1B4D2E]/15 space-y-1">
-                    <div>
-                      <strong>STRIPE_SECRET_KEY</strong> — Server secret key used by <code className="font-mono">/api/create-checkout-session</code>
-                    </div>
-                    <div className="text-gray-600">
-                      <strong>STRIPE_WEBHOOK_SECRET</strong> — Webhook signing secret verified by <code className="font-mono">/api/stripe-webhook</code>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Test Stripe API Endpoint Button */}
-                <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    onClick={handleTestStripeEndpoint}
-                    disabled={isTestingStripe}
-                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center space-x-2 transition-colors cursor-pointer"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isTestingStripe ? 'animate-spin' : ''}`} />
-                    <span>{isTestingStripe ? 'Verifying Live Stripe API...' : 'Verify Live Stripe Server Endpoint'}</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      handlePersistContent(content, 'Stripe checkout settings published to live site!');
-                    }}
-                    className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold py-3 px-6 rounded-xl text-xs flex items-center space-x-2 shadow-md cursor-pointer"
-                  >
-                    <Save className="w-4 h-4 text-[#E1AD01]" />
-                    <span>Save Stripe Settings</span>
-                  </button>
-                </div>
-
-                {stripeTestResult && (
-                  <div
-                    className={`p-3.5 rounded-xl text-xs flex items-start space-x-2 ${
-                      stripeTestResult.success ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-amber-50 text-amber-900 border border-amber-200'
-                    }`}
-                  >
-                    {stripeTestResult.success ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-                    )}
-                    <span>{stripeTestResult.message}</span>
-                  </div>
-                )}
-
-              </div>
-            </div>
+            <StripeGatewayManager
+              content={content}
+              orders={orders}
+              serverStatus={serverStatus}
+              onUpdateContent={(next) => setContent(next)}
+              onPersistContent={handlePersistContent}
+              onServerStatusRefresh={() => setServerStatus(supabaseService.getServerStatus())}
+              onNotify={showToast}
+              onOpenDatabaseTab={() => setActiveTab('supabase')}
+            />
           )}
 
           {/* TAB: PRODUCTS MANAGEMENT */}
@@ -2212,9 +1964,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                             {ord.status.replace('_', ' ')}
                           </span>
                           {ord.paymentMethod === 'stripe_card' && (
-                            <span className="bg-purple-100 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center space-x-1">
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center space-x-1 ${
+                                ord.paymentStatus === 'paid'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : ord.paymentStatus === 'failed'
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}
+                            >
                               <CreditCard className="w-3 h-3" />
-                              <span>Stripe Paid</span>
+                              <span>
+                                {ord.paymentStatus === 'paid'
+                                  ? 'Stripe Paid'
+                                  : ord.paymentStatus === 'failed'
+                                  ? 'Stripe Payment Failed'
+                                  : 'Stripe Pending'}
+                              </span>
                             </span>
                           )}
                         </div>

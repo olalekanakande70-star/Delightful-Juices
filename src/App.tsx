@@ -160,7 +160,7 @@ function MainApp() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('order_success') === 'true') {
       const orderNum = params.get('order_number') || 'DJ-Order';
-      showToast(`Thank you! Payment received for Order ${orderNum}.`);
+      showToast(`Thank you! Checkout submitted for Order ${orderNum}. Payment confirmation syncs automatically.`);
       dataRepo.syncFromSupabase();
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (params.get('order_cancelled') === 'true') {
