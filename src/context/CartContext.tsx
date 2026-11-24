@@ -43,9 +43,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'local_delivery' | 'shipping'>('local_delivery');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const siteContent = dataRepo.getContent();
-  const freeDeliveryThreshold = siteContent.freeDeliveryThreshold || 40.0;
-  const standardDeliveryFee = siteContent.standardDeliveryFee || 4.99;
+  const freeDeliveryThreshold = 0;
+  const standardDeliveryFee = 0;
 
   useEffect(() => {
     try {
@@ -101,16 +100,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const subtotal = cart.reduce((sum, item) => sum + item.selectedSize.price * item.quantity, 0);
   const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  let deliveryFee = 0;
-  if (deliveryMethod === 'pickup') {
-    deliveryFee = 0;
-  } else if (subtotal >= freeDeliveryThreshold) {
-    deliveryFee = 0;
-  } else {
-    deliveryFee = standardDeliveryFee;
-  }
-
-  const total = subtotal + deliveryFee;
+  const deliveryFee = 0;
+  const total = subtotal;
 
   return (
     <CartContext.Provider

@@ -17,6 +17,8 @@ export default async function handler(req: any, res: any) {
     customerEmail,
     customerName,
     deliveryFee,
+    deliveryLabel,
+    deliveryDescription,
     successUrl,
     cancelUrl,
     currency = 'usd',
@@ -83,9 +85,11 @@ export default async function handler(req: any, res: any) {
         price_data: {
           currency: String(currency).toLowerCase(),
           product_data: {
-            name: 'Local Cold Delivery Fee',
+            name: String(deliveryLabel || 'Local Cold Delivery Fee'),
             images: [],
-            description: 'Quakertown & Regional Insulated Delivery',
+            description: String(
+              deliveryDescription || 'Quakertown & Regional Insulated Delivery'
+            ),
           },
           unit_amount: Math.round(Number(deliveryFee) * 100),
         },

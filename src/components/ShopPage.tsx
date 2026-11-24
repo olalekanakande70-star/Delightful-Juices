@@ -81,10 +81,9 @@ export const ShopHeaderBanner: React.FC<ShopHeaderBannerProps> = ({
               </p>
             ) : (
               <p className="text-sm sm:text-base text-[#FFF8E7]/88 leading-relaxed">
-                Handcrafted to order in Quakertown, PA using whole hibiscus calyces, organic ginger root, ripe tropical fruit, and soaked tigernuts. Enjoy affordable delivery directly to your door in{' '}
-                <strong className="text-[#E1AD01]">12oz</strong>,{' '}
-                <strong className="text-[#E1AD01]">16oz</strong>, and{' '}
-                <strong className="text-[#E1AD01]">18oz</strong> bottles.
+                Handcrafted to order in Quakertown, PA using whole hibiscus calyces, organic ginger root, ripe tropical fruit, and soaked tigernuts. Choose individual{' '}
+                <strong className="text-[#E1AD01]">Single Bottles (12oz, 16oz, 18oz)</strong> or separate{' '}
+                <strong className="text-[#E1AD01]">12-Pack Cases ($36, $48, $60)</strong> across every signature flavor.
               </p>
             )}
 
@@ -128,14 +127,11 @@ export const ShopHeaderBanner: React.FC<ShopHeaderBannerProps> = ({
         <div className="mt-8 pt-6 border-t border-white/15 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-[#FFF8E7]/90">
           <div className="flex items-center space-x-2.5">
             <Truck className="w-4 h-4 text-[#E1AD01] shrink-0" />
-            <span>
-              Affordable Delivery • Free over{' '}
-              <strong>${content.freeDeliveryThreshold.toFixed(2)}</strong>
-            </span>
+            <span>Delivery fee will be charged when package is delivered.</span>
           </div>
           <div className="flex items-center space-x-2.5">
             <Store className="w-4 h-4 text-[#E1AD01] shrink-0" />
-            <span>Free kitchen pickup at 500 W Broad St, Quakertown</span>
+            <span>Kitchen pickup at 500 W Broad St, Quakertown</span>
           </div>
           <div className="flex items-center space-x-2.5">
             <CheckCircle2 className="w-4 h-4 text-[#E1AD01] shrink-0" />
@@ -181,17 +177,35 @@ export const ShopCatalogSection: React.FC<ShopCatalogSectionProps> = ({
     setActiveCategory(defaultCategory || 'all');
   }, [defaultCategory]);
 
+  const hasBundles = products.some((p) => p.category === 'bundles' || p.id.endsWith('-12pack'));
+  const hasSingles = products.some((p) => p.category !== 'bundles' && !p.id.endsWith('-12pack'));
   const categories = [
     { id: 'all', label: 'All Fresh Sips' },
+    ...(hasSingles ? [{ id: 'singles', label: 'Single Bottles' }] : []),
+    ...(hasBundles ? [{ id: 'bundles', label: '12-Pack Cases' }] : []),
     { id: 'zobo', label: 'Signature Zobo' },
     { id: 'ginger', label: 'Ginger Elixirs' },
     { id: 'other', label: 'Artisanal Milks' },
-    { id: 'bundles', label: 'Party & Sampler Packs' },
   ];
 
   const filteredAndSorted = useMemo(() => {
     const filtered = products.filter((p) => {
-      const matchesCat = activeCategory === 'all' || p.category === activeCategory;
+      const isPackItem = p.category === 'bundles' || p.id.toLowerCase().endsWith('-12pack');
+      let matchesCat = activeCategory === 'all';
+      if (activeCategory === 'singles') {
+        matchesCat = !isPackItem;
+      } else if (activeCategory === 'bundles') {
+        matchesCat = isPackItem;
+      } else if (activeCategory === 'zobo') {
+        matchesCat = p.category === 'zobo' || p.slug.toLowerCase().includes('zobo');
+      } else if (activeCategory === 'ginger') {
+        matchesCat = p.category === 'ginger' || p.slug.toLowerCase().includes('ginger');
+      } else if (activeCategory === 'other') {
+        matchesCat = p.category === 'other' || p.slug.toLowerCase().includes('tigernut');
+      } else if (activeCategory !== 'all') {
+        matchesCat = p.category === activeCategory;
+      }
+
       const matchesStock = !inStockOnly || p.inStock;
       const q = searchQuery.trim().toLowerCase();
       const matchesQuery =
@@ -209,7 +223,6 @@ export const ShopCatalogSection: React.FC<ShopCatalogSectionProps> = ({
       if (sortBy === 'price_asc') return minPriceA - minPriceB;
       if (sortBy === 'price_desc') return minPriceB - minPriceA;
       if (sortBy === 'rating') return b.rating - a.rating;
-      if (a.featured !== b.featured) return a.featured ? -1 : 1;
       return (a.displayOrder || 99) - (b.displayOrder || 99);
     });
   }, [products, activeCategory, inStockOnly, searchQuery, sortBy]);
@@ -222,7 +235,7 @@ export const ShopCatalogSection: React.FC<ShopCatalogSectionProps> = ({
       : 'bg-[#FFF8E7] text-[#1B4D2E]';
 
   return (
-    <section className={`py-8 sm:py-12 ${bgClass}`}>
+    <section id="shop-catalog" className={`py-8 sm:py-12 ${bgClass}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {(kicker?.trim() || heading?.trim() || subheading?.trim()) && (
           <div className="mb-8 space-y-2 max-w-3xl">
@@ -404,15 +417,40 @@ export const ShopPackPricingSection: React.FC<ShopPackPricingSectionProps> = ({
   const packPricing =
     content.packPricing ||
     content.branding?.packPricing || {
-      heading: 'Delightful Juice Value Packs',
-      subheading: 'Stock up your fridge, office, or event with curated multi-packs handcrafted daily.',
+      heading: '12-Pack Bottle Pricing Across All 6 Flavors',
+      subheading:
+        'Order Zobo (Hibiscus/Sorrel), Tigernut Milk, Pure Ginger, Ginger Mango, Ginger Pineapple, or Ginger Lychee in fresh 12-bottle packs.',
       tiers: [
-        { id: 'pack-6', name: '6-pack', bottlesCount: 6, price: 28, badge: 'Popular Sampler', description: 'Choice of 6 fresh assorted bottles. Perfect for weekly refreshment.', enabled: true },
-        { id: 'pack-12', name: '12-pack', bottlesCount: 12, price: 48, badge: 'Most Popular', description: 'Ideal for families, busy weeks, and wellness sharing.', enabled: true },
-        { id: 'pack-24', name: '24-pack', bottlesCount: 24, price: 90, badge: 'Best Value', description: 'Full case for gatherings, office fridges, and bulk stock.', enabled: true },
+        {
+          id: 'pack-12-12oz',
+          name: '12-pack (12oz)',
+          bottlesCount: 12,
+          price: 36,
+          badge: 'Everyday Value',
+          description: '12 fresh 12oz bottles of your favorite Delightful Juices botanical blend.',
+          enabled: true,
+        },
+        {
+          id: 'pack-12-16oz',
+          name: '12-pack (16oz)',
+          bottlesCount: 12,
+          price: 48,
+          badge: 'Most Popular',
+          description: '12 full-size 16oz bottles handcrafted daily for families and busy weeks.',
+          enabled: true,
+        },
+        {
+          id: 'pack-12-18oz',
+          name: '12-pack (18oz)',
+          bottlesCount: 12,
+          price: 60,
+          badge: 'Large Pour',
+          description: '12 generous 18oz bottles packed with pure whole hibiscus, ginger & fruit.',
+          enabled: true,
+        },
       ],
       pricingNote:
-        'Prices vary depending on delivery location and order quantity. Wholesale discounts are available for bulk purchases.',
+        'Applies across all 6 signature flavors. Delivery fee will be charged when package is delivered.',
     };
 
   const bgClass =
@@ -483,17 +521,23 @@ export const ShopPackPricingSection: React.FC<ShopPackPricingSectionProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        const bundle = products.find((p) => p.category === 'bundles');
-                        if (bundle) {
-                          onOpenDetails(bundle);
+                        const catalogEl = document.getElementById('shop-catalog');
+                        if (catalogEl) {
+                          catalogEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          return;
+                        }
+                        const targetProd =
+                          products.find((p) => p.category === 'bundles') || products[0];
+                        if (targetProd) {
+                          onOpenDetails(targetProd);
                         } else {
-                          onNavigate('/contact-us');
+                          onNavigate('/shop');
                         }
                       }}
                       className="w-full inline-flex items-center justify-center space-x-2 bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] py-3 px-4 rounded-xl text-xs font-extrabold transition-all shadow-xs cursor-pointer group-hover:bg-[#143822]"
                     >
                       <ShoppingCart className="w-3.5 h-3.5 text-[#E1AD01]" />
-                      <span>Order {tier.name}</span>
+                      <span>Shop {tier.name}</span>
                       <ArrowRight className="w-3.5 h-3.5 text-[#E1AD01] group-hover:translate-x-0.5 transition-transform" />
                     </button>
                   </div>

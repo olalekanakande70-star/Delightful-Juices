@@ -66,6 +66,23 @@ export function parseSizeString(sizeStr: string, labelStr?: string): {
   const clean = (sizeStr || '').trim();
 
   if (clean.toLowerCase() === 'pack' || clean.toLowerCase().includes('pack')) {
+    const packParenMatch = (labelStr || clean).match(
+      /(\d+)\s*-?\s*pack\s*\(\s*(\d+(?:\.\d+)?)\s*(cl|l|ml|oz)\s*\)/i
+    );
+    if (packParenMatch) {
+      const count = parseFloat(packParenMatch[1]);
+      let bQty = parseFloat(packParenMatch[2]);
+      const rawUnit = packParenMatch[3].toLowerCase();
+      if (rawUnit === 'cl' && Math.abs(bQty - 50) < 5) bQty = 16;
+      else if (rawUnit === 'l' && Math.abs(bQty - 1) < 0.2) bQty = 18;
+      else if (Math.abs(bQty - 16.9) < 0.5) bQty = 16;
+      return {
+        quantityValue: count,
+        unit: 'Pack',
+        packBottleQuantity: bQty,
+        packBottleUnit: 'oz',
+      };
+    }
     const packMatch = (labelStr || clean).match(/(\d+)\s*[x×]\s*(\d+(?:\.\d+)?)\s*(cl|l|ml|oz)/i);
     if (packMatch) {
       const count = parseFloat(packMatch[1]);
@@ -81,8 +98,9 @@ export function parseSizeString(sizeStr: string, labelStr?: string): {
         packBottleUnit: 'oz',
       };
     }
+    const countOnlyMatch = clean.match(/(\d+)\s*-?\s*pack/i);
     return {
-      quantityValue: 6,
+      quantityValue: countOnlyMatch ? parseFloat(countOnlyMatch[1]) : 12,
       unit: 'Pack',
       packBottleQuantity: 16,
       packBottleUnit: 'oz',
@@ -136,25 +154,26 @@ export function parseSizeString(sizeStr: string, labelStr?: string): {
 }
 
 /**
- * Returns the concise customer-facing ounce badge for a SizeOption (e.g., "11.8 oz", "16.9 oz", "33.8 oz", "6 × 16.9 oz").
+ * Returns the concise customer-facing ounce badge for a SizeOption (e.g., "12-pack (16oz)", "12oz", "16oz", "18oz").
  * Never double-converts values already in oz.
  */
 export function getCustomerSizeDisplay(sizeOption: SizeOption): string {
   const unit = sizeOption.unit;
   const qty = sizeOption.quantityValue;
+  const sizeLower = (sizeOption.size || '').toLowerCase();
 
-  if (unit === 'Pack' || sizeOption.size.toLowerCase() === 'pack') {
-    const count = qty && qty > 0 ? qty : 6;
+  if (unit === 'Pack' || sizeLower === 'pack' || sizeLower.includes('pack')) {
+    const parsed = parseSizeString(sizeOption.size, sizeOption.label);
+    const count = qty && qty > 0 ? qty : parsed.quantityValue || 12;
     if (sizeOption.packBottleQuantity && sizeOption.packBottleUnit) {
       const bottleOz = convertToOzNumber(sizeOption.packBottleQuantity, sizeOption.packBottleUnit);
-      return `${count}-Pack (${formatOzValue(bottleOz)} ea)`;
+      return `${count}-pack (${formatOzValue(bottleOz)})`;
     }
-    const parsed = parseSizeString(sizeOption.size, sizeOption.label);
     if (parsed.packBottleQuantity && parsed.packBottleUnit) {
       const bottleOz = convertToOzNumber(parsed.packBottleQuantity, parsed.packBottleUnit);
-      return `${parsed.quantityValue}-Pack (${formatOzValue(bottleOz)} ea)`;
+      return `${count}-pack (${formatOzValue(bottleOz)})`;
     }
-    return `${count}-Pack`;
+    return `${count}-pack`;
   }
 
   if (qty && qty > 0 && unit) {
@@ -170,13 +189,15 @@ export function getCustomerSizeDisplay(sizeOption: SizeOption): string {
  */
 export function getCustomerSizeFullLabel(sizeOption: SizeOption): string {
   const ozShort = getCustomerSizeDisplay(sizeOption);
+  const sizeLower = (sizeOption.size || '').toLowerCase();
 
-  if (sizeOption.unit === 'Pack' || sizeOption.size.toLowerCase() === 'pack') {
-    const count = sizeOption.quantityValue || 6;
-    const bQty = sizeOption.packBottleQuantity || 50;
-    const bUnit = sizeOption.packBottleUnit || 'cl';
+  if (sizeOption.unit === 'Pack' || sizeLower === 'pack' || sizeLower.includes('pack')) {
+    const parsed = parseSizeString(sizeOption.size, sizeOption.label);
+    const count = sizeOption.quantityValue || parsed.quantityValue || 12;
+    const bQty = sizeOption.packBottleQuantity ?? parsed.packBottleQuantity ?? 16;
+    const bUnit = sizeOption.packBottleUnit ?? parsed.packBottleUnit ?? 'oz';
     const bottleOz = formatOzValue(convertToOzNumber(bQty, bUnit));
-    return `${count} × ${bottleOz} Fresh Bottles Variety Pack`;
+    return `${count}-pack (${bottleOz} · ${count} Bottles)`;
   }
 
   // Strip old cl/Litre prefix from custom descriptor if present (e.g. "35cl (12 oz Pocket Sip)" -> "Pocket Sip")
@@ -291,11 +312,20 @@ export function convertInlineMeasurementsToOz(text: string): string {
 }
 
 /**
- * Formats an order or catering bottle size code (e.g. '35cl', '50cl', '1L', '12oz', '16oz', '18oz') for customer-facing display in oz.
+ * Formats an order or catering bottle size code (e.g. '35cl', '50cl', '1L', '12oz', '16oz', '18oz', '12-pack (16oz)') for customer-facing display in oz.
  */
 export function formatBottleCodeToOz(code: string): string {
   if (!code) return '';
-  if (code.toLowerCase() === 'pack') return '6-Pack (16oz ea)';
+  const lower = code.toLowerCase();
+  if (lower === 'pack') return '12-pack (16oz)';
+  if (lower.includes('pack')) {
+    const parsed = parseSizeString(code);
+    if (parsed.packBottleQuantity && parsed.packBottleUnit) {
+      const bottleOz = formatOzValue(convertToOzNumber(parsed.packBottleQuantity, parsed.packBottleUnit));
+      return `${parsed.quantityValue}-pack (${bottleOz})`;
+    }
+    return code;
+  }
   const parsed = parseSizeString(code);
   return formatOzValue(convertToOzNumber(parsed.quantityValue, parsed.unit));
 }

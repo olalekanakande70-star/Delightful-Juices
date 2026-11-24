@@ -11,18 +11,12 @@ export const FaqSection: React.FC<FaqSectionProps> = ({ content }) => {
 
   const faqs = [
     {
-      q: 'Where do you deliver, and what are the delivery fees?',
-      a: `Delightful Juices provides direct cold-insulated delivery throughout Quakertown, Bucks County, Montgomery County, and the Lehigh Valley in Pennsylvania. Free delivery is provided on all orders over $${content.freeDeliveryThreshold.toFixed(
-        2
-      )}. For orders under $${content.freeDeliveryThreshold.toFixed(
-        0
-      )}, a standard local courier fee of $${content.standardDeliveryFee.toFixed(
-        2
-      )} applies. You can also choose free local pickup at 500 W Broad St, Quakertown, PA.`,
+      q: 'Where do you deliver, and how are delivery fees handled?',
+      a: 'Delightful Juices provides direct cold-insulated delivery throughout Quakertown, Bucks County, Montgomery County, and the Lehigh Valley in Pennsylvania. Delivery fee will be charged when package is delivered. You can also choose kitchen pickup at 500 W Broad St, Quakertown, PA.',
     },
     {
       q: 'What bottle sizes do you offer?',
-      a: 'All of our signature juices and plant milks are bottled in convenient US fluid ounce sizes: 12oz Pocket Sip bottles, 16oz Daily Refresh bottles, and 18oz Sharing Bottles, plus our popular 6 × 16oz Party Sampler Pack.',
+      a: 'All of our signature juices and plant milks are bottled in convenient US fluid ounce single bottles (12oz, 16oz, and 18oz) as well as separate 12-pack cases (12oz — $36, 16oz — $48, 18oz — $60).',
     },
     {
       q: 'What is your delivery timeframe?',
@@ -83,7 +77,7 @@ export const FaqSection: React.FC<FaqSectionProps> = ({ content }) => {
           <div className="bg-[#FFF8E7] p-3 rounded-2xl border border-[#1B4D2E]/15 text-center">
             <Truck className="w-5 h-5 text-[#1B4D2E] mx-auto mb-1" />
             <div className="text-xs font-bold text-[#1B4D2E]">Local Delivery</div>
-            <div className="text-[10px] text-[#1B4D2E]/70">Free on orders $40+</div>
+            <div className="text-[10px] text-[#1B4D2E]/70">Fee charged on delivery</div>
           </div>
           <div className="bg-[#FFF8E7] p-3 rounded-2xl border border-[#1B4D2E]/15 text-center">
             <ShieldCheck className="w-5 h-5 text-[#1B4D2E] mx-auto mb-1" />

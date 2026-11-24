@@ -287,20 +287,21 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Order Summary Snapshot */}
-              <div className="bg-[#FFF8E7] p-3.5 rounded-2xl border border-[#1B4D2E]/15 flex items-center justify-between text-xs tabular-nums">
-                <div>
-                  <span className="font-bold text-[#1B4D2E]">Cart Subtotal: </span>
-                  <span>${subtotal.toFixed(2)}</span>
+              <div className="bg-[#FFF8E7] p-3.5 rounded-2xl border border-[#1B4D2E]/15 space-y-1.5 text-xs tabular-nums">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-[#1B4D2E]">Cart Subtotal: </span>
+                    <span>${subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="font-extrabold text-[#1B4D2E] text-sm">
+                    Total: ${total.toFixed(2)}
+                  </div>
                 </div>
-                <div>
-                  <span className="font-bold text-[#1B4D2E]">Delivery: </span>
-                  <span className={deliveryFee === 0 ? 'text-emerald-700 font-bold' : ''}>
-                    {deliveryFee === 0 ? 'Free' : `$${deliveryFee.toFixed(2)}`}
-                  </span>
-                </div>
-                <div className="font-extrabold text-[#1B4D2E] text-sm">
-                  Total: ${total.toFixed(2)}
-                </div>
+                {deliveryMethod === 'local_delivery' && (
+                  <p className="text-[11px] font-medium text-[#1B4D2E]/80">
+                    Delivery fee will be charged when package is delivered.
+                  </p>
+                )}
               </div>
 
               {/* Delivery Method Selector */}
@@ -322,7 +323,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                     <div>
                       <div>Doorstep Delivery</div>
                       <div className="text-[10px] font-normal opacity-80">
-                        Quakertown & Regional
+                        Fee charged upon delivery
                       </div>
                     </div>
                   </button>
@@ -340,7 +341,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ content }) => {
                     <div>
                       <div>Kitchen Pickup</div>
                       <div className="text-[10px] font-normal opacity-80">
-                        500 W Broad St (Free)
+                        500 W Broad St, Quakertown
                       </div>
                     </div>
                   </button>

@@ -3,6 +3,7 @@ import express from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import adminUsersHandler from './api/admin-users.ts';
 import createCheckoutSessionHandler from './api/create-checkout-session.ts';
 import publicConfigHandler from './api/public-config.ts';
 import stripeGatewayHandler from './api/stripe-gateway.ts';
@@ -29,6 +30,15 @@ async function startServer() {
   app.all('/api/public-config', async (req, res) => {
     try {
       await publicConfigHandler(req, res);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Internal server error';
+      res.status(500).json({ error: 'SERVER_ERROR', message });
+    }
+  });
+
+  app.all('/api/admin-users', async (req, res) => {
+    try {
+      await adminUsersHandler(req, res);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Internal server error';
       res.status(500).json({ error: 'SERVER_ERROR', message });

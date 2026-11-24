@@ -265,6 +265,49 @@ export interface ProductSliderSettings {
   autoplayInterval?: number;
 }
 
+export interface WholesaleShopProductItem {
+  id: string;
+  matchSlug?: string;
+  name: string;
+  shortName: string;
+  category: 'zobo' | 'ginger' | 'milks';
+  categoryLabel: string;
+  tagline: string;
+  imageUrl: string;
+  inStock: boolean;
+  published: boolean;
+  displayOrder: number;
+}
+
+export interface WholesaleSizeTierConfig {
+  size: '12oz' | '16oz' | '18oz';
+  label: string;
+  bottlesPerCase: number;
+  baseCasePrice: number;
+  tier2CasePrice: number;
+  tier3CasePrice: number;
+  enabled: boolean;
+}
+
+export interface WholesaleDeliveryConfig {
+  id: 'radius_1hr' | 'radius_2hr_plus' | 'pickup';
+  label: string;
+  shortLabel: string;
+  fee: number;
+  description: string;
+  enabled: boolean;
+}
+
+export interface WholesaleShopSettings {
+  enabled: boolean;
+  kicker: string;
+  heading: string;
+  subheading: string;
+  products: WholesaleShopProductItem[];
+  sizeTiers: WholesaleSizeTierConfig[];
+  deliveryOptions: WholesaleDeliveryConfig[];
+}
+
 export interface BrandSettings {
   logoUrl?: string;
   mobileLogoUrl?: string;
@@ -274,6 +317,7 @@ export interface BrandSettings {
   eventShowcase?: EventShowcaseItem[];
   eventShowcaseInitialized?: boolean;
   wholesaleGallery?: WholesaleGalleryItem[];
+  wholesaleShop?: WholesaleShopSettings;
   packPricing?: PackPricingSettings;
   shopHeading?: string;
   productSlider?: ProductSliderSettings;
@@ -337,6 +381,7 @@ export interface SiteContent {
   packPricing?: PackPricingSettings;
   eventShowcase?: EventShowcaseItem[];
   wholesaleGallery?: WholesaleGalleryItem[];
+  wholesaleShop?: WholesaleShopSettings;
   productSlider?: ProductSliderSettings;
   branding?: BrandSettings;
   colors?: ColorThemeSettings;

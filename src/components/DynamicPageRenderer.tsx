@@ -579,6 +579,7 @@ export const DynamicPageRenderer: React.FC<DynamicPageRendererProps> = ({
           <WholesaleSection
             key={section.id}
             content={content}
+            products={products}
             heroSection={wholesaleHeroSection}
             onCateringClick={() => onNavigate('/events-catering')}
           />

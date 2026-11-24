@@ -262,11 +262,11 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
             </span>
             <span className="flex items-center space-x-1.5">
               <CheckCircle2 className="w-4 h-4 text-[#E1AD01] shrink-0" />
-              <span>Affordable Delivery</span>
+              <span>Fresh Cold-Insulated Delivery</span>
             </span>
             <span className="flex items-center space-x-1.5">
               <MapPin className="w-4 h-4 text-[#E1AD01] shrink-0" />
-              <span>Free Local Delivery Over ${content.freeDeliveryThreshold.toFixed(0)}</span>
+              <span>Delivery fee will be charged when package is delivered.</span>
             </span>
           </div>
         </div>

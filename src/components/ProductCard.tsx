@@ -43,6 +43,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     setImgLoaded(liveImageSrc.startsWith('data:image/'));
   }, [liveImageSrc]);
 
+  useEffect(() => {
+    setSelectedSize(product.sizes[1] || product.sizes[0]);
+  }, [product.id, product.sizes]);
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     addToCart(product, selectedSize, quantity);
@@ -138,18 +142,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 >
                   {product.sizes.map((s) => {
                     const isSelected = selectedSize.size === s.size;
+                    const displayLabel = getCustomerSizeDisplay(s);
+                    const packMatch = displayLabel.match(/^(12-pack)\s*\(([^)]+)\)$/i);
+                    const formattedPrice =
+                      s.price % 1 === 0 ? `$${s.price.toFixed(0)}` : `$${s.price.toFixed(2)}`;
                     return (
                       <button
                         type="button"
                         key={s.size}
                         onClick={() => setSelectedSize(s)}
-                        className={`py-1.5 sm:py-2 px-1 sm:px-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all text-center truncate cursor-pointer ${
+                        className={`py-1.5 sm:py-2 px-1 sm:px-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-[11px] font-bold transition-all text-center leading-tight cursor-pointer tabular-nums ${
                           isSelected
                             ? 'bg-[#1B4D2E] text-[#FFF8E7] shadow-xs'
                             : 'bg-[#FFF8E7] text-[#1B4D2E]/85 hover:bg-[#1B4D2E]/10 border border-[#1B4D2E]/15'
                         }`}
                       >
-                        {getCustomerSizeDisplay(s)}
+                        <span className="flex flex-col items-center leading-tight">
+                          <span className="text-[9px] sm:text-[10px] opacity-85 truncate max-w-full">
+                            {packMatch ? `${packMatch[1]} (${packMatch[2]})` : displayLabel}
+                          </span>
+                          <span className="font-extrabold">{formattedPrice}</span>
+                        </span>
                       </button>
                     );
                   })}

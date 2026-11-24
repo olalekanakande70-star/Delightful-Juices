@@ -51,7 +51,9 @@ export const AboutProductsShowcase: React.FC<AboutProductsShowcaseProps> = ({
     return '';
   };
 
-  const displayProducts = products.length > 0 ? products : [];
+  const baseFlavorProducts = products.filter((p) => !p.id.toLowerCase().endsWith('-12pack'));
+  const displayProducts =
+    baseFlavorProducts.length > 0 ? baseFlavorProducts : products.length > 0 ? products : [];
 
   return (
     <section className="py-16 sm:py-24 bg-[#FFF8E7] border-y border-[#1B4D2E]/10 relative">

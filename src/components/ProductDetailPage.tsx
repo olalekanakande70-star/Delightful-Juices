@@ -390,16 +390,11 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               <div className="pt-4 border-t border-[#1B4D2E]/10 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-[#1B4D2E]/80">
                 <div className="flex items-center space-x-2">
                   <Truck className="w-4 h-4 text-[#E1AD01] shrink-0" />
-                  <span>
-                    Free local delivery over{' '}
-                    <strong className="text-[#1B4D2E]">
-                      ${content.freeDeliveryThreshold.toFixed(2)}
-                    </strong>
-                  </span>
+                  <span>Delivery fee will be charged when package is delivered.</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Store className="w-4 h-4 text-[#E1AD01] shrink-0" />
-                  <span>Free pickup in Quakertown, PA</span>
+                  <span>Kitchen pickup at 500 W Broad St, Quakertown, PA</span>
                 </div>
               </div>
             </div>

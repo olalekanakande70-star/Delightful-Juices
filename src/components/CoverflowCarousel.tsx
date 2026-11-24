@@ -16,10 +16,12 @@ export const CoverflowCarousel: React.FC<CoverflowCarouselProps> = ({
   onSelectProduct,
   isLoading = false,
 }) => {
-  // Filter active in-stock products
+  // Filter active in-stock signature flavors
   const activeProducts = React.useMemo(() => {
-    const list = products.filter((p) => p.inStock !== false);
-    return list.length > 0 ? list : products;
+    const inStockList = products.filter((p) => p.inStock !== false);
+    const list = inStockList.length > 0 ? inStockList : products;
+    const baseFlavors = list.filter((p) => !p.id.toLowerCase().endsWith('-12pack'));
+    return baseFlavors.length > 0 ? baseFlavors : list;
   }, [products]);
 
   const [currentIndex, setCurrentIndex] = useState(0);

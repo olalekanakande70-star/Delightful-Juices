@@ -119,7 +119,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
           </div>
         )}
 
-        {/* Free Delivery Callout Banner */}
+        {/* Delivery & Size Availability Callout Banner */}
         <div className="bg-[#1B4D2E] text-[#FFF8E7] rounded-2xl p-4 sm:p-5 mb-10 flex flex-col sm:flex-row items-center justify-between shadow-md border border-[#E1AD01]/30 gap-3">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-full bg-[#E1AD01] flex items-center justify-center text-[#1B4D2E] shrink-0 font-extrabold text-sm">
@@ -127,10 +127,10 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
             </div>
             <div>
               <div className="font-bold text-sm sm:text-base">
-                Free Local Delivery in Quakertown & Surrounding Areas
+                Single Bottles (12oz, 16oz, 18oz) &amp; Separate 12-Pack Cases
               </div>
               <div className="text-xs text-[#FFF8E7]/80">
-                Complimentary cold-insulated doorstep delivery on all orders over $40.00!
+                Delivery fee will be charged when package is delivered.
               </div>
             </div>
           </div>
@@ -140,7 +140,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
               onClick={() => onNavigate('/shop')}
               className="text-xs font-extrabold bg-[#E1AD01] hover:bg-[#f0bc0e] text-[#1B4D2E] px-4 py-2 rounded-lg shrink-0 transition-colors cursor-pointer"
             >
-              Shop All Sizes →
+              Shop Singles &amp; 12-Packs →
             </button>
           ) : (
             <div className="text-xs font-semibold bg-[#FFF8E7] text-[#1B4D2E] px-3.5 py-1.5 rounded-lg shrink-0">

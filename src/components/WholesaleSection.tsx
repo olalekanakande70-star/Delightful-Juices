@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { PageSection, SiteContent } from '../types';
+import { PageSection, Product, SiteContent } from '../types';
 import { dataRepo } from '../lib/storage';
 import { WholesaleProductGallery } from './WholesaleProductGallery';
+import { WholesaleShopSection } from './WholesaleShopSection';
 import {
   Building2,
   Store,
@@ -13,16 +14,19 @@ import {
   MessageCircle,
   ShieldCheck,
   Check,
+  ShoppingBag,
 } from 'lucide-react';
 
 interface WholesaleSectionProps {
   content: SiteContent;
+  products?: Product[];
   heroSection?: PageSection;
   onCateringClick?: () => void;
 }
 
 export const WholesaleSection: React.FC<WholesaleSectionProps> = ({
   content,
+  products = [],
   heroSection,
   onCateringClick,
 }) => {
@@ -56,6 +60,13 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({
 
   const scrollToInquiryForm = () => {
     const el = document.getElementById('wholesale-inquiry-form');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const scrollToWholesaleShop = () => {
+    const el = document.getElementById('wholesale-shop');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
@@ -142,10 +153,11 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({
             <div className="pt-4 flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={scrollToInquiryForm}
+                onClick={scrollToWholesaleShop}
                 className="inline-flex items-center space-x-2 bg-[#E1AD01] hover:bg-[#f0bc0e] text-[#1B4D2E] font-black text-xs sm:text-sm px-6 py-3.5 rounded-xl shadow-lg transition-all cursor-pointer"
               >
-                <span>Enquire About Wholesale</span>
+                <ShoppingBag className="w-4 h-4" />
+                <span>Shop Wholesale Cases</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
@@ -154,7 +166,7 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({
                 onClick={scrollToInquiryForm}
                 className="inline-flex items-center space-x-2 bg-white/15 hover:bg-white/25 text-white border border-white/30 font-bold text-xs sm:text-sm px-5 py-3.5 rounded-xl transition-all cursor-pointer"
               >
-                <span>Request Bulk Orders</span>
+                <span>Enquire About Wholesale</span>
               </button>
 
               <a
@@ -171,7 +183,10 @@ export const WholesaleSection: React.FC<WholesaleSectionProps> = ({
         </div>
       </section>
 
-      {/* 2. Wholesale Partner Segments (Retail, Supermarkets, Restaurants, Food Service, Distributors) */}
+      {/* 2. Wholesale Products Only Shop Section (12-Pack Case Pricing & Radius Delivery) */}
+      <WholesaleShopSection products={products} content={content} />
+
+      {/* 3. Wholesale Partner Segments (Retail, Supermarkets, Restaurants, Food Service, Distributors) */}
       <section className="py-20 bg-[#FFF8E7] border-b border-[#1B4D2E]/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto space-y-3 mb-16">

@@ -35,14 +35,14 @@ export const ProductSliderSection: React.FC<ProductSliderSectionProps> = ({
   // Filter and order active/published products
   const activeProducts = React.useMemo(() => {
     const published = products.filter((p) => p.inStock !== false);
-    if (!sliderConfig?.productIds || sliderConfig.productIds.length === 0) {
-      return published;
+    if (sliderConfig?.productIds && sliderConfig.productIds.length > 0) {
+      const selected = sliderConfig.productIds
+        .map((id) => published.find((p) => p.id === id))
+        .filter((p): p is Product => Boolean(p));
+      if (selected.length > 0) return selected;
     }
-    // Custom selection/order from admin
-    const selected = sliderConfig.productIds
-      .map((id) => published.find((p) => p.id === id))
-      .filter((p): p is Product => Boolean(p));
-    return selected.length > 0 ? selected : published;
+    const baseFlavors = published.filter((p) => !p.id.toLowerCase().endsWith('-12pack'));
+    return baseFlavors.length > 0 ? baseFlavors : published;
   }, [products, sliderConfig]);
 
   const [currentIndex, setCurrentIndex] = useState(0);

@@ -15,6 +15,7 @@ import {
   PackPricingTier,
   BrandSettings,
   ProductSliderSettings,
+  WholesaleShopSettings,
 } from '../types';
 import { supabaseService } from './supabaseClient';
 import { applyTheme } from './theme';
@@ -185,10 +186,64 @@ function normalizeHeroSlide(slide: HeroSlide): HeroSlide {
   };
 }
 
-export const INITIAL_PRODUCTS: Product[] = [
+const SINGLE_BOTTLE_SIZES: SizeOption[] = [
+  {
+    size: '12oz',
+    label: '12oz Pocket Sip',
+    price: 5.0,
+    quantityValue: 12,
+    unit: 'oz',
+  },
+  {
+    size: '16oz',
+    label: '16oz Daily Refresh',
+    price: 7.0,
+    quantityValue: 16,
+    unit: 'oz',
+  },
+  {
+    size: '18oz',
+    label: '18oz Sharing Bottle',
+    price: 15.0,
+    quantityValue: 18,
+    unit: 'oz',
+  },
+];
+
+const TWELVE_PACK_SHOP_SIZES: SizeOption[] = [
+  {
+    size: '12-pack (12oz)',
+    label: '12-pack (12oz) — 12 Bottles',
+    price: 36.0,
+    quantityValue: 12,
+    unit: 'Pack',
+    packBottleQuantity: 12,
+    packBottleUnit: 'oz',
+  },
+  {
+    size: '12-pack (16oz)',
+    label: '12-pack (16oz) — 12 Bottles',
+    price: 48.0,
+    quantityValue: 12,
+    unit: 'Pack',
+    packBottleQuantity: 16,
+    packBottleUnit: 'oz',
+  },
+  {
+    size: '12-pack (18oz)',
+    label: '12-pack (18oz) — 12 Bottles',
+    price: 60.0,
+    quantityValue: 12,
+    unit: 'Pack',
+    packBottleQuantity: 18,
+    packBottleUnit: 'oz',
+  },
+];
+
+const CORE_SINGLE_PRODUCTS: Product[] = [
   {
     id: 'prod-zobo',
-    name: 'Home Made Hibiscus Juice - Sorrel (Zobo)',
+    name: 'Zobo (Hibiscus/Sorrel)',
     slug: 'zobo-hibiscus-sorrel',
     category: 'zobo',
     categoryLabel: 'Signature Zobo',
@@ -211,11 +266,7 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Natural electrolyte booster',
       'Caffeine-free energy',
     ],
-    sizes: [
-      { size: '12oz', label: '12oz Single Refresh', price: 5.0, quantityValue: 12, unit: 'oz' },
-      { size: '16oz', label: '16oz Daily Refresh', price: 7.0, quantityValue: 16, unit: 'oz' },
-      { size: '18oz', label: '18oz Sharing Bottle', price: 10.0, quantityValue: 18, unit: 'oz' },
-    ],
+    sizes: SINGLE_BOTTLE_SIZES.map((s) => ({ ...s })),
     imageUrl: '/assets/aistudio/18oz_zobo_label_17754013.png',
     galleryImages: [],
     inStock: true,
@@ -227,154 +278,8 @@ export const INITIAL_PRODUCTS: Product[] = [
     displayOrder: 1,
   },
   {
-    id: 'prod-organic-ginger',
-    name: 'Home Made Ginger Juice (Pure Organic Ginger)',
-    slug: 'pure-organic-ginger',
-    category: 'ginger',
-    categoryLabel: 'Ginger Elixirs',
-    tagline: 'Fiery organic ginger root balanced with fresh lemon, sweet date & whole cloves',
-    description:
-      'An invigorating wellness powerhouse from Delightful Juices! Crafted from whole fresh ginger root to preserve active gingerol compounds, balanced with fresh lemon juice, whole cloves, and sweet dates. Bold, fiery, and deeply comforting, this drink supports natural digestion and clear breathing with zero preservatives added.',
-    ingredients: [
-      'Water',
-      'Lemon Juice',
-      'Sweet Date',
-      'Cloves',
-      'Fresh Ginger Root',
-    ],
-    tasteProfile: 'Fiery ginger spice upfront with crisp lemon tang and smooth honeyed date undertone',
-    healthBenefits: [
-      'Potent natural digestive aid',
-      'Anti-inflammatory gingerols',
-      'Immunity defense booster',
-      'Soothes throat & sinuses',
-    ],
-    sizes: [
-      { size: '12oz', label: '12oz Immunity Bottle', price: 5.5, quantityValue: 12, unit: 'oz' },
-      { size: '16oz', label: '16oz Standard Refresh', price: 7.5, quantityValue: 16, unit: 'oz' },
-      { size: '18oz', label: '18oz Sharing Bottle', price: 14.0, quantityValue: 18, unit: 'oz' },
-    ],
-    imageUrl: '/assets/aistudio/12oz_ginger_d302545f.png',
-    galleryImages: [],
-    inStock: true,
-    featured: true,
-    badge: 'Immunity Powerhouse',
-    rating: 4.92,
-    reviewCount: 98,
-    isFlyerConfirmed: true,
-    displayOrder: 2,
-  },
-  {
-    id: 'prod-ginger-mango',
-    name: 'Home Made Ginger Juice - Mango',
-    slug: 'ginger-mango-crush',
-    category: 'ginger',
-    categoryLabel: 'Ginger Elixirs',
-    tagline: 'Velvety tropical mango nectar harmonized with fiery fresh ginger & sweet dates',
-    description:
-      'A vibrant tropical symphony where rich, sun-ripened mango puree meets the invigorating warmth of fresh ginger root, fresh lemon juice, whole cloves, and sweet dates. Velvety smooth with just the right amount of spicy kick, perfect for sunny afternoons, event celebrations, and everyday refreshment with no preservatives added.',
-    ingredients: [
-      'Water',
-      'Lemon Juice',
-      'Sweet Date',
-      'Cloves',
-      'Fresh Ginger Root',
-      'Mango Puree',
-    ],
-    tasteProfile: 'Rich, luscious tropical mango sweetness with a warming, zesty ginger finish',
-    healthBenefits: [
-      'High in Vitamin A & Beta-Carotene',
-      'Promotes glowing skin',
-      'Revitalizes tired energy',
-      'Naturally sweet without refined syrups',
-    ],
-    sizes: [
-      { size: '12oz', label: '12oz Single Bottle', price: 5.5, quantityValue: 12, unit: 'oz' },
-    ],
-    imageUrl: '/assets/aistudio/12oz_mango_dcfd0401.png',
-    inStock: true,
-    featured: true,
-    badge: 'Best Tropical Blend',
-    rating: 4.97,
-    reviewCount: 114,
-    isFlyerConfirmed: true,
-    displayOrder: 3,
-  },
-  {
-    id: 'prod-ginger-pineapple',
-    name: 'Home Made Ginger Juice - Pineapple',
-    slug: 'ginger-pineapple-splash',
-    category: 'ginger',
-    categoryLabel: 'Ginger Elixirs',
-    tagline: 'Golden tropical pineapple juice kissed by spicy handcrafted ginger & cloves',
-    description:
-      'Crisp, bright, and intensely refreshing. Pure pineapple puree harmoniously united with fresh ginger root, lemon juice, sweet dates, and whole cloves. Naturally packed with bromelain and enzymes, this drink elevates your palate with every sip and contains zero preservatives.',
-    ingredients: [
-      'Water',
-      'Lemon Juice',
-      'Sweet Date',
-      'Cloves',
-      'Fresh Ginger Root',
-      'Pineapple Puree',
-    ],
-    tasteProfile: 'Vibrant sweet-tart pineapple punch followed by a clean, warming ginger sparkle',
-    healthBenefits: [
-      'Rich in Bromelain enzyme',
-      'Aids post-meal digestion',
-      'Hydrates deeply',
-      'Natural mood enhancer',
-    ],
-    sizes: [
-      { size: '12oz', label: '12oz Single Bottle', price: 5.0, quantityValue: 12, unit: 'oz' },
-    ],
-    imageUrl: '/assets/aistudio/12oz_pineapple_28b92d79.png',
-    inStock: true,
-    featured: true,
-    badge: 'Top Refreshment',
-    rating: 4.89,
-    reviewCount: 87,
-    isFlyerConfirmed: true,
-    displayOrder: 4,
-  },
-  {
-    id: 'prod-ginger-lychee',
-    name: 'Home Made Ginger Juice - Lychee',
-    slug: 'ginger-lychee-floral',
-    category: 'ginger',
-    categoryLabel: 'Ginger Elixirs',
-    tagline: 'Delicate floral exotic lychee blended with gentle warming ginger & citrus',
-    description:
-      'An exotic culinary delight from Delightful Juices! Delicate lychee fruit puree infused into our signature homemade ginger base with fresh lemon juice, sweet dates, and aromatic cloves. Sweet, floral, and deeply cooling with a light aromatic zest and zero artificial additives.',
-    ingredients: [
-      'Water',
-      'Lemon Juice',
-      'Sweet Date',
-      'Cloves',
-      'Fresh Ginger Root',
-      'Lychee Puree',
-    ],
-    tasteProfile: 'Silky, aromatic lychee florals with a gentle, rounded ginger warmth',
-    healthBenefits: [
-      'Packed with polyphenols',
-      'Cellular hydration',
-      'Calming, restorative sensation',
-      'Low acid gentleness',
-    ],
-    sizes: [
-      { size: '12oz', label: '12oz Single Bottle', price: 5.5, quantityValue: 12, unit: 'oz' },
-    ],
-    imageUrl: '/assets/aistudio/12oz_Lychee_771f865d.png',
-    inStock: true,
-    featured: false,
-    badge: 'Exotic Artisan Pick',
-    rating: 4.88,
-    reviewCount: 63,
-    isFlyerConfirmed: false,
-    displayOrder: 5,
-  },
-  {
     id: 'prod-tigernut-milk',
-    name: 'Home Made Tigernut Juice (Tigernut Milk)',
+    name: 'Tigernut Milk',
     slug: 'tigernut-milk-kunu-aya',
     category: 'other',
     categoryLabel: 'Artisanal Milks',
@@ -396,97 +301,354 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Natural source of Magnesium & Iron',
       'Sustained steady energy',
     ],
-    sizes: [
-      { size: '12oz', label: '12oz Morning Bottle', price: 6.0, quantityValue: 12, unit: 'oz' },
-      { size: '16oz', label: '16oz Standard Bottle', price: 8.0, quantityValue: 16, unit: 'oz' },
-      { size: '18oz', label: '18oz Sharing Bottle', price: 15.0, quantityValue: 18, unit: 'oz' },
-    ],
+    sizes: SINGLE_BOTTLE_SIZES.map((s) => ({ ...s })),
     imageUrl: '/assets/aistudio/12oz_Tigernut_a2076757.png',
+    galleryImages: [],
     inStock: true,
     featured: true,
     badge: '100% Dairy-Free Superfood',
     rating: 4.96,
     reviewCount: 129,
     isFlyerConfirmed: true,
-    displayOrder: 6,
+    displayOrder: 2,
   },
   {
-    id: 'prod-celebration-bundle',
-    name: 'Delightful 6-Pack Party Sampler',
-    slug: 'delightful-party-sampler-6pack',
-    category: 'bundles',
-    categoryLabel: 'Party & Event Packs',
-    tagline: 'Curated 6-bottle variety pack featuring our top client favorites for family or gatherings',
+    id: 'prod-organic-ginger',
+    name: 'Pure Ginger',
+    slug: 'pure-organic-ginger',
+    category: 'ginger',
+    categoryLabel: 'Ginger Elixirs',
+    tagline: 'Fiery organic ginger root balanced with fresh lemon, sweet date & whole cloves',
     description:
-      'The ultimate Delightful Juices tasting collection! Includes 2x Signature Zobo, 1x Pure Organic Ginger, 1x Ginger Mango, 1x Ginger Pineapple, and 1x Tigernut Milk in 16oz bottles. Packed cold in an insulated carrier, perfect for weekend brunch, gift giving, and small parties.',
+      'An invigorating wellness powerhouse from Delightful Juices! Crafted from whole fresh ginger root to preserve active gingerol compounds, balanced with fresh lemon juice, whole cloves, and sweet dates. Bold, fiery, and deeply comforting, this drink supports natural digestion and clear breathing with zero preservatives added.',
     ingredients: [
-      '6 × 16oz assorted bottles (Zobo, Ginger blends, Tigernut Milk)',
-      'Fresh whole botanical ingredients',
-      'Delightful Juices signature botanical touch',
+      'Water',
+      'Lemon Juice',
+      'Sweet Date',
+      'Cloves',
+      'Fresh Ginger Root',
     ],
-    tasteProfile: 'Complete journey from tart floral hibiscus to fiery ginger and creamy tigernut sweetness',
+    tasteProfile: 'Fiery ginger spice upfront with crisp lemon tang and smooth honeyed date undertone',
     healthBenefits: [
-      'Full spectrum of botanical vitamins',
-      'Perfect crowd-pleaser for all ages',
-      'Great savings vs individual bottles',
+      'Potent natural digestive aid',
+      'Anti-inflammatory gingerols',
+      'Immunity defense booster',
+      'Soothes throat & sinuses',
     ],
-    sizes: [
-      {
-        size: 'Pack',
-        label: '6 × 16oz Fresh Bottles Variety Pack',
-        price: 28.0,
-        quantityValue: 6,
-        unit: 'Pack',
-        packBottleQuantity: 16,
-        packBottleUnit: 'oz',
-      },
-    ],
-    imageUrl: '/assets/aistudio/18oz_zobo_label_17754013.png',
+    sizes: SINGLE_BOTTLE_SIZES.map((s) => ({ ...s })),
+    imageUrl: '/assets/aistudio/12oz_ginger_d302545f.png',
     galleryImages: [],
     inStock: true,
     featured: true,
-    badge: 'Popular Gift & Party Pack',
-    rating: 4.98,
-    reviewCount: 76,
+    badge: 'Immunity Powerhouse',
+    rating: 4.92,
+    reviewCount: 98,
     isFlyerConfirmed: true,
-    displayOrder: 7,
+    displayOrder: 3,
+  },
+  {
+    id: 'prod-ginger-mango',
+    name: 'Ginger Mango',
+    slug: 'ginger-mango-crush',
+    category: 'ginger',
+    categoryLabel: 'Ginger Elixirs',
+    tagline: 'Velvety tropical mango nectar harmonized with fiery fresh ginger & sweet dates',
+    description:
+      'A vibrant tropical symphony where rich, sun-ripened mango puree meets the invigorating warmth of fresh ginger root, fresh lemon juice, whole cloves, and sweet dates. Velvety smooth with just the right amount of spicy kick, perfect for sunny afternoons, event celebrations, and everyday refreshment with no preservatives added.',
+    ingredients: [
+      'Water',
+      'Lemon Juice',
+      'Sweet Date',
+      'Cloves',
+      'Fresh Ginger Root',
+      'Mango Puree',
+    ],
+    tasteProfile: 'Rich, luscious tropical mango sweetness with a warming, zesty ginger finish',
+    healthBenefits: [
+      'High in Vitamin A & Beta-Carotene',
+      'Promotes glowing skin',
+      'Revitalizes tired energy',
+      'Naturally sweet without refined syrups',
+    ],
+    sizes: SINGLE_BOTTLE_SIZES.map((s) => ({ ...s })),
+    imageUrl: '/assets/aistudio/12oz_mango_dcfd0401.png',
+    galleryImages: [],
+    inStock: true,
+    featured: true,
+    badge: 'Best Tropical Blend',
+    rating: 4.97,
+    reviewCount: 114,
+    isFlyerConfirmed: true,
+    displayOrder: 4,
+  },
+  {
+    id: 'prod-ginger-pineapple',
+    name: 'Ginger Pineapple',
+    slug: 'ginger-pineapple-splash',
+    category: 'ginger',
+    categoryLabel: 'Ginger Elixirs',
+    tagline: 'Golden tropical pineapple juice kissed by spicy handcrafted ginger & cloves',
+    description:
+      'Crisp, bright, and intensely refreshing. Pure pineapple puree harmoniously united with fresh ginger root, lemon juice, sweet dates, and whole cloves. Naturally packed with bromelain and enzymes, this drink elevates your palate with every sip and contains zero preservatives.',
+    ingredients: [
+      'Water',
+      'Lemon Juice',
+      'Sweet Date',
+      'Cloves',
+      'Fresh Ginger Root',
+      'Pineapple Puree',
+    ],
+    tasteProfile: 'Vibrant sweet-tart pineapple punch followed by a clean, warming ginger sparkle',
+    healthBenefits: [
+      'Rich in Bromelain enzyme',
+      'Aids post-meal digestion',
+      'Hydrates deeply',
+      'Natural mood enhancer',
+    ],
+    sizes: SINGLE_BOTTLE_SIZES.map((s) => ({ ...s })),
+    imageUrl: '/assets/aistudio/12oz_pineapple_28b92d79.png',
+    galleryImages: [],
+    inStock: true,
+    featured: true,
+    badge: 'Top Refreshment',
+    rating: 4.89,
+    reviewCount: 87,
+    isFlyerConfirmed: true,
+    displayOrder: 5,
+  },
+  {
+    id: 'prod-ginger-lychee',
+    name: 'Ginger Lychee',
+    slug: 'ginger-lychee-floral',
+    category: 'ginger',
+    categoryLabel: 'Ginger Elixirs',
+    tagline: 'Delicate floral exotic lychee blended with gentle warming ginger & citrus',
+    description:
+      'An exotic culinary delight from Delightful Juices! Delicate lychee fruit puree infused into our signature homemade ginger base with fresh lemon juice, sweet dates, and aromatic cloves. Sweet, floral, and deeply cooling with a light aromatic zest and zero artificial additives.',
+    ingredients: [
+      'Water',
+      'Lemon Juice',
+      'Sweet Date',
+      'Cloves',
+      'Fresh Ginger Root',
+      'Lychee Puree',
+    ],
+    tasteProfile: 'Silky, aromatic lychee florals with a gentle, rounded ginger warmth',
+    healthBenefits: [
+      'Packed with polyphenols',
+      'Cellular hydration',
+      'Calming, restorative sensation',
+      'Low acid gentleness',
+    ],
+    sizes: SINGLE_BOTTLE_SIZES.map((s) => ({ ...s })),
+    imageUrl: '/assets/aistudio/12oz_Lychee_771f865d.png',
+    galleryImages: [],
+    inStock: true,
+    featured: true,
+    badge: 'Exotic Artisan Pick',
+    rating: 4.88,
+    reviewCount: 63,
+    isFlyerConfirmed: true,
+    displayOrder: 6,
   },
 ];
 
+const CORE_TWELVE_PACK_PRODUCTS: Product[] = CORE_SINGLE_PRODUCTS.map((single, index) => ({
+  ...single,
+  id: `${single.id}-12pack`,
+  name: `${single.name} — 12-Pack`,
+  slug: `${single.slug}-12pack`,
+  category: 'bundles',
+  categoryLabel: '12-Pack Cases',
+  tagline: `12-bottle pack of ${single.name} in your choice of 12oz ($36), 16oz ($48), or 18oz ($60).`,
+  sizes: TWELVE_PACK_SHOP_SIZES.map((s) => ({ ...s })),
+  featured: false,
+  badge: '12-Pack Case',
+  displayOrder: CORE_SINGLE_PRODUCTS.length + index + 1,
+}));
+
+export const INITIAL_PRODUCTS: Product[] = [
+  ...CORE_SINGLE_PRODUCTS,
+  ...CORE_TWELVE_PACK_PRODUCTS,
+];
+
 export const DEFAULT_PACK_PRICING: PackPricingSettings = {
-  heading: 'Delightful Juice Value Packs',
-  subheading: 'Stock up your fridge, office, or event with curated multi-packs handcrafted daily.',
+  heading: '12-Pack Juice Pricing by Bottle Size',
+  subheading: 'Available across all 6 signature flavors: Zobo (Hibiscus/Sorrel), Tigernut Milk, Pure Ginger, Ginger Mango, Ginger Pineapple, and Ginger Lychee.',
   tiers: [
     {
-      id: 'pack-6',
-      name: '6-pack',
-      bottlesCount: 6,
-      price: 28,
-      badge: 'Popular Sampler',
-      description: 'Choice of 6 fresh assorted bottles. Perfect for personal weekly refreshment.',
+      id: 'pack-12-12oz',
+      name: '12-pack (12oz)',
+      bottlesCount: 12,
+      price: 36,
+      badge: '12oz Standard Case',
+      description: '12 fresh 12oz bottles per pack. Great for personal fridges, wellness routines & gifting.',
       enabled: true,
     },
     {
-      id: 'pack-12',
-      name: '12-pack',
+      id: 'pack-12-16oz',
+      name: '12-pack (16oz)',
       bottlesCount: 12,
       price: 48,
       badge: 'Most Popular',
-      description: 'Best everyday value. Ideal for families, busy weeks, and wellness sharing.',
+      description: '12 fresh 16oz bottles per pack. Ideal for families, busy weeks & everyday refreshment.',
       enabled: true,
     },
     {
-      id: 'pack-24',
-      name: '24-pack',
-      bottlesCount: 24,
-      price: 90,
-      badge: 'Best Value',
-      description: 'Full party & office case. Maximum freshness and wholesale savings.',
+      id: 'pack-12-18oz',
+      name: '12-pack (18oz)',
+      bottlesCount: 12,
+      price: 60,
+      badge: 'Full Sharing Size',
+      description: '12 large 18oz bottles per pack. Maximum bottle volume for households and gatherings.',
       enabled: true,
     },
   ],
   pricingNote:
-    'Prices vary depending on delivery location and order quantity. Wholesale discounts are available for bulk purchases.',
+    'Applies across all 6 signature flavors. Delivery fee will be charged when package is delivered. Wholesale tiered discounts (10–20 cases and 20–30 cases) are available on the Wholesale page.',
+};
+
+export const DEFAULT_WHOLESALE_SHOP: WholesaleShopSettings = {
+  enabled: true,
+  kicker: 'Wholesale Case Storefront · 12 Bottles Per Case',
+  heading: 'Shop Wholesale Products by the Case',
+  subheading:
+    'Exclusively curated 12-pack commercial cases for stores, supermarkets, cafés, restaurants, and bulk buyers. Mix flavors within the same bottle size to automatically unlock 10-case and 20-case volume pricing.',
+  products: [
+    {
+      id: 'prod-zobo',
+      matchSlug: 'zobo-hibiscus-sorrel',
+      name: 'Zobo (Hibiscus/Sorrel)',
+      shortName: 'Zobo',
+      category: 'zobo',
+      categoryLabel: 'Signature Zobo',
+      tagline: 'Brewed hibiscus calyces with fresh ginger root, cloves, pineapple & dates',
+      imageUrl: '/assets/aistudio/18oz_zobo_label_17754013.png',
+      inStock: true,
+      published: true,
+      displayOrder: 1,
+    },
+    {
+      id: 'prod-tigernut-milk',
+      matchSlug: 'tigernut-milk-kunu-aya',
+      name: 'Tigernut Milk',
+      shortName: 'Tigernut Milk',
+      category: 'milks',
+      categoryLabel: 'Artisanal Milks',
+      tagline: 'Velvety dairy-free soaked tigernut milk sweetened with Medjool dates & cloves',
+      imageUrl: '/assets/aistudio/12oz_Tigernut_a2076757.png',
+      inStock: true,
+      published: true,
+      displayOrder: 2,
+    },
+    {
+      id: 'prod-organic-ginger',
+      matchSlug: 'pure-organic-ginger',
+      name: 'Pure Ginger',
+      shortName: 'Pure Ginger',
+      category: 'ginger',
+      categoryLabel: 'Ginger Elixirs',
+      tagline: 'Cold-pressed organic ginger root balanced with fresh lemon, dates & whole cloves',
+      imageUrl: '/assets/aistudio/12oz_ginger_d302545f.png',
+      inStock: true,
+      published: true,
+      displayOrder: 3,
+    },
+    {
+      id: 'prod-ginger-mango',
+      matchSlug: 'ginger-mango-crush',
+      name: 'Ginger Mango',
+      shortName: 'Ginger Mango',
+      category: 'ginger',
+      categoryLabel: 'Ginger Elixirs',
+      tagline: 'Lush tropical mango puree blended with invigorating fresh ginger root & lemon',
+      imageUrl: '/assets/aistudio/12oz_mango_dcfd0401.png',
+      inStock: true,
+      published: true,
+      displayOrder: 4,
+    },
+    {
+      id: 'prod-ginger-pineapple',
+      matchSlug: 'ginger-pineapple-splash',
+      name: 'Ginger Pineapple',
+      shortName: 'Ginger Pineapple',
+      category: 'ginger',
+      categoryLabel: 'Ginger Elixirs',
+      tagline: 'Bright golden pineapple infused with crisp spiced ginger & natural date honey',
+      imageUrl: '/assets/aistudio/12oz_pineapple_28b92d79.png',
+      inStock: true,
+      published: true,
+      displayOrder: 5,
+    },
+    {
+      id: 'prod-ginger-lychee',
+      matchSlug: 'ginger-lychee-floral',
+      name: 'Ginger Lychee',
+      shortName: 'Ginger Lychee',
+      category: 'ginger',
+      categoryLabel: 'Ginger Elixirs',
+      tagline: 'Delicate floral lychee nectar paired with warming handcrafted ginger & citrus',
+      imageUrl: '/assets/aistudio/12oz_Lychee_771f865d.png',
+      inStock: true,
+      published: true,
+      displayOrder: 6,
+    },
+  ],
+  sizeTiers: [
+    {
+      size: '12oz',
+      label: '12-pack (12oz)',
+      bottlesPerCase: 12,
+      baseCasePrice: 36,
+      tier2CasePrice: 34,
+      tier3CasePrice: 30,
+      enabled: true,
+    },
+    {
+      size: '16oz',
+      label: '12-pack (16oz)',
+      bottlesPerCase: 12,
+      baseCasePrice: 48,
+      tier2CasePrice: 45,
+      tier3CasePrice: 40,
+      enabled: true,
+    },
+    {
+      size: '18oz',
+      label: '12-pack (18oz)',
+      bottlesPerCase: 12,
+      baseCasePrice: 60,
+      tier2CasePrice: 55,
+      tier3CasePrice: 50,
+      enabled: true,
+    },
+  ],
+  deliveryOptions: [
+    {
+      id: 'radius_1hr',
+      label: 'Wholesale Delivery (Within 1 hr travel radius)',
+      shortLabel: '1 hr travel radius',
+      fee: 50,
+      description: 'Chilled regional delivery within 1 hour of Quakertown, PA',
+      enabled: true,
+    },
+    {
+      id: 'radius_2hr_plus',
+      label: 'Wholesale Delivery (2 hrs+ travel radius)',
+      shortLabel: '2 hrs+ travel radius',
+      fee: 100,
+      description: 'Extended cold-chain wholesale delivery 2+ hours from Quakertown, PA',
+      enabled: true,
+    },
+    {
+      id: 'pickup',
+      label: 'Quakertown Kitchen Pickup',
+      shortLabel: 'Kitchen pickup',
+      fee: 0,
+      description: 'Free commercial pickup at 500 W Broad St, Quakertown, PA 18951',
+      enabled: true,
+    },
+  ],
 };
 
 export const DEFAULT_ABOUT_SHOWCASE: AboutShowcaseSettings = {
@@ -757,13 +919,13 @@ export const INITIAL_SITE_CONTENT: SiteContent = {
   heroSubheadline:
     'Naturally made healthy sips handcrafted in Quakertown, PA with affordable delivery. From our signature hibiscus Zobo to organic ginger infusions and rich tigernut milk, every bottle from Delightful Juices is thoughtfully prepared for authentic flavor and vitality.',
   announcementTicker:
-    '🌿 Fresh Batch Pressed Daily in Quakertown, PA • Affordable Local Delivery • Free Delivery Over $40 • Now Booking Weddings & Events • Call/WhatsApp (484) 792-8023 🌿',
+    '🌿 Fresh Batch Pressed Daily in Quakertown, PA • Delivery fee will be charged when package is delivered • Now Booking Weddings & Events • Call/WhatsApp (484) 792-8023 🌿',
   aboutStory:
     'Delightful Juices was founded on a simple, passionate mission: to create truly nourishing, uncompromised drinks using nature’s most potent botanicals, fruits, herbs, and spices. Rooted in authentic West African heritage flavors like Zobo (Hibiscus) and Kunu Aya (Tigernut Milk), alongside revitalizing organic ginger roots, every recipe is hand-blended with care by our dedicated kitchen team in Quakertown, PA.',
   signaturePromise:
     'Every bottle of Delightful Juices is handcrafted with care and whole botanical ingredients, giving you a pure, refreshing experience you can enjoy again and again.',
-  freeDeliveryThreshold: 40.0,
-  standardDeliveryFee: 4.99,
+  freeDeliveryThreshold: 0,
+  standardDeliveryFee: 0,
   pickupAddress: '500 W Broad St, Quakertown, PA 18951',
   operatingHours: 'Mon - Sat: 9:00 AM - 6:30 PM | Sun: 11:00 AM - 4:00 PM',
   chatButtonLabel: 'Chat with Kitchen',
@@ -771,6 +933,7 @@ export const INITIAL_SITE_CONTENT: SiteContent = {
   packPricing: DEFAULT_PACK_PRICING,
   eventShowcase: INITIAL_EVENT_SHOWCASE,
   wholesaleGallery: INITIAL_WHOLESALE_GALLERY,
+  wholesaleShop: DEFAULT_WHOLESALE_SHOP,
   productSlider: DEFAULT_PRODUCT_SLIDER,
   branding: {
     logoUrl: '',
@@ -780,6 +943,7 @@ export const INITIAL_SITE_CONTENT: SiteContent = {
     aboutShowcase: DEFAULT_ABOUT_SHOWCASE,
     eventShowcase: INITIAL_EVENT_SHOWCASE,
     wholesaleGallery: INITIAL_WHOLESALE_GALLERY,
+    wholesaleShop: DEFAULT_WHOLESALE_SHOP,
     packPricing: DEFAULT_PACK_PRICING,
     shopHeading: 'Shop Fresh, Natural Delightful Juices.',
     productSlider: DEFAULT_PRODUCT_SLIDER,
@@ -1000,8 +1164,8 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
         id: 'sec-story-promo',
         type: 'promo_banner',
         kicker: 'FRESHNESS DELIVERED',
-        heading: 'Complimentary Cold-Insulated Local Delivery Over $40',
-        body: 'Order online today in 12oz, 16oz, or 18oz sizes for doorstep delivery or free Quakertown kitchen pickup.',
+        heading: 'Fresh Small-Batch Local Delivery & Pickup',
+        body: 'Order online today in single bottles (12oz, 16oz, 18oz) or 12-pack cases. Delivery fee will be charged when package is delivered, or pick up directly in Quakertown.',
         buttonLabel: 'Shop Now',
         buttonUrl: '/shop',
         theme: 'gold',
@@ -1016,7 +1180,7 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
     slug: 'delivery-information',
     seoTitle: 'Delivery Information & FAQ | Delightful Juices Quakertown, PA',
     metaDescription:
-      'Delivery zones, free delivery over $40, Quakertown pickup hours, bottle ounce sizes (12oz, 16oz, 18oz), and cold-storage shelf life for Delightful Juices.',
+      'Delivery zones, delivery fee charged upon delivery, Quakertown pickup hours, bottle ounce sizes (12oz, 16oz, 18oz), and cold-storage shelf life for Delightful Juices.',
     status: 'published',
     showInNav: false,
     parentNavId: 'nav-about',
@@ -1172,7 +1336,7 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
         kicker: 'DELIGHTFUL JUICES ONLINE STORE',
         heading: 'Shop Fresh, Natural Delightful Juices.',
         subheading:
-          'Handcrafted to order in Quakertown, PA using whole hibiscus calyces, organic ginger root, ripe tropical fruit, and soaked tigernuts. Enjoy affordable delivery directly to your door in 12oz, 16oz, and 18oz bottles.',
+          'Handcrafted to order in Quakertown, PA using whole hibiscus calyces, organic ginger root, ripe tropical fruit, and soaked tigernuts. Shop individual single bottles (12oz, 16oz, 18oz) or separate 12-pack cases ($36, $48, $60). Delivery fee will be charged when package is delivered.',
         imageUrl: '',
         theme: 'dark',
       },
@@ -1189,10 +1353,10 @@ export const INITIAL_CMS_PAGES: CmsPage[] = [
         id: 'sec-shop-packs',
         type: 'shop_pack_pricing',
         kicker: 'PACK PRICING & VARIETY BUNDLES',
-        heading: 'Delightful Juice Value Packs',
+        heading: 'Delightful Juice 12-Pack Cases',
         subheading:
-          'Stock up your fridge, office, or event with curated multi-packs handcrafted daily.',
-        body: 'Prices vary depending on delivery location and order quantity. Wholesale discounts are available for bulk purchases.',
+          'Stock up your fridge, office, or event with separate 12-pack cases of every signature flavor.',
+        body: 'Applies across all 6 signature flavors. Delivery fee will be charged when package is delivered. Wholesale discounts are available on the Wholesale page.',
         theme: 'cream',
       },
       {
@@ -1226,23 +1390,18 @@ function cleanCeoMentions(str?: string): string {
 }
 
 /**
- * Ensures any product loaded from localStorage or Supabase has structured
- * quantityValue & unit (without altering prices, IDs, or stock) and cleans legacy DelightOil text.
+ * Ensures any product loaded from Supabase or edited in CMS preserves custom admin prices & sizes,
+ * keeping the 6 core single-bottle flavors on single-bottle prices ($5/$7/$15) while separate
+ * `*-12pack` products carry the 12-pack tiers ($36/$48/$60).
  */
 function normalizeProduct(p: Product): Product {
   const normalizedSizes: SizeOption[] = (p.sizes || []).map((s) => {
-    if (s.quantityValue !== undefined && s.unit) {
-      return {
-        ...s,
-        label: sanitizeBrandText(s.label || ''),
-      };
-    }
     const parsed = parseSizeString(String(s.size || ''), s.label);
     return {
       ...s,
       label: sanitizeBrandText(s.label || ''),
-      quantityValue: parsed.quantityValue,
-      unit: parsed.unit,
+      quantityValue: s.quantityValue ?? parsed.quantityValue,
+      unit: s.unit ?? parsed.unit,
       packBottleQuantity: s.packBottleQuantity ?? parsed.packBottleQuantity,
       packBottleUnit: s.packBottleUnit ?? parsed.packBottleUnit,
     };
@@ -1250,86 +1409,59 @@ function normalizeProduct(p: Product): Product {
 
   const idLower = (p.id || '').toLowerCase();
   const slugLower = (p.slug || '').toLowerCase();
-  const nameLower = (p.name || '').toLowerCase();
 
-  const isZobo = idLower === 'prod-zobo' || slugLower.includes('zobo') || nameLower.includes('zobo');
-  const isGingerPineapple =
-    idLower === 'prod-ginger-pineapple' || slugLower.includes('pineapple') || nameLower.includes('pineapple');
-  const isGingerLychee =
-    idLower === 'prod-ginger-lychee' || slugLower.includes('lychee') || nameLower.includes('lychee');
-  const isGingerMango =
-    idLower === 'prod-ginger-mango' || slugLower.includes('mango') || nameLower.includes('mango');
+  const CORE_SINGLE_ID_SET = new Set([
+    'prod-zobo',
+    'prod-tigernut-milk',
+    'prod-organic-ginger',
+    'prod-ginger-mango',
+    'prod-ginger-pineapple',
+    'prod-ginger-lychee',
+  ]);
 
-  let activeSizes = normalizedSizes;
-  if (isZobo) {
-    activeSizes = [
-      { size: '12oz', label: '12oz Single Refresh', price: 5.0, quantityValue: 12, unit: 'oz' },
-      { size: '16oz', label: '16oz Daily Refresh', price: 7.0, quantityValue: 16, unit: 'oz' },
-      { size: '18oz', label: '18oz Sharing Bottle', price: 10.0, quantityValue: 18, unit: 'oz' },
-    ];
-  } else if (isGingerPineapple) {
-    activeSizes = [
-      { size: '12oz', label: '12oz Single Bottle', price: 5.0, quantityValue: 12, unit: 'oz' },
-    ];
-  } else if (isGingerLychee) {
-    activeSizes = [
-      { size: '12oz', label: '12oz Single Bottle', price: 5.5, quantityValue: 12, unit: 'oz' },
-    ];
-  } else if (isGingerMango) {
-    activeSizes = [
-      { size: '12oz', label: '12oz Single Bottle', price: 5.5, quantityValue: 12, unit: 'oz' },
-    ];
-  } else {
-    // Standardise any other products (e.g. Pure Organic Ginger, Tigernut Milk) to 12oz, 16oz, 18oz
-    activeSizes = normalizedSizes.map((s) => {
-      if (s.unit === 'Pack' || s.size.toLowerCase() === 'pack') {
-        return {
-          ...s,
-          label: s.label.replace(/16\.9\s*oz/gi, '16oz').replace(/12\s*oz/gi, '12oz'),
-          packBottleQuantity: 16,
-          packBottleUnit: 'oz',
-        };
-      }
-      const parsed = parseSizeString(String(s.size || ''), s.label);
-      let standardSize = '12oz';
-      let standardLabel = s.label || '12oz Bottle';
-      if (parsed.quantityValue === 16) {
-        standardSize = '16oz';
-        standardLabel = s.label ? s.label.replace(/16\.9\s*oz|16\s*oz|50cl/gi, '16oz') : '16oz Standard Refresh';
-      } else if (parsed.quantityValue === 18) {
-        standardSize = '18oz';
-        standardLabel = s.label ? s.label.replace(/33\.8\s*oz|18\s*oz|1L/gi, '18oz') : '18oz Sharing Bottle';
-      } else {
-        standardSize = '12oz';
-        standardLabel = s.label ? s.label.replace(/11\.8\s*oz|12\s*oz|35cl/gi, '12oz') : '12oz Single Refresh';
-      }
-      return {
-        ...s,
-        size: standardSize,
-        label: sanitizeBrandText(standardLabel),
-        quantityValue: parsed.quantityValue,
-        unit: 'oz',
-      };
-    });
-  }
+  const isCoreSingleFlavor = CORE_SINGLE_ID_SET.has(idLower);
+  const allAreAutoTwelvePack =
+    normalizedSizes.length > 0 &&
+    normalizedSizes.every(
+      (s) => s.unit === 'Pack' || String(s.size || '').toLowerCase().includes('pack')
+    );
+
+  // If a core single-bottle flavor row previously received 12-pack sizes, restore its single-bottle sizes ($5/$7/$15)
+  const activeSizes =
+    isCoreSingleFlavor && allAreAutoTwelvePack
+      ? SINGLE_BOTTLE_SIZES.map((s) => ({ ...s }))
+      : normalizedSizes;
 
   let safeImageUrl = sanitizeLiveImageUrl(p.imageUrl);
   if (!safeImageUrl) {
-    if (isZobo) safeImageUrl = '/assets/aistudio/18oz_zobo_label_17754013.png';
-    else if (isGingerPineapple) safeImageUrl = '/assets/aistudio/12oz_pineapple_28b92d79.png';
-    else if (isGingerLychee) safeImageUrl = '/assets/aistudio/12oz_Lychee_771f865d.png';
-    else if (isGingerMango) safeImageUrl = '/assets/aistudio/12oz_mango_dcfd0401.png';
-    else if (idLower.includes('ginger') || slugLower.includes('ginger')) safeImageUrl = '/assets/aistudio/12oz_ginger_d302545f.png';
-    else if (idLower.includes('tigernut') || slugLower.includes('tigernut')) safeImageUrl = '/assets/aistudio/12oz_Tigernut_a2076757.png';
+    if (idLower.startsWith('prod-zobo') || slugLower.includes('zobo')) {
+      safeImageUrl = '/assets/aistudio/18oz_zobo_label_17754013.png';
+    } else if (idLower.startsWith('prod-ginger-pineapple') || slugLower.includes('pineapple')) {
+      safeImageUrl = '/assets/aistudio/12oz_pineapple_28b92d79.png';
+    } else if (idLower.startsWith('prod-ginger-lychee') || slugLower.includes('lychee')) {
+      safeImageUrl = '/assets/aistudio/12oz_Lychee_771f865d.png';
+    } else if (idLower.startsWith('prod-ginger-mango') || slugLower.includes('mango')) {
+      safeImageUrl = '/assets/aistudio/12oz_mango_dcfd0401.png';
+    } else if (idLower.includes('ginger') || slugLower.includes('ginger')) {
+      safeImageUrl = '/assets/aistudio/12oz_ginger_d302545f.png';
+    } else if (idLower.includes('tigernut') || slugLower.includes('tigernut')) {
+      safeImageUrl = '/assets/aistudio/12oz_Tigernut_a2076757.png';
+    }
   }
 
   const safeGallery = (p.galleryImages || [])
     .map((img) => sanitizeLiveImageUrl(img))
     .filter(Boolean);
 
+  const canonicalDefault = INITIAL_PRODUCTS.find((ip) => ip.id === p.id);
+  const cleanName =
+    isCoreSingleFlavor && canonicalDefault
+      ? canonicalDefault.name
+      : sanitizeBrandText(p.name);
+
   return {
     ...p,
-    name: sanitizeBrandText(p.name),
+    name: cleanName,
     tagline: sanitizeBrandText(p.tagline),
     description: sanitizeBrandText(p.description),
     ingredients: (p.ingredients || []).map((ing) => sanitizeBrandText(ing)),
@@ -1342,18 +1474,37 @@ function normalizeProduct(p: Product): Product {
 function normalizeCmsPage(page: CmsPage): CmsPage {
   const isAbout = (page.slug || '').replace(/^\/+/, '').toLowerCase() === 'about-us';
 
+  const cleanDeliveryText = (text: string): string =>
+    text
+      .replace(/Complimentary Cold-Insulated Local Delivery Over \$?\d+(?:\.\d+)?/gi, 'Fresh Small-Batch Local Delivery & Pickup')
+      .replace(/Free(?:\s+Local)?\s+Delivery(?:\s+Over\s+\$?\d+(?:\.\d+)?)?/gi, 'Delivery fee will be charged when package is delivered')
+      .replace(/or free Quakertown kitchen pickup\.?/gi, 'or pick up directly in Quakertown.')
+      .replace(/free delivery over \$?\d+(?:\.\d+)?,?\s*/gi, '');
+
   return {
     ...page,
     title: sanitizeBrandText(page.title),
     seoTitle: cleanCeoMentions(sanitizeBrandText(page.seoTitle || '')),
-    metaDescription: cleanCeoMentions(sanitizeBrandText(page.metaDescription || '')),
+    metaDescription: cleanDeliveryText(cleanCeoMentions(sanitizeBrandText(page.metaDescription || ''))),
     sections: (page.sections || []).map((sec) => {
-      let heading = cleanCeoMentions(sec.heading || '').replace(/\bBespoke\s+Event\b/gi, 'Delightful').replace(/\bBespoke\b/gi, 'Delightful');
+      let heading = cleanDeliveryText(
+        cleanCeoMentions(sec.heading || '')
+          .replace(/\bBespoke\s+Event\b/gi, 'Delightful')
+          .replace(/\bBespoke\b/gi, 'Delightful')
+      );
       if (heading.includes('Crafted from Passion')) {
         heading = 'Authentic Heritage, Pure Botanicals & Uncompromised Quality';
       }
-      let body = cleanCeoMentions(sec.body).replace(/\bBespoke\s+Event\b/gi, 'Delightful').replace(/\bBespoke\b/gi, 'Delightful');
-      let subheading = cleanCeoMentions(sec.subheading).replace(/\bBespoke\s+Event\b/gi, 'Delightful').replace(/\bBespoke\b/gi, 'Delightful');
+      let body = cleanDeliveryText(
+        cleanCeoMentions(sec.body)
+          .replace(/\bBespoke\s+Event\b/gi, 'Delightful')
+          .replace(/\bBespoke\b/gi, 'Delightful')
+      );
+      let subheading = cleanDeliveryText(
+        cleanCeoMentions(sec.subheading)
+          .replace(/\bBespoke\s+Event\b/gi, 'Delightful')
+          .replace(/\bBespoke\b/gi, 'Delightful')
+      );
 
       if (isAbout) {
         body = body
@@ -1436,6 +1587,40 @@ function normalizeSiteContent(raw: SiteContent): SiteContent {
   const rawWholesaleGallery =
     rawWholesaleSource !== undefined ? mappedWholesaleGallery : INITIAL_WHOLESALE_GALLERY;
 
+  const rawWholesaleShopSource =
+    raw.wholesaleShop || raw.branding?.wholesaleShop || DEFAULT_WHOLESALE_SHOP;
+  const normalizedWholesaleShop: WholesaleShopSettings = {
+    enabled: rawWholesaleShopSource.enabled !== false,
+    kicker: rawWholesaleShopSource.kicker || DEFAULT_WHOLESALE_SHOP.kicker,
+    heading: rawWholesaleShopSource.heading || DEFAULT_WHOLESALE_SHOP.heading,
+    subheading: rawWholesaleShopSource.subheading || DEFAULT_WHOLESALE_SHOP.subheading,
+    products:
+      Array.isArray(rawWholesaleShopSource.products) && rawWholesaleShopSource.products.length > 0
+        ? rawWholesaleShopSource.products.map((item, idx) => ({
+            ...item,
+            imageUrl: sanitizeLiveImageUrl(item.imageUrl),
+            inStock: item.inStock !== false,
+            published: item.published !== false,
+            displayOrder: item.displayOrder ?? idx + 1,
+          }))
+        : DEFAULT_WHOLESALE_SHOP.products,
+    sizeTiers:
+      Array.isArray(rawWholesaleShopSource.sizeTiers) && rawWholesaleShopSource.sizeTiers.length > 0
+        ? rawWholesaleShopSource.sizeTiers.map((tier) => ({
+            ...tier,
+            enabled: tier.enabled !== false,
+          }))
+        : DEFAULT_WHOLESALE_SHOP.sizeTiers,
+    deliveryOptions:
+      Array.isArray(rawWholesaleShopSource.deliveryOptions) &&
+      rawWholesaleShopSource.deliveryOptions.length > 0
+        ? rawWholesaleShopSource.deliveryOptions.map((opt) => ({
+            ...opt,
+            enabled: opt.enabled !== false,
+          }))
+        : DEFAULT_WHOLESALE_SHOP.deliveryOptions,
+  };
+
   const rawInsta = (raw.instagram || '').trim();
   const cleanInstagram =
     !rawInsta ||
@@ -1455,20 +1640,34 @@ function normalizeSiteContent(raw: SiteContent): SiteContent {
       ? rawTikTok
       : `https://www.tiktok.com/@${rawTikTok.replace(/^@/, '')}`;
 
+  const cleanedTicker = sanitizeBrandText(raw.announcementTicker || '')
+    .replace(/•?\s*Affordable Local Delivery/gi, '')
+    .replace(/•?\s*Free(?:\s+Local)?\s+Delivery\s+Over\s+\$?\d+(?:\.\d+)?/gi, ' • Delivery fee will be charged when package is delivered')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
   return {
     ...raw,
     businessName: cleanName,
     instagram: cleanInstagram,
     tiktok: cleanTiktok,
+    freeDeliveryThreshold: 0,
+    standardDeliveryFee: 0,
     heroHeadline: sanitizeBrandText(raw.heroHeadline),
     heroSubheadline: sanitizeBrandText(raw.heroSubheadline).replace(/\bDelightful Juice\b(?!s)/g, 'Delightful Juices'),
-    announcementTicker: sanitizeBrandText(raw.announcementTicker),
+    announcementTicker: cleanedTicker,
     aboutStory: cleanCeoMentions(sanitizeBrandText(raw.aboutStory)).replace(/\bDelightful Juice\b(?!s)/g, 'Delightful Juices'),
     signaturePromise: sanitizeBrandText(raw.signaturePromise).replace(/\bDelightful Juice\b(?!s)/g, 'Delightful Juices'),
     shopHeading: rawShopHeading,
-    packPricing: rawPackPricing,
+    packPricing: {
+      ...rawPackPricing,
+      pricingNote: (rawPackPricing.pricingNote || '')
+        .replace(/free local delivery applies automatically on qualifying orders\.?/gi, 'Delivery fee will be charged when package is delivered.')
+        .trim() || DEFAULT_PACK_PRICING.pricingNote,
+    },
     eventShowcase: rawEventShowcase,
     wholesaleGallery: rawWholesaleGallery,
+    wholesaleShop: normalizedWholesaleShop,
     branding: {
       ...INITIAL_SITE_CONTENT.branding!,
       ...(raw.branding || {}),
@@ -1479,6 +1678,7 @@ function normalizeSiteContent(raw: SiteContent): SiteContent {
       packPricing: rawPackPricing,
       eventShowcase: rawEventShowcase,
       wholesaleGallery: rawWholesaleGallery,
+      wholesaleShop: normalizedWholesaleShop,
       aboutShowcase: {
         ...mergedShowcase,
         showCeoCard: false,
@@ -1791,15 +1991,37 @@ class DataRepository {
   private applyRemoteProducts(remoteProducts: Product[] | null, isAdminAuthenticated: boolean) {
     if (remoteProducts && remoteProducts.length > 0) {
       const normalized = remoteProducts.map(normalizeProduct);
-      this.products = normalized;
+      const existingIds = new Set(normalized.map((p) => p.id));
+
+      // Ensure each of the 6 core flavors also has its separate 12-pack product in /shop
+      const missingTwelvePacks = CORE_TWELVE_PACK_PRODUCTS.filter(
+        (packProd) => !existingIds.has(packProd.id)
+      ).map((packProd) => {
+        const baseSingleId = packProd.id.replace(/-12pack$/, '');
+        const matchingSingle = normalized.find((n) => n.id === baseSingleId);
+        return normalizeProduct({
+          ...packProd,
+          imageUrl: (matchingSingle?.imageUrl || '').trim() || packProd.imageUrl,
+        });
+      });
+
+      const merged = [...normalized, ...missingTwelvePacks];
+      this.products = merged;
       this.productsLoaded = true;
 
       if (isAdminAuthenticated) {
         for (const raw of remoteProducts) {
           const clean = normalized.find((n) => n.id === raw.id);
-          if (clean && (raw.imageUrl || '') !== (clean.imageUrl || '')) {
+          if (
+            clean &&
+            ((raw.imageUrl || '') !== (clean.imageUrl || '') ||
+              JSON.stringify(raw.sizes || []) !== JSON.stringify(clean.sizes || []))
+          ) {
             supabaseService.upsertProduct(clean).catch(() => {});
           }
+        }
+        for (const newPack of missingTwelvePacks) {
+          supabaseService.upsertProduct(newPack).catch(() => {});
         }
       }
       return;
@@ -1993,6 +2215,44 @@ class DataRepository {
     return this.buildWriteResult(ok);
   }
 
+  public async syncTwelvePackShopProducts(): Promise<SyncWriteResult> {
+    const existingById = new Map(this.products.map((p) => [p.id, p]));
+    const syncedProducts = INITIAL_PRODUCTS.map((canonical) => {
+      const existing = existingById.get(canonical.id);
+      const baseSingle = existingById.get(canonical.id.replace(/-12pack$/, ''));
+      const isPack = canonical.id.endsWith('-12pack');
+      return normalizeProduct({
+        ...(existing || canonical),
+        id: canonical.id,
+        name: canonical.name,
+        slug: canonical.slug,
+        category: canonical.category,
+        categoryLabel: canonical.categoryLabel,
+        tagline: canonical.tagline,
+        badge: canonical.badge,
+        sizes: canonical.sizes.map((s) => ({ ...s })),
+        imageUrl:
+          (existing?.imageUrl || '').trim() ||
+          (isPack ? (baseSingle?.imageUrl || '').trim() : '') ||
+          canonical.imageUrl,
+        inStock: existing ? existing.inStock : true,
+        featured: !isPack,
+        displayOrder: canonical.displayOrder,
+      });
+    });
+
+    // Remove legacy celebration bundle row if present in live DB so /shop cleanly highlights singles + 12-packs
+    if (existingById.has('prod-celebration-bundle')) {
+      await supabaseService.deleteProduct('prod-celebration-bundle');
+    }
+
+    this.products = syncedProducts;
+    this.productsLoaded = true;
+    this.notify();
+    const results = await Promise.all(syncedProducts.map((p) => supabaseService.upsertProduct(p)));
+    return this.buildWriteResult(results.every(Boolean));
+  }
+
   // --- SITE CONTENT ---
   public getContent(): SiteContent {
     return this.content;
@@ -2106,6 +2366,49 @@ class DataRepository {
     const nextContent: SiteContent = {
       ...this.content,
       wholesaleGallery: sanitized,
+      branding: defaultBranding,
+    };
+    return this.saveContent(nextContent);
+  }
+
+  // --- WHOLESALE SHOP ---
+  public getWholesaleShop(): WholesaleShopSettings {
+    return (
+      this.content.wholesaleShop ||
+      this.content.branding?.wholesaleShop ||
+      DEFAULT_WHOLESALE_SHOP
+    );
+  }
+
+  public async saveWholesaleShop(wholesaleShop: WholesaleShopSettings): Promise<SyncWriteResult> {
+    const sanitized: WholesaleShopSettings = {
+      ...wholesaleShop,
+      enabled: wholesaleShop.enabled !== false,
+      products: (wholesaleShop.products || []).map((item, idx) => ({
+        ...item,
+        imageUrl: sanitizeLiveImageUrl(item.imageUrl),
+        inStock: item.inStock !== false,
+        published: item.published !== false,
+        displayOrder: item.displayOrder ?? idx + 1,
+      })),
+      sizeTiers: (wholesaleShop.sizeTiers || []).map((t) => ({
+        ...t,
+        enabled: t.enabled !== false,
+      })),
+      deliveryOptions: (wholesaleShop.deliveryOptions || []).map((d) => ({
+        ...d,
+        enabled: d.enabled !== false,
+      })),
+    };
+    const defaultBranding: BrandSettings = {
+      logoText: 'Delightful Juices',
+      showLogoIcon: true,
+      ...(this.content.branding || {}),
+      wholesaleShop: sanitized,
+    };
+    const nextContent: SiteContent = {
+      ...this.content,
+      wholesaleShop: sanitized,
       branding: defaultBranding,
     };
     return this.saveContent(nextContent);
@@ -2547,8 +2850,8 @@ CREATE TABLE IF NOT EXISTS public.site_content (
   announcement_ticker TEXT NOT NULL,
   about_story TEXT NOT NULL,
   signature_promise TEXT NOT NULL,
-  free_delivery_threshold NUMERIC(10,2) NOT NULL DEFAULT 40.00,
-  standard_delivery_fee NUMERIC(10,2) NOT NULL DEFAULT 4.99,
+  free_delivery_threshold NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+  standard_delivery_fee NUMERIC(10,2) NOT NULL DEFAULT 0.00,
   pickup_address TEXT NOT NULL,
   operating_hours TEXT NOT NULL,
   chat_button_label TEXT DEFAULT 'Chat with Kitchen',
@@ -2738,7 +3041,21 @@ ALTER TABLE public.payment_gateway_secrets ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.payment_gateway_secrets FROM anon;
 REVOKE ALL ON TABLE public.payment_gateway_secrets FROM authenticated;
 
--- 11. Safe Brand Update (DelightOil -> Delightful Juices)
+-- 11. CMS Admin Profiles Table (Multi-Admin Support)
+CREATE TABLE IF NOT EXISTS public.admin_profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('admin', 'superadmin', 'manager')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.admin_profiles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Authenticated view admin profiles" ON public.admin_profiles;
+CREATE POLICY "Authenticated view admin profiles"
+  ON public.admin_profiles FOR SELECT
+  USING (auth.role() = 'authenticated');
+
+-- 12. Safe Brand Update (DelightOil -> Delightful Juices)
 UPDATE public.site_content
 SET
   business_name = 'Delightful Juices',

@@ -17,6 +17,7 @@ import {
 } from '../types';
 import {
   dataRepo,
+  DEFAULT_PACK_PRICING,
   SUPABASE_SQL_MIGRATION,
   DEFAULT_ABOUT_SHOWCASE,
 } from '../lib/storage';
@@ -28,7 +29,9 @@ import { PagesManager } from './PagesManager';
 import { NavigationManager } from './NavigationManager';
 import { EventShowcaseManager } from './EventShowcaseManager';
 import { WholesaleGalleryManager } from './WholesaleGalleryManager';
+import { WholesaleShopManager } from './WholesaleShopManager';
 import { StripeGatewayManager } from './StripeGatewayManager';
+import { AdminUsersManager } from './AdminUsersManager';
 import { 
   ShieldCheck, 
   LogOut, 
@@ -64,7 +67,8 @@ import {
   DollarSign,
   HelpCircle,
   Layers,
-  Monitor
+  Monitor,
+  Users
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -78,7 +82,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
   const [loginError, setLoginError] = useState('');
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'hero_slider' | 'wholesale_gallery' | 'event_showcase' | 'pages' | 'branding' | 'appearance' | 'products' | 'orders' | 'inquiries' | 'stripe' | 'content' | 'nav' | 'supabase'
+    | 'overview'
+    | 'hero_slider'
+    | 'wholesale_shop'
+    | 'wholesale_gallery'
+    | 'event_showcase'
+    | 'pages'
+    | 'branding'
+    | 'appearance'
+    | 'products'
+    | 'orders'
+    | 'inquiries'
+    | 'stripe'
+    | 'admin_users'
+    | 'content'
+    | 'nav'
+    | 'supabase'
   >('overview');
 
   // Repositories state
@@ -105,6 +124,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
   const [isTestingSupabase, setIsTestingSupabase] = useState(false);
   const [saveSuccessNotice, setSaveSuccessNotice] = useState<string | null>(null);
   const [confirmDeleteProdId, setConfirmDeleteProdId] = useState<string | null>(null);
+  const [isSyncingShopMenu, setIsSyncingShopMenu] = useState(false);
 
   // Subscribe to live repository & Supabase Auth changes
   useEffect(() => {
@@ -200,9 +220,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
       tasteProfile: 'Zesty, crisp and balanced sweetness',
       healthBenefits: ['Natural immune support', 'Revitalizing enzymes'],
       sizes: [
-        { size: '11.8 oz', label: '11.8 oz Pocket Sip', price: 5.50, quantityValue: 11.8, unit: 'oz' },
-        { size: '16.9 oz', label: '16.9 oz Daily Refresh', price: 7.50, quantityValue: 16.9, unit: 'oz' },
-        { size: '33.8 oz', label: '33.8 oz Family Jug', price: 14.00, quantityValue: 33.8, unit: 'oz' },
+        { size: '12oz', label: '12oz Pocket Sip', price: 5.0, quantityValue: 12, unit: 'oz' },
+        { size: '16oz', label: '16oz Daily Refresh', price: 7.0, quantityValue: 16, unit: 'oz' },
+        { size: '18oz', label: '18oz Sharing Bottle', price: 15.0, quantityValue: 18, unit: 'oz' },
       ],
       imageUrl: '',
       galleryImages: [],
@@ -216,6 +236,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
     };
     setEditingProduct(newP);
     setIsAddingProduct(true);
+  };
+
+  const handleSyncTwelvePackMenu = async () => {
+    setIsSyncingShopMenu(true);
+    const res = await dataRepo.syncTwelvePackShopProducts();
+    setIsSyncingShopMenu(false);
+    if (res.synced) {
+      showToast('Synced 6 single flavors ($5/$7/$15) + 6 separate 12-packs ($36/$48/$60) on /shop!');
+    } else {
+      showToast(`Sync partial: ${res.error || 'Please check Supabase permissions'}`);
+    }
   };
 
   // Upload Logo file handler (strictly live Supabase Storage)
@@ -632,6 +663,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
             </button>
 
             <button
+              onClick={() => setActiveTab('wholesale_shop')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                activeTab === 'wholesale_shop'
+                  ? 'bg-[#1B4D2E] text-[#FFF8E7] shadow-xs'
+                  : 'text-[#1B4D2E]/75 hover:bg-[#FFF8E7]'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <ShoppingBag className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
+                <span className="hidden md:inline">Shop Wholesale</span>
+              </div>
+              <span className="hidden md:inline text-[11px] bg-gray-100 text-[#1B4D2E] font-bold px-2 py-0.5 rounded-full">
+                {(content.wholesaleShop || content.branding?.wholesaleShop)?.products?.length || 6}
+              </span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('wholesale_gallery')}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
                 activeTab === 'wholesale_gallery'
@@ -786,6 +834,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
             </button>
 
             <button
+              onClick={() => setActiveTab('admin_users')}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                activeTab === 'admin_users'
+                  ? 'bg-[#1B4D2E] text-[#FFF8E7] shadow-xs'
+                  : 'text-[#1B4D2E]/75 hover:bg-[#FFF8E7]'
+              }`}
+            >
+              <Users className="w-4.5 h-4.5 shrink-0 text-[#E1AD01]" />
+              <span className="hidden md:inline">CMS Admins</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('content')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
                 activeTab === 'content'
@@ -901,7 +961,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                     {products.filter((p) => p.inStock).length} / {products.length}
                   </div>
                   <div className="text-[11px] text-[#1B4D2E]/70 mt-1">
-                    All sizes in oz (11.8, 16.9, 33.8 oz)
+                    Singles &amp; separate 12-pack cases
                   </div>
                 </div>
               </div>
@@ -1763,13 +1823,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                   </p>
                 </div>
 
-                <button
-                  onClick={handleNewProductInit}
-                  className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold text-xs py-2.5 px-4 rounded-xl flex items-center space-x-2 shadow-xs cursor-pointer"
-                >
-                  <Plus className="w-4 h-4 text-[#E1AD01]" />
-                  <span>Add New Drink</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <button
+                    type="button"
+                    disabled={isSyncingShopMenu}
+                    onClick={handleSyncTwelvePackMenu}
+                    className="bg-[#FFF8E7] hover:bg-[#1B4D2E]/10 text-[#1B4D2E] border border-[#1B4D2E]/20 font-bold text-xs py-2.5 px-4 rounded-xl flex items-center space-x-2 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingShopMenu ? 'animate-spin' : ''}`} />
+                    <span>
+                      {isSyncingShopMenu ? 'Syncing /shop...' : 'Sync Singles & 12-Pack Shop Menu'}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={handleNewProductInit}
+                    className="bg-[#1B4D2E] hover:bg-[#143822] text-[#FFF8E7] font-bold text-xs py-2.5 px-4 rounded-xl flex items-center space-x-2 shadow-xs cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4 text-[#E1AD01]" />
+                    <span>Add New Drink</span>
+                  </button>
+                </div>
               </div>
 
               {/* Products Table */}
@@ -2688,31 +2762,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
-                      Free Delivery Threshold ($)
-                    </label>
-                    <input
-                      type="number"
-                      step="1"
-                      value={content.freeDeliveryThreshold}
-                      onChange={(e) => setContent({ ...content, freeDeliveryThreshold: parseFloat(e.target.value) || 40 })}
-                      className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs text-[#1B4D2E] font-bold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[#1B4D2E]/70 mb-1">
-                      Standard Delivery Fee ($)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={content.standardDeliveryFee}
-                      onChange={(e) => setContent({ ...content, standardDeliveryFee: parseFloat(e.target.value) || 4.99 })}
-                      className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-xs text-[#1B4D2E] font-bold"
-                    />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+                  <div className="sm:col-span-2 bg-[#FFF8E7] border border-[#1B4D2E]/15 rounded-xl px-4 py-3 text-xs text-[#1B4D2E]">
+                    <span className="block font-bold uppercase tracking-wider text-[10px] text-[#1B4D2E]/70 mb-0.5">
+                      Online Storefront Delivery Policy
+                    </span>
+                    <span className="font-semibold">
+                      Delivery fee will be charged when package is delivered. (No upfront $4.99 fee or free-delivery threshold is charged online.)
+                    </span>
                   </div>
 
                   <div>
@@ -2764,11 +2821,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                       Pack Pricing Tiers
                     </label>
                     <div className="space-y-3">
-                      {(content.packPricing?.tiers || [
-                        { id: 'pack-6', name: '6-pack', bottlesCount: 6, price: 28, badge: 'Popular Sampler', description: 'Choice of 6 fresh assorted bottles. Perfect for personal weekly refreshment.', enabled: true },
-                        { id: 'pack-12', name: '12-pack', bottlesCount: 12, price: 48, badge: 'Most Popular', description: 'Ideal for families, busy weeks, and wellness sharing.', enabled: true },
-                        { id: 'pack-24', name: '24-pack', bottlesCount: 24, price: 90, badge: 'Best Value', description: 'Full case for gatherings, office fridges, and bulk stock.', enabled: true },
-                      ]).map((tier, idx) => (
+                      {(content.packPricing?.tiers || DEFAULT_PACK_PRICING.tiers).map((tier, idx) => (
                         <div key={tier.id || idx} className="bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl p-3 grid grid-cols-1 sm:grid-cols-12 gap-3 items-center text-xs">
                           <div className="sm:col-span-3">
                             <label className="block text-[10px] font-bold text-[#1B4D2E]/60 uppercase">Tier Name</label>
@@ -2946,6 +2999,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
             />
           )}
 
+          {/* TAB: SHOP WHOLESALE PRODUCTS MANAGER */}
+          {activeTab === 'wholesale_shop' && (
+            <WholesaleShopManager
+              onToast={showToast}
+              onPreviewPublic={() => {
+                onClose();
+                if (onNavigate) onNavigate('/wholesale');
+              }}
+            />
+          )}
+
           {/* TAB: WHOLESALE PRODUCT GALLERY */}
           {activeTab === 'wholesale_gallery' && (
             <WholesaleGalleryManager
@@ -2954,6 +3018,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                 onClose();
                 if (onNavigate) onNavigate('/wholesale');
               }}
+            />
+          )}
+
+          {/* TAB: CMS ADMINISTRATOR ACCOUNTS */}
+          {activeTab === 'admin_users' && (
+            <AdminUsersManager
+              onToast={showToast}
+              onOpenDatabaseTab={() => setActiveTab('supabase')}
             />
           )}
 
@@ -3378,11 +3450,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                     type="button"
                     onClick={() => {
                       const nextSize: SizeOption = {
-                        size: '16.9 oz',
-                        label: '16.9 oz Bottle',
-                        price: 7.50,
-                        quantityValue: 16.9,
-                        unit: 'oz',
+                        size: '12-pack (16oz)',
+                        label: '12-pack (16oz) — 12 Bottles',
+                        price: 48.0,
+                        quantityValue: 12,
+                        unit: 'Pack',
+                        packBottleQuantity: 16,
+                        packBottleUnit: 'oz',
                       };
                       setEditingProduct({
                         ...editingProduct,
@@ -3399,7 +3473,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                 <div className="space-y-2.5">
                   {editingProduct.sizes.map((s, idx) => {
                     const currentUnit: MeasurementUnit = s.unit || 'oz';
-                    const currentQty = s.quantityValue ?? (parseFloat(String(s.size)) || 16.9);
+                    const currentQty = s.quantityValue ?? (parseFloat(String(s.size)) || 12);
+                    const currentPackBottleQty = s.packBottleQuantity || 16;
                     return (
                       <div key={idx} className="bg-white p-3 rounded-xl border border-gray-200 space-y-2">
                         <div className="flex items-center justify-between">
@@ -3420,12 +3495,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                           )}
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div className={`grid grid-cols-2 ${currentUnit === 'Pack' ? 'sm:grid-cols-5' : 'sm:grid-cols-4'} gap-2`}>
                           <div>
-                            <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Quantity</label>
+                            <label className="block text-[10px] font-bold text-gray-600 mb-0.5">
+                              {currentUnit === 'Pack' ? 'Bottles / Pack' : 'Quantity'}
+                            </label>
                             <input
                               type="number"
-                              step="0.1"
+                              step={currentUnit === 'Pack' ? '1' : '0.1'}
                               min="0.1"
                               value={currentQty}
                               onChange={(e) => {
@@ -3435,7 +3512,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                                   ...s,
                                   quantityValue: val,
                                   unit: currentUnit,
-                                  size: currentUnit === 'Pack' ? s.size : `${val} ${currentUnit}`,
+                                  size:
+                                    currentUnit === 'Pack'
+                                      ? `${val}-pack (${currentPackBottleQty}${s.packBottleUnit || 'oz'})`
+                                      : `${val} ${currentUnit}`,
                                 };
                                 updatedSizes[idx] = nextOpt;
                                 setEditingProduct({ ...editingProduct, sizes: updatedSizes });
@@ -3455,20 +3535,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, onNavig
                                   ...s,
                                   quantityValue: currentQty,
                                   unit: u,
-                                  size: u === 'Pack' ? `${currentQty}-Pack` : `${currentQty} ${u}`,
+                                  packBottleQuantity: u === 'Pack' ? currentPackBottleQty : undefined,
+                                  packBottleUnit: u === 'Pack' ? (s.packBottleUnit || 'oz') : undefined,
+                                  size:
+                                    u === 'Pack'
+                                      ? `${currentQty}-pack (${currentPackBottleQty}${s.packBottleUnit || 'oz'})`
+                                      : `${currentQty} ${u}`,
                                 };
                                 updatedSizes[idx] = nextOpt;
                                 setEditingProduct({ ...editingProduct, sizes: updatedSizes });
                               }}
                               className="w-full bg-[#FFF8E7] border rounded-lg px-2 py-1.5 font-bold text-[#1B4D2E]"
                             >
+                              <option value="Pack">12-Pack / Bundle</option>
                               <option value="oz">oz (US Fluid Ounces)</option>
                               <option value="cl">cl (Auto-converts to oz)</option>
                               <option value="L">L (Auto-converts to oz)</option>
                               <option value="ml">ml (Auto-converts to oz)</option>
-                              <option value="Pack">Pack / Bundle</option>
                             </select>
                           </div>
+
+                          {currentUnit === 'Pack' && (
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Bottle Size (oz)</label>
+                              <input
+                                type="number"
+                                step="1"
+                                min="1"
+                                value={currentPackBottleQty}
+                                onChange={(e) => {
+                                  const bVal = parseFloat(e.target.value) || 16;
+                                  const updatedSizes = [...editingProduct.sizes];
+                                  updatedSizes[idx] = {
+                                    ...s,
+                                    packBottleQuantity: bVal,
+                                    packBottleUnit: s.packBottleUnit || 'oz',
+                                    size: `${currentQty}-pack (${bVal}${s.packBottleUnit || 'oz'})`,
+                                  };
+                                  setEditingProduct({ ...editingProduct, sizes: updatedSizes });
+                                }}
+                                className="w-full bg-[#FFF8E7] border rounded-lg px-2 py-1.5 font-bold text-[#1B4D2E]"
+                              />
+                            </div>
+                          )}
 
                           <div>
                             <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Bottle Label</label>

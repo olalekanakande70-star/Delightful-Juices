@@ -28,8 +28,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content, onNavigate }) =
     removeFromCart,
     updateQuantity,
     subtotal,
-    freeDeliveryThreshold,
-    deliveryFee,
     deliveryMethod,
     setDeliveryMethod,
     total,
@@ -38,9 +36,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content, onNavigate }) =
   } = useCart();
 
   if (!isCartOpen) return null;
-
-  const amountNeededForFreeDelivery = Math.max(0, freeDeliveryThreshold - subtotal);
-  const progressPercent = Math.min(100, Math.round((subtotal / freeDeliveryThreshold) * 100));
 
   const whatsappCheckoutUrl = (() => {
     if (cart.length === 0) return `https://wa.me/${content.whatsappNumber}`;
@@ -59,11 +54,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content, onNavigate }) =
         `*Subtotal:* $${subtotal.toFixed(2)}\n` +
         `*Delivery Method:* ${
           deliveryMethod === 'pickup'
-            ? 'Free Pickup (500 W Broad St, Quakertown)'
+            ? 'Kitchen Pickup (500 W Broad St, Quakertown)'
             : 'Local Delivery'
         }\n` +
-        `*Delivery Fee:* $${deliveryFee.toFixed(2)}\n` +
-        `*Total:* $${total.toFixed(2)}\n\n` +
+        (deliveryMethod === 'pickup'
+          ? ''
+          : `*Delivery Fee:* Delivery fee will be charged when package is delivered.\n`) +
+        `*Order Total (before delivery):* $${total.toFixed(2)}\n\n` +
         `Please let me know how soon this can be prepared and delivered!`
     );
     return `https://wa.me/${content.whatsappNumber}?text=${text}`;
@@ -104,32 +101,17 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content, onNavigate }) =
           </button>
         </div>
 
-        {/* Free Delivery Bar */}
+        {/* Delivery / Pickup Notice */}
         <div className="bg-[#1B4D2E] text-[#FFF8E7] px-5 py-3 text-xs">
           {deliveryMethod === 'pickup' ? (
             <div className="flex items-center space-x-2">
-              <Store className="w-4 h-4 text-[#E1AD01]" />
-              <span>Free Pickup at 500 W Broad St, Quakertown PA</span>
-            </div>
-          ) : amountNeededForFreeDelivery > 0 ? (
-            <div>
-              <div className="flex justify-between items-center mb-1.5 font-semibold">
-                <span>
-                  Add <strong className="text-[#E1AD01]">${amountNeededForFreeDelivery.toFixed(2)}</strong> more for FREE delivery
-                </span>
-                <span>{progressPercent}%</span>
-              </div>
-              <div className="w-full h-1.5 bg-[#143822] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[#E1AD01] transition-all duration-300"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
+              <Store className="w-4 h-4 text-[#E1AD01] shrink-0" />
+              <span>Kitchen Pickup at 500 W Broad St, Quakertown PA</span>
             </div>
           ) : (
-            <div className="flex items-center space-x-2 font-bold text-[#E1AD01]">
-              <Sparkles className="w-4 h-4" />
-              <span>You&apos;ve unlocked FREE local delivery!</span>
+            <div className="flex items-center space-x-2">
+              <Truck className="w-4 h-4 text-[#E1AD01] shrink-0" />
+              <span>Delivery fee will be charged when package is delivered.</span>
             </div>
           )}
         </div>
@@ -145,7 +127,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content, onNavigate }) =
                 Your Cart is Empty
               </div>
               <p className="text-xs text-[#1B4D2E]/70 max-w-xs mx-auto">
-                Explore our signature Zobo, Organic Ginger, and Tigernut Milk in 11.8 oz, 16.9 oz, and 33.8 oz sizes.
+                Explore our signature Zobo, Organic Ginger, and Tigernut Milk in single bottles (12oz, 16oz, 18oz) and 12-pack cases.
               </p>
               <button
                 type="button"
@@ -260,7 +242,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content, onNavigate }) =
                 }`}
               >
                 <Store className="w-3.5 h-3.5" />
-                <span>Free Kitchen Pickup</span>
+                <span>Kitchen Pickup</span>
               </button>
             </div>
 
@@ -271,21 +253,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ content, onNavigate }) =
                   ${subtotal.toFixed(2)}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span>
-                  {deliveryMethod === 'pickup'
-                    ? 'Kitchen Pickup Fee'
-                    : subtotal >= freeDeliveryThreshold
-                    ? 'Local Delivery (Promo)'
-                    : 'Local Delivery Fee'}
-                </span>
-                <span className="font-bold text-[#1B4D2E] tabular-nums">
-                  {deliveryFee === 0 ? (
-                    <span className="text-emerald-700 font-bold uppercase text-[11px]">Free</span>
-                  ) : (
-                    `$${deliveryFee.toFixed(2)}`
-                  )}
-                </span>
+              <div className="text-[11px] font-medium text-[#1B4D2E]/80 bg-[#FFF8E7] px-3 py-2 rounded-lg border border-[#1B4D2E]/12">
+                {deliveryMethod === 'pickup'
+                  ? 'Kitchen Pickup: 500 W Broad St, Quakertown PA'
+                  : 'Delivery fee will be charged when package is delivered.'}
               </div>
               <div className="flex justify-between text-base font-extrabold text-[#1B4D2E] pt-2 border-t border-gray-100 tabular-nums">
                 <span>Total</span>
