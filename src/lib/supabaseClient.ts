@@ -1036,6 +1036,8 @@ class SupabaseService {
 
       if (error || !data) return null;
 
+      const branding = data.branding || undefined;
+
       return {
         businessName: data.business_name,
         ceoName: data.ceo_name,
@@ -1059,7 +1061,13 @@ class SupabaseService {
         pickupAddress: data.pickup_address,
         operatingHours: data.operating_hours,
         chatButtonLabel: data.chat_button_label || 'Chat with Kitchen',
-        branding: data.branding || undefined,
+        shopHeading: branding?.shopHeading,
+        packPricing: branding?.packPricing,
+        eventShowcase: branding?.eventShowcase,
+        wholesaleGallery: branding?.wholesaleGallery,
+        wholesaleShop: branding?.wholesaleShop,
+        productSlider: branding?.productSlider,
+        branding,
         colors: data.colors || undefined,
         typography: data.typography || undefined,
         stripe: data.stripe || undefined,

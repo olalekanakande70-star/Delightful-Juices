@@ -603,6 +603,7 @@ export const WholesaleShopSection: React.FC<WholesaleShopSectionProps> = ({
                       <div className="aspect-4/3 bg-[#FFF8E7] overflow-hidden flex items-center justify-center p-5 border-b border-[#1B4D2E]/10">
                         {product.imageUrl && !hasImgError ? (
                           <img
+                            key={product.imageUrl}
                             src={product.imageUrl}
                             alt={`${product.name} wholesale 12-pack bottle`}
                             referrerPolicy="no-referrer"

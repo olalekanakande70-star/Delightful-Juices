@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   WholesaleDeliveryConfig,
   WholesaleShopProductItem,
@@ -44,17 +44,42 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
 }) => {
   const [settings, setSettings] = useState<WholesaleShopSettings>(() => dataRepo.getWholesaleShop());
   const [isSaving, setIsSaving] = useState(false);
-  const [uploadingProductId, setUploadingProductId] = useState<string | null>(null);
+  const [uploadingIds, setUploadingIds] = useState<Record<string, boolean>>({});
+  const latestSettingsRef = useRef<WholesaleShopSettings>(settings);
+  const hasLocalEditsRef = useRef(false);
+
+  const commitDraftSettings = (
+    updater: WholesaleShopSettings | ((prev: WholesaleShopSettings) => WholesaleShopSettings),
+    markDirty = true
+  ) => {
+    setSettings((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      latestSettingsRef.current = next;
+      if (markDirty) {
+        hasLocalEditsRef.current = true;
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
-    setSettings(dataRepo.getWholesaleShop());
+    const syncFromRepo = () => {
+      if (hasLocalEditsRef.current) return;
+      const live = dataRepo.getWholesaleShop();
+      latestSettingsRef.current = live;
+      setSettings(live);
+    };
+    syncFromRepo();
+    const unsubscribe = dataRepo.subscribe(syncFromRepo);
+    return unsubscribe;
   }, []);
 
   const handleSave = async () => {
     setIsSaving(true);
+    const current = latestSettingsRef.current;
     const ordered: WholesaleShopSettings = {
-      ...settings,
-      products: settings.products.map((p, idx) => ({
+      ...current,
+      products: current.products.map((p, idx) => ({
         ...p,
         displayOrder: idx + 1,
       })),
@@ -63,7 +88,10 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
     setIsSaving(false);
 
     if (res.synced) {
-      setSettings(dataRepo.getWholesaleShop());
+      hasLocalEditsRef.current = false;
+      const saved = dataRepo.getWholesaleShop();
+      latestSettingsRef.current = saved;
+      setSettings(saved);
       onToast('Wholesale Shop products, tiers & delivery rates published live!');
     } else {
       onToast(`Unable to save Wholesale Shop: ${res.error || 'Database sync issue'}`);
@@ -77,7 +105,7 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
       sizeTiers: DEFAULT_WHOLESALE_SHOP.sizeTiers.map((t) => ({ ...t })),
       deliveryOptions: DEFAULT_WHOLESALE_SHOP.deliveryOptions.map((d) => ({ ...d })),
     };
-    setSettings(freshDefaults);
+    commitDraftSettings(freshDefaults, true);
     onToast('Loaded default Wholesale Shop pricing & 6 flavors. Click Save & Publish to apply.');
   };
 
@@ -85,7 +113,7 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
     size: WholesaleSizeTierConfig['size'],
     patch: Partial<WholesaleSizeTierConfig>
   ) => {
-    setSettings((prev) => ({
+    commitDraftSettings((prev) => ({
       ...prev,
       sizeTiers: prev.sizeTiers.map((tier) =>
         tier.size === size ? { ...tier, ...patch } : tier
@@ -97,7 +125,7 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
     id: WholesaleDeliveryConfig['id'],
     patch: Partial<WholesaleDeliveryConfig>
   ) => {
-    setSettings((prev) => ({
+    commitDraftSettings((prev) => ({
       ...prev,
       deliveryOptions: prev.deliveryOptions.map((opt) =>
         opt.id === id ? { ...opt, ...patch } : opt
@@ -106,26 +134,28 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
   };
 
   const handleAddProduct = () => {
-    const newItem: WholesaleShopProductItem = {
-      id: `ws-prod-${Date.now()}`,
-      name: 'New Wholesale Juice Flavor',
-      shortName: 'New Flavor',
-      category: 'ginger',
-      categoryLabel: 'Ginger Elixirs',
-      tagline: 'Cold-pressed 12-pack commercial wholesale case for stores and cafes',
-      imageUrl: '',
-      inStock: true,
-      published: true,
-      displayOrder: settings.products.length + 1,
-    };
-    setSettings((prev) => ({
-      ...prev,
-      products: [...prev.products, newItem],
-    }));
+    commitDraftSettings((prev) => {
+      const newItem: WholesaleShopProductItem = {
+        id: `ws-prod-${Date.now()}`,
+        name: 'New Wholesale Juice Flavor',
+        shortName: 'New Flavor',
+        category: 'ginger',
+        categoryLabel: 'Ginger Elixirs',
+        tagline: 'Cold-pressed 12-pack commercial wholesale case for stores and cafes',
+        imageUrl: '',
+        inStock: true,
+        published: true,
+        displayOrder: prev.products.length + 1,
+      };
+      return {
+        ...prev,
+        products: [...prev.products, newItem],
+      };
+    });
   };
 
   const handleUpdateProduct = (id: string, patch: Partial<WholesaleShopProductItem>) => {
-    setSettings((prev) => ({
+    commitDraftSettings((prev) => ({
       ...prev,
       products: prev.products.map((item) => {
         if (item.id !== id) return item;
@@ -140,7 +170,7 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
   };
 
   const handleDeleteProduct = (id: string) => {
-    setSettings((prev) => ({
+    commitDraftSettings((prev) => ({
       ...prev,
       products: prev.products
         .filter((p) => p.id !== id)
@@ -149,15 +179,41 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
   };
 
   const handleMoveProduct = (index: number, direction: 'up' | 'down') => {
-    const targetIdx = direction === 'up' ? index - 1 : index + 1;
-    if (targetIdx < 0 || targetIdx >= settings.products.length) return;
-    const copy = [...settings.products];
-    const [moved] = copy.splice(index, 1);
-    copy.splice(targetIdx, 0, moved);
-    setSettings((prev) => ({
-      ...prev,
-      products: copy.map((p, idx) => ({ ...p, displayOrder: idx + 1 })),
-    }));
+    commitDraftSettings((prev) => {
+      const targetIdx = direction === 'up' ? index - 1 : index + 1;
+      if (targetIdx < 0 || targetIdx >= prev.products.length) return prev;
+      const copy = [...prev.products];
+      const [moved] = copy.splice(index, 1);
+      copy.splice(targetIdx, 0, moved);
+      return {
+        ...prev,
+        products: copy.map((p, idx) => ({ ...p, displayOrder: idx + 1 })),
+      };
+    });
+  };
+
+  const handleRemoveProductImage = async (productId: string) => {
+    const current = latestSettingsRef.current;
+    const nextSettings: WholesaleShopSettings = {
+      ...current,
+      products: current.products.map((p) =>
+        p.id === productId ? { ...p, imageUrl: '' } : p
+      ),
+    };
+    latestSettingsRef.current = nextSettings;
+    setSettings(nextSettings);
+
+    const saveRes = await dataRepo.saveWholesaleShop(nextSettings);
+    if (saveRes.synced) {
+      hasLocalEditsRef.current = false;
+      const saved = dataRepo.getWholesaleShop();
+      latestSettingsRef.current = saved;
+      setSettings(saved);
+      onToast('Wholesale product photo removed & synced.');
+    } else {
+      hasLocalEditsRef.current = true;
+      onToast(`Photo cleared locally; click Save & Publish to sync (${saveRes.error || 'pending'}).`);
+    }
   };
 
   const handleProductImageUpload = async (
@@ -171,24 +227,34 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
       return;
     }
 
-    setUploadingProductId(productId);
+    setUploadingIds((prev) => ({ ...prev, [productId]: true }));
     try {
       const ext = file.name.split('.').pop() || 'png';
       const storagePath = `wholesale-shop/${Date.now()}-${productId}.${ext}`;
       const res = await supabaseService.uploadAsset('delightful_assets', storagePath, file);
       if (res.url) {
+        const current = latestSettingsRef.current;
         const nextSettings: WholesaleShopSettings = {
-          ...settings,
-          products: settings.products.map((p) =>
+          ...current,
+          showProductImages: true,
+          products: current.products.map((p) =>
             p.id === productId ? { ...p, imageUrl: res.url! } : p
           ),
         };
+        latestSettingsRef.current = nextSettings;
         setSettings(nextSettings);
         const saveRes = await dataRepo.saveWholesaleShop(nextSettings);
         if (saveRes.synced) {
-          onToast('Wholesale product image uploaded & published live!');
+          hasLocalEditsRef.current = false;
+          const saved = dataRepo.getWholesaleShop();
+          latestSettingsRef.current = saved;
+          setSettings(saved);
+          onToast('Wholesale product image uploaded & displayed live on /wholesale!');
         } else {
-          onToast(`Image uploaded, click Save & Publish to sync (${saveRes.error || 'pending'}).`);
+          hasLocalEditsRef.current = true;
+          onToast(
+            `Image uploaded, click Save & Publish to sync (${saveRes.error || 'Database sync pending'}).`
+          );
         }
       } else {
         onToast(`Upload error: ${res.error || 'Unable to upload product photo'}`);
@@ -196,7 +262,7 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
     } catch (err: any) {
       onToast(`Upload failed: ${err?.message || 'Error uploading file'}`);
     } finally {
-      setUploadingProductId(null);
+      setUploadingIds((prev) => ({ ...prev, [productId]: false }));
       inputEl.value = '';
     }
   };
@@ -267,7 +333,10 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
                 type="checkbox"
                 checked={settings.showProductImages === true}
                 onChange={(e) =>
-                  setSettings((prev) => ({ ...prev, showProductImages: e.target.checked }))
+                  commitDraftSettings((prev) => ({
+                    ...prev,
+                    showProductImages: e.target.checked,
+                  }))
                 }
                 className="w-4 h-4 accent-[#1B4D2E]"
               />
@@ -280,7 +349,9 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
               <input
                 type="checkbox"
                 checked={settings.enabled !== false}
-                onChange={(e) => setSettings((prev) => ({ ...prev, enabled: e.target.checked }))}
+                onChange={(e) =>
+                  commitDraftSettings((prev) => ({ ...prev, enabled: e.target.checked }))
+                }
                 className="w-4 h-4 accent-[#1B4D2E]"
               />
               <span className="text-xs font-bold text-[#1B4D2E]">
@@ -298,7 +369,9 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
             <input
               type="text"
               value={settings.kicker}
-              onChange={(e) => setSettings((prev) => ({ ...prev, kicker: e.target.value }))}
+              onChange={(e) =>
+                commitDraftSettings((prev) => ({ ...prev, kicker: e.target.value }))
+              }
               className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-3 py-2.5 font-semibold text-[#1B4D2E]"
             />
           </div>
@@ -310,7 +383,9 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
             <input
               type="text"
               value={settings.heading}
-              onChange={(e) => setSettings((prev) => ({ ...prev, heading: e.target.value }))}
+              onChange={(e) =>
+                commitDraftSettings((prev) => ({ ...prev, heading: e.target.value }))
+              }
               className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-3 py-2.5 font-bold text-[#1B4D2E]"
             />
           </div>
@@ -322,7 +397,9 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
             <textarea
               rows={2}
               value={settings.subheading}
-              onChange={(e) => setSettings((prev) => ({ ...prev, subheading: e.target.value }))}
+              onChange={(e) =>
+                commitDraftSettings((prev) => ({ ...prev, subheading: e.target.value }))
+              }
               className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-3 py-2 text-[#1B4D2E]"
             />
           </div>
@@ -550,7 +627,7 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {settings.products.map((item, index) => {
             const hasUrl = Boolean(item.imageUrl?.trim());
-            const isUploadingThis = uploadingProductId === item.id;
+            const isUploadingThis = Boolean(uploadingIds[item.id]);
 
             return (
               <div
@@ -566,8 +643,10 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
                   <div className="relative aspect-16/10 bg-[#FFF8E7] border-b border-[#1B4D2E]/10 overflow-hidden">
                     {hasUrl ? (
                       <img
+                        key={item.imageUrl}
                         src={item.imageUrl}
                         alt={item.name}
+                        referrerPolicy="no-referrer"
                         className="w-full h-full object-contain p-3"
                       />
                     ) : (
@@ -631,7 +710,7 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
                       {hasUrl && (
                         <button
                           type="button"
-                          onClick={() => handleUpdateProduct(item.id, { imageUrl: '' })}
+                          onClick={() => handleRemoveProductImage(item.id)}
                           className="bg-red-600/90 hover:bg-red-700 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg cursor-pointer flex items-center space-x-1 shadow-xs"
                           title="Remove photo"
                         >
@@ -729,6 +808,20 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
                         placeholder="/assets/aistudio/... or https://..."
                         className="w-full bg-[#FFF8E7] border border-[#1B4D2E]/20 rounded-xl px-3 py-1.5 text-[11px] font-mono text-[#1B4D2E]"
                       />
+                      {hasUrl && settings.showProductImages !== true && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            commitDraftSettings((prev) => ({
+                              ...prev,
+                              showProductImages: true,
+                            }))
+                          }
+                          className="mt-1.5 text-[10px] font-bold text-amber-800 hover:text-amber-950 underline cursor-pointer"
+                        >
+                          Images are currently hidden on /wholesale — click to enable display
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -2076,10 +2076,21 @@ class DataRepository {
 
       // 1. Apply live site content
       if (remoteContent) {
+        const mergedRemoteBranding = {
+          ...INITIAL_SITE_CONTENT.branding!,
+          ...(remoteContent.branding || {}),
+        };
         this.content = normalizeSiteContent({
           ...INITIAL_SITE_CONTENT,
           ...remoteContent,
-          branding: { ...INITIAL_SITE_CONTENT.branding!, ...(remoteContent.branding || {}) },
+          shopHeading: remoteContent.shopHeading ?? mergedRemoteBranding.shopHeading,
+          packPricing: remoteContent.packPricing ?? mergedRemoteBranding.packPricing,
+          eventShowcase: remoteContent.eventShowcase ?? mergedRemoteBranding.eventShowcase,
+          wholesaleGallery:
+            remoteContent.wholesaleGallery ?? mergedRemoteBranding.wholesaleGallery,
+          wholesaleShop: remoteContent.wholesaleShop ?? mergedRemoteBranding.wholesaleShop,
+          productSlider: remoteContent.productSlider ?? mergedRemoteBranding.productSlider,
+          branding: mergedRemoteBranding,
           colors: { ...INITIAL_SITE_CONTENT.colors!, ...(remoteContent.colors || {}) },
           typography: { ...INITIAL_SITE_CONTENT.typography!, ...(remoteContent.typography || {}) },
           stripe: { ...INITIAL_SITE_CONTENT.stripe!, ...(remoteContent.stripe || {}) },
