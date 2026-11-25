@@ -21,6 +21,7 @@ import {
   Trash2,
   Truck,
   Upload,
+  X,
 } from 'lucide-react';
 
 interface WholesaleShopManagerProps {
@@ -260,17 +261,33 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
               Control the heading, description, and whether the Shop Wholesale Products section renders on /wholesale.
             </p>
           </div>
-          <label className="inline-flex items-center space-x-2.5 bg-[#FFF8E7] px-4 py-2 rounded-xl border border-[#1B4D2E]/15 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={settings.enabled !== false}
-              onChange={(e) => setSettings((prev) => ({ ...prev, enabled: e.target.checked }))}
-              className="w-4 h-4 accent-[#1B4D2E]"
-            />
-            <span className="text-xs font-bold text-[#1B4D2E]">
-              Show Section on /wholesale
-            </span>
-          </label>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <label className="inline-flex items-center space-x-2.5 bg-[#FFF8E7] px-4 py-2 rounded-xl border border-[#1B4D2E]/15 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.showProductImages === true}
+                onChange={(e) =>
+                  setSettings((prev) => ({ ...prev, showProductImages: e.target.checked }))
+                }
+                className="w-4 h-4 accent-[#1B4D2E]"
+              />
+              <span className="text-xs font-bold text-[#1B4D2E]">
+                Show Product Images on /wholesale
+              </span>
+            </label>
+
+            <label className="inline-flex items-center space-x-2.5 bg-[#FFF8E7] px-4 py-2 rounded-xl border border-[#1B4D2E]/15 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.enabled !== false}
+                onChange={(e) => setSettings((prev) => ({ ...prev, enabled: e.target.checked }))}
+                className="w-4 h-4 accent-[#1B4D2E]"
+              />
+              <span className="text-xs font-bold text-[#1B4D2E]">
+                Show Section on /wholesale
+              </span>
+            </label>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -512,7 +529,12 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
               Wholesale Flavors &amp; Case Catalog ({settings.products.length})
             </h3>
             <p className="text-xs text-[#1B4D2E]/70">
-              Manage photos, names, descriptions, and availability for each wholesale case item.
+              Edit names, descriptions, pricing categories, availability, and optional product photos for each wholesale case item.{' '}
+              <span className="font-semibold text-[#1B4D2E]">
+                {settings.showProductImages === true
+                  ? '(Product images are currently visible on /wholesale.)'
+                  : '(Product images are currently hidden on /wholesale — enable "Show Product Images on /wholesale" above to display them.)'}
+              </span>
             </p>
           </div>
           <button
@@ -605,17 +627,30 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
                       </button>
                     </div>
 
-                    <label className="absolute bottom-3 right-3 bg-[#1B4D2E] hover:bg-[#143822] text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg cursor-pointer flex items-center space-x-1 shadow-xs">
-                      <Upload className="w-3 h-3 text-[#E1AD01]" />
-                      <span>{isUploadingThis ? 'Uploading...' : hasUrl ? 'Replace Photo' : 'Upload Photo'}</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        disabled={isUploadingThis}
-                        onChange={(e) => handleProductImageUpload(e, item.id)}
-                        className="hidden"
-                      />
-                    </label>
+                    <div className="absolute bottom-3 right-3 flex items-center space-x-1.5">
+                      {hasUrl && (
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateProduct(item.id, { imageUrl: '' })}
+                          className="bg-red-600/90 hover:bg-red-700 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg cursor-pointer flex items-center space-x-1 shadow-xs"
+                          title="Remove photo"
+                        >
+                          <X className="w-3 h-3" />
+                          <span>Remove</span>
+                        </button>
+                      )}
+                      <label className="bg-[#1B4D2E] hover:bg-[#143822] text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg cursor-pointer flex items-center space-x-1 shadow-xs">
+                        <Upload className="w-3 h-3 text-[#E1AD01]" />
+                        <span>{isUploadingThis ? 'Uploading...' : hasUrl ? 'Replace Photo' : 'Upload Photo'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={isUploadingThis}
+                          onChange={(e) => handleProductImageUpload(e, item.id)}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                   </div>
 
                   {/* Product Edit Fields */}

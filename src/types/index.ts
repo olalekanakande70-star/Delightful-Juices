@@ -300,6 +300,7 @@ export interface WholesaleDeliveryConfig {
 
 export interface WholesaleShopSettings {
   enabled: boolean;
+  showProductImages?: boolean;
   kicker: string;
   heading: string;
   subheading: string;

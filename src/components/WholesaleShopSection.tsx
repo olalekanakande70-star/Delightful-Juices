@@ -167,7 +167,9 @@ export const WholesaleShopSection: React.FC<WholesaleShopSectionProps> = ({
     }
   }, [wholesaleCart]);
 
-  // Resolve live CMS Wholesale Shop items (falling back to live Product image only when item imageUrl is empty)
+  const showProductImages = wholesaleConfig.showProductImages === true;
+
+  // Resolve live CMS Wholesale Shop items strictly from Wholesale Shop CMS config
   const resolvedProducts = useMemo(() => {
     const cmsItems =
       wholesaleConfig.products && wholesaleConfig.products.length > 0
@@ -177,21 +179,12 @@ export const WholesaleShopSection: React.FC<WholesaleShopSectionProps> = ({
     return [...cmsItems]
       .filter((item) => item.published !== false)
       .sort((a, b) => (a.displayOrder ?? 99) - (b.displayOrder ?? 99))
-      .map((spec) => {
-        const matched = products.find(
-          (p) =>
-            p.id === spec.id ||
-            (spec.matchSlug && p.slug?.toLowerCase() === spec.matchSlug.toLowerCase()) ||
-            p.name?.toLowerCase().includes(spec.shortName.toLowerCase())
-        );
-        const imageUrl = (spec.imageUrl || '').trim() || (matched?.imageUrl || '').trim();
-        return {
-          ...spec,
-          imageUrl,
-          inStock: spec.inStock !== false,
-        };
-      });
-  }, [wholesaleConfig.products, products]);
+      .map((spec) => ({
+        ...spec,
+        imageUrl: (spec.imageUrl || '').trim(),
+        inStock: spec.inStock !== false,
+      }));
+  }, [wholesaleConfig.products]);
 
   const filteredProducts = useMemo(() => {
     if (categoryFilter === 'all') return resolvedProducts;
@@ -605,33 +598,48 @@ export const WholesaleShopSection: React.FC<WholesaleShopSectionProps> = ({
                   className="bg-white rounded-3xl border border-[#1B4D2E]/15 shadow-xs hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col justify-between"
                 >
                   <div>
-                    {/* Product Photography */}
-                    <div className="aspect-4/3 bg-[#FFF8E7] overflow-hidden flex items-center justify-center p-5 border-b border-[#1B4D2E]/10">
-                      {product.imageUrl && !hasImgError ? (
-                        <img
-                          src={product.imageUrl}
-                          alt={`${product.name} wholesale 12-pack bottle`}
-                          referrerPolicy="no-referrer"
-                          onError={() =>
-                            setErroredImages((prev) => ({ ...prev, [product.imageUrl]: true }))
-                          }
-                          className="w-full h-full object-contain transition-transform duration-300 hover:scale-105"
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center justify-center text-center text-[#1B4D2E]/70 space-y-2">
-                          <Package className="w-9 h-9 text-[#1B4D2E]/50" />
-                          <span className="text-xs font-bold">{product.name}</span>
-                        </div>
-                      )}
-                    </div>
+                    {/* Product Photography (shown only when enabled in Wholesale CMS) */}
+                    {showProductImages && (
+                      <div className="aspect-4/3 bg-[#FFF8E7] overflow-hidden flex items-center justify-center p-5 border-b border-[#1B4D2E]/10">
+                        {product.imageUrl && !hasImgError ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={`${product.name} wholesale 12-pack bottle`}
+                            referrerPolicy="no-referrer"
+                            onError={() =>
+                              setErroredImages((prev) => ({ ...prev, [product.imageUrl]: true }))
+                            }
+                            className="w-full h-full object-contain transition-transform duration-300 hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-center text-[#1B4D2E]/70 space-y-2">
+                            <Package className="w-9 h-9 text-[#1B4D2E]/50" />
+                            <span className="text-xs font-bold">{product.name}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Product Info */}
-                    <div className="p-5 space-y-4">
-                      <div className="space-y-1">
-                        <div className="text-xs text-[#1B4D2E]/65 font-semibold flex items-center gap-1.5">
-                          <span>{product.categoryLabel}</span>
-                          <span aria-hidden="true">·</span>
-                          <span>12 Bottles / Case</span>
+                    <div className={`p-5 space-y-4 ${!showProductImages ? 'pt-6' : ''}`}>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-xs text-[#1B4D2E]/65 font-semibold flex items-center gap-1.5">
+                            <span>{product.categoryLabel}</span>
+                            <span aria-hidden="true">·</span>
+                            <span>12 Bottles / Case</span>
+                          </div>
+                          {!showProductImages && (
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 ${
+                                product.inStock
+                                  ? 'bg-[#FFF8E7] text-[#1B4D2E] border border-[#1B4D2E]/15'
+                                  : 'bg-gray-100 text-gray-500 border border-gray-200'
+                              }`}
+                            >
+                              {product.inStock ? '12-Pack Case' : 'Sold Out'}
+                            </span>
+                          )}
                         </div>
                         <h3 className="font-display font-bold text-lg sm:text-xl text-[#1B4D2E] leading-snug">
                           {product.name}
