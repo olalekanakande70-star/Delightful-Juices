@@ -24,7 +24,7 @@ export const FaqSection: React.FC<FaqSectionProps> = ({ content }) => {
     },
     {
       q: 'How long do Delightful Juices stay fresh?',
-      a: 'Because our juices are 100% natural and free from chemical preservatives, they must be refrigerated immediately upon receipt (at 36°F - 40°F). They maintain peak freshness and flavor for 7 to 10 days refrigerated, or up to 60 days if frozen immediately.',
+      a: 'Because our juices are 100% natural and free from chemical preservatives, they must be kept refrigerated immediately upon receipt between 32°F and 40°F. They maintain peak freshness and flavor for 1 to 8 weeks when refrigerated under 32°F – 40°F, or longer if frozen immediately.',
     },
     {
       q: 'What makes your Zobo drink so special?',
@@ -67,11 +67,11 @@ export const FaqSection: React.FC<FaqSectionProps> = ({ content }) => {
           <div className="bg-[#FFF8E7] p-3 rounded-2xl border border-[#1B4D2E]/15 text-center">
             <Snowflake className="w-5 h-5 text-[#1B4D2E] mx-auto mb-1" />
             <div className="text-xs font-bold text-[#1B4D2E]">Keep Chilled</div>
-            <div className="text-[10px] text-[#1B4D2E]/70">Refrigerate at 36°-40°F</div>
+            <div className="text-[10px] text-[#1B4D2E]/70">Refrigerate at 32°–40°F</div>
           </div>
           <div className="bg-[#FFF8E7] p-3 rounded-2xl border border-[#1B4D2E]/15 text-center">
             <Clock className="w-5 h-5 text-[#1B4D2E] mx-auto mb-1" />
-            <div className="text-xs font-bold text-[#1B4D2E]">7-10 Days Fresh</div>
+            <div className="text-xs font-bold text-[#1B4D2E]">1–8 Weeks Fresh</div>
             <div className="text-[10px] text-[#1B4D2E]/70">Zero chemical preservatives</div>
           </div>
           <div className="bg-[#FFF8E7] p-3 rounded-2xl border border-[#1B4D2E]/15 text-center">

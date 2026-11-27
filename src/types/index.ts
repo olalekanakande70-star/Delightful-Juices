@@ -318,7 +318,11 @@ export interface BrandSettings {
   eventShowcase?: EventShowcaseItem[];
   eventShowcaseInitialized?: boolean;
   wholesaleGallery?: WholesaleGalleryItem[];
+  wholesaleGalleryDiversified?: boolean;
+  wholesaleGalleryPackPhotosV3?: boolean;
   wholesaleShop?: WholesaleShopSettings;
+  wholesaleRadius1hrFreeMigrated?: boolean;
+  wholesaleGingerMangoMigrated?: boolean;
   packPricing?: PackPricingSettings;
   shopHeading?: string;
   productSlider?: ProductSliderSettings;

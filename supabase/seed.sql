@@ -53,7 +53,7 @@ INSERT INTO public.site_content (
   40.00,
   4.99,
   '500 W Broad St, Quakertown, PA 18951',
-  'Mon - Sat: 9:00 AM - 6:30 PM | Sun: 11:00 AM - 4:00 PM',
+  'Mon - Sat: 9:00 AM - 6:30 PM | Sun: Closed',
   NOW()
 )
 ON CONFLICT (key) DO UPDATE SET

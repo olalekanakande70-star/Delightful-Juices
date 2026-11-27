@@ -563,7 +563,7 @@ export const DEFAULT_WHOLESALE_SHOP: WholesaleShopSettings = {
       category: 'ginger',
       categoryLabel: 'Ginger Elixirs',
       tagline: 'Lush tropical mango puree blended with invigorating fresh ginger root & lemon',
-      imageUrl: '',
+      imageUrl: '/assets/aistudio/Make_it_part_of_12_cc06343c_6bed23ea.jpg',
       inStock: true,
       published: true,
       displayOrder: 4,
@@ -627,10 +627,10 @@ export const DEFAULT_WHOLESALE_SHOP: WholesaleShopSettings = {
   deliveryOptions: [
     {
       id: 'radius_1hr',
-      label: 'Wholesale Delivery (Within 1 hr travel radius)',
-      shortLabel: '1 hr travel radius',
-      fee: 50,
-      description: 'Chilled regional delivery within 1 hour of Quakertown, PA',
+      label: 'Wholesale Delivery (Under 1 hr travel radius)',
+      shortLabel: 'Under 1 hr travel radius',
+      fee: 0,
+      description: 'Zero-fee chilled regional delivery under 1 hour from Quakertown, PA',
       enabled: true,
     },
     {
@@ -683,6 +683,48 @@ export const DEFAULT_PRODUCT_SLIDER: ProductSliderSettings = {
 
 export const INITIAL_WHOLESALE_GALLERY: WholesaleGalleryItem[] = [
   {
+    id: 'wg-ginger-mango-pack-1',
+    title: 'Home Made Ginger Mango Juice – 12-Pack Commercial Case',
+    category: 'ginger',
+    categoryLabel: 'Ginger Elixirs',
+    imageUrl: '/assets/aistudio/Make_it_part_of_12_cc06343c_6bed23ea.jpg',
+    badge: 'USDA-Approved',
+    sizes: '12oz • 16oz • 18oz',
+    barcode: 'UPC: 036000291452',
+    description: 'Small-batch tropical Ginger Mango juice shrink-wrapped in 12-bottle wholesale cases with full nutrition & UPC labeling.',
+    packOptions: '12-Pack & 24-Pack Cases (1–8 Weeks Refrigerated)',
+    displayOrder: 1,
+    published: true,
+  },
+  {
+    id: 'wg-tigernut-milk-2',
+    title: 'Home Made Tigernut Milk (Kunu Aya) – 12-Pack Case',
+    category: 'milks',
+    categoryLabel: 'Tigernut Milk',
+    imageUrl: '/assets/aistudio/This_is_15__make_0b7c3ce6_2b9754b7.jpg',
+    badge: 'USDA-Approved',
+    sizes: '12oz • 16oz • 18oz',
+    barcode: 'UPC: 036000291452',
+    description: 'Velvety dairy-free, nut-free soaked tigernut milk shrink-wrapped in 12-bottle wholesale cases sweetened with Medjool dates and organic cane sugar.',
+    packOptions: '12-Pack & 24-Pack Cases (1–8 Weeks Refrigerated)',
+    displayOrder: 2,
+    published: true,
+  },
+  {
+    id: 'wg-ginger-case-2',
+    title: 'Home Made Pure Ginger Juice – Refrigerated 12-Pack',
+    category: 'ginger',
+    categoryLabel: 'Ginger Elixirs',
+    imageUrl: '/assets/aistudio/Make_it_part_of_12_0d6500d7_870dcb8d.jpg',
+    badge: 'USDA-Approved',
+    sizes: '12oz • 16oz • 18oz',
+    barcode: 'UPC: 036000291452',
+    description: 'Chilled, ready-to-stock organic ginger juice bottles bundled in shrink-wrapped 12-packs for grocery cooler shelves.',
+    packOptions: '12-Pack & 24-Pack Cases (1–8 Weeks Refrigerated)',
+    displayOrder: 3,
+    published: true,
+  },
+  {
     id: 'wg-zobo-bundle-1',
     title: 'Home Made Hibiscus Juice (Zobo) – Shrink-Wrapped Case',
     category: 'zobo',
@@ -692,50 +734,36 @@ export const INITIAL_WHOLESALE_GALLERY: WholesaleGalleryItem[] = [
     sizes: '12oz • 16oz • 18oz',
     barcode: 'UPC: 036000291452',
     description: 'Small-batch hibiscus juice shrink-wrapped in commercial multi-packs with full nutrition & UPC labeling.',
-    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
-    displayOrder: 1,
+    packOptions: '12-Pack & 24-Pack Cases (1–8 Weeks Refrigerated)',
+    displayOrder: 4,
     published: true,
   },
   {
-    id: 'wg-ginger-case-2',
-    title: 'Home Made Ginger Juice – Refrigerated Retail Pack',
+    id: 'wg-ginger-lychee-pack',
+    title: 'Home Made Ginger Lychee Juice – 12-Pack Case',
     category: 'ginger',
     categoryLabel: 'Ginger Elixirs',
-    imageUrl: '/assets/aistudio/juice6_cb0073a8.jpg',
+    imageUrl: '/assets/aistudio/Make_park_on_table_ccbd1cdf_851286f5.jpg',
     badge: 'USDA-Approved',
     sizes: '12oz • 16oz • 18oz',
     barcode: 'UPC: 036000291452',
-    description: 'Chilled, ready-to-stock organic ginger juice bottles bundled in multiples of 12 for grocery cooler shelves.',
-    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
-    displayOrder: 2,
+    description: 'Exotic floral lychee nectar paired with warming fresh ginger root shrink-wrapped in 12-bottle cases with USDA-compliant barcode & nutrition labeling.',
+    packOptions: '12-Pack & 24-Pack Cases (1–8 Weeks Refrigerated)',
+    displayOrder: 5,
     published: true,
   },
   {
-    id: 'wg-zobo-retail-shelf-3',
-    title: 'Home Made Hibiscus Juice – Shelf-Ready 18oz Bottles',
-    category: 'zobo',
-    categoryLabel: 'Signature Zobo',
-    imageUrl: '/assets/aistudio/juice12_ae6b4523.jpg',
+    id: 'wg-pure-ginger-label',
+    title: 'Pure Ginger Root Elixir – Botanical 12-Pack',
+    category: 'ginger',
+    categoryLabel: 'Ginger Elixirs',
+    imageUrl: '/assets/aistudio/Arranging_items_on_a_table_c75164ac_6bb2ba82.jpg',
     badge: 'USDA-Approved',
     sizes: '12oz • 16oz • 18oz',
     barcode: 'UPC: 036000291452',
-    description: 'Commercial grocery aisle presentation featuring tamper-evident caps and scannable UPC barcodes.',
-    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
-    displayOrder: 3,
-    published: true,
-  },
-  {
-    id: 'wg-zobo-store-cooler-4',
-    title: 'Signature Hibiscus Juice – Supermarket Cooler Display',
-    category: 'zobo',
-    categoryLabel: 'Signature Zobo',
-    imageUrl: '/assets/aistudio/juice3_f8a4c21d.jpg',
-    badge: 'USDA-Approved',
-    sizes: '12oz • 16oz • 18oz',
-    barcode: 'UPC: 036000291452',
-    description: 'Stocked directly inside retail cold cases with bold shelf presence and fresh-pressed hibiscus appeal.',
-    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
-    displayOrder: 4,
+    description: 'Bold cold-pressed organic ginger root elixir infused with fresh lime & whole cloves in a tamper-evident 12-bottle wholesale pack.',
+    packOptions: '12-Pack & 24-Pack Cases (1–8 Weeks Refrigerated)',
+    displayOrder: 6,
     published: true,
   },
   {
@@ -748,35 +776,7 @@ export const INITIAL_WHOLESALE_GALLERY: WholesaleGalleryItem[] = [
     sizes: '12oz • 16oz • 18oz',
     barcode: 'UPC: 036000291452',
     description: 'Clear commercial shrink-wrap case staging crafted for quick stockroom intake and cold-chain handling.',
-    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
-    displayOrder: 5,
-    published: true,
-  },
-  {
-    id: 'wg-zobo-grab-go-6',
-    title: 'Chilled Hibiscus Juice – Grab-and-Go Beverage Merchandising',
-    category: 'zobo',
-    categoryLabel: 'Signature Zobo',
-    imageUrl: '/assets/aistudio/juice1_ba3e13ec.jpg',
-    badge: 'USDA-Approved',
-    sizes: '12oz • 16oz • 18oz',
-    barcode: 'UPC: 036000291452',
-    description: 'Merchandised on cold retail display racks for natural markets, health food stores, and specialty grocers.',
-    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
-    displayOrder: 6,
-    published: true,
-  },
-  {
-    id: 'wg-zobo-case-staging-7',
-    title: 'Home Made Hibiscus Juice – Bulk Countertop & Case Pack',
-    category: 'zobo',
-    categoryLabel: 'Signature Zobo',
-    imageUrl: '/assets/aistudio/juice4_eed970c6.jpg',
-    badge: 'USDA-Approved',
-    sizes: '12oz • 16oz • 18oz',
-    barcode: 'UPC: 036000291452',
-    description: 'Tightly sealed multi-bottle wholesale sleeves prepared for cafes, restaurants, and boutique retailers.',
-    packOptions: '12-Pack & 24-Pack Cases (Refrigerated)',
+    packOptions: '12-Pack & 24-Pack Cases (1–8 Weeks Refrigerated)',
     displayOrder: 7,
     published: true,
   },
@@ -928,7 +928,7 @@ export const INITIAL_SITE_CONTENT: SiteContent = {
   freeDeliveryThreshold: 0,
   standardDeliveryFee: 0,
   pickupAddress: '500 W Broad St, Quakertown, PA 18951',
-  operatingHours: 'Mon - Sat: 9:00 AM - 6:30 PM | Sun: 11:00 AM - 4:00 PM',
+  operatingHours: 'Mon - Sat: 9:00 AM - 6:30 PM | Sun: Closed',
   chatButtonLabel: 'Chat with Kitchen',
   shopHeading: 'Shop Fresh, Natural Delightful Juices.',
   packPricing: DEFAULT_PACK_PRICING,
@@ -1585,11 +1585,101 @@ function normalizeSiteContent(raw: SiteContent): SiteContent {
     displayOrder: item.displayOrder ?? idx + 1,
     published: item.published !== false,
   }));
-  const rawWholesaleGallery =
+  let rawWholesaleGallery =
     rawWholesaleSource !== undefined ? mappedWholesaleGallery : INITIAL_WHOLESALE_GALLERY;
+
+  const extraLegacyZoboIds = new Set([
+    'wg-zobo-retail-shelf-3',
+    'wg-zobo-store-cooler-4',
+    'wg-zobo-grab-go-6',
+    'wg-zobo-case-staging-7',
+  ]);
+  if (rawWholesaleSource !== undefined && !raw.branding?.wholesaleGalleryDiversified) {
+    const filteredExisting = mappedWholesaleGallery.filter(
+      (item) =>
+        !(extraLegacyZoboIds.has(item.id) && (item.imageUrl || '').startsWith('/assets/aistudio/juice'))
+    );
+    const existingIds = new Set(filteredExisting.map((item) => item.id));
+    const missingBalanced = INITIAL_WHOLESALE_GALLERY.filter((item) => !existingIds.has(item.id));
+    rawWholesaleGallery = [...missingBalanced, ...filteredExisting]
+      .sort((a, b) => (a.displayOrder ?? 99) - (b.displayOrder ?? 99))
+      .map((item, idx) => ({ ...item, displayOrder: idx + 1 }));
+  }
+
+  if (rawWholesaleSource !== undefined && !raw.branding?.wholesaleGalleryPackPhotosV3) {
+    const initialById = new Map(INITIAL_WHOLESALE_GALLERY.map((item) => [item.id, item]));
+    rawWholesaleGallery = rawWholesaleGallery
+      .filter(
+        (item) =>
+          !(
+            item.id === 'wg-ginger-pineapple-pack' &&
+            item.imageUrl === '/assets/aistudio/12oz_pineapple_28b92d79.png'
+          )
+      )
+      .map((item) => {
+        if (
+          item.imageUrl === '/assets/aistudio/12oz_Tigernut_a2076757.png' ||
+          (item.id === 'wg-tigernut-milk-2' && item.imageUrl.endsWith('.png'))
+        ) {
+          const updated = initialById.get('wg-tigernut-milk-2');
+          return {
+            ...item,
+            title: updated?.title || item.title,
+            description: updated?.description || item.description,
+            imageUrl: '/assets/aistudio/This_is_15__make_0b7c3ce6_2b9754b7.jpg',
+          };
+        }
+        if (
+          item.imageUrl === '/assets/aistudio/12oz_Lychee_771f865d.png' ||
+          (item.id === 'wg-ginger-lychee-pack' && item.imageUrl.endsWith('.png'))
+        ) {
+          const updated = initialById.get('wg-ginger-lychee-pack');
+          return {
+            ...item,
+            title: updated?.title || item.title,
+            description: updated?.description || item.description,
+            imageUrl: '/assets/aistudio/Make_park_on_table_ccbd1cdf_851286f5.jpg',
+          };
+        }
+        if (
+          item.imageUrl === '/assets/aistudio/12oz_ginger_d302545f.png' ||
+          (item.id === 'wg-pure-ginger-label' && item.imageUrl.endsWith('.png'))
+        ) {
+          const updated = initialById.get('wg-pure-ginger-label');
+          return {
+            ...item,
+            title: updated?.title || item.title,
+            description: updated?.description || item.description,
+            imageUrl: '/assets/aistudio/Arranging_items_on_a_table_c75164ac_6bb2ba82.jpg',
+          };
+        }
+        if (
+          item.id === 'wg-ginger-case-2' &&
+          item.imageUrl === '/assets/aistudio/juice6_cb0073a8.jpg'
+        ) {
+          const updated = initialById.get('wg-ginger-case-2');
+          return {
+            ...item,
+            title: updated?.title || item.title,
+            description: updated?.description || item.description,
+            imageUrl: '/assets/aistudio/Make_it_part_of_12_0d6500d7_870dcb8d.jpg',
+          };
+        }
+        if (item.imageUrl === '/assets/aistudio/12oz_mango_dcfd0401.png') {
+          return {
+            ...item,
+            imageUrl: '/assets/aistudio/Make_it_part_of_12_cc06343c_6bed23ea.jpg',
+          };
+        }
+        return item;
+      })
+      .map((item, idx) => ({ ...item, displayOrder: idx + 1 }));
+  }
 
   const rawWholesaleShopSource =
     raw.wholesaleShop || raw.branding?.wholesaleShop || DEFAULT_WHOLESALE_SHOP;
+  const shouldMigrateRadius1hr = !raw.branding?.wholesaleRadius1hrFreeMigrated;
+  const shouldMigrateGingerMango = !raw.branding?.wholesaleGingerMangoMigrated;
   const normalizedWholesaleShop: WholesaleShopSettings = {
     enabled: rawWholesaleShopSource.enabled !== false,
     showProductImages: rawWholesaleShopSource.showProductImages === true,
@@ -1598,13 +1688,20 @@ function normalizeSiteContent(raw: SiteContent): SiteContent {
     subheading: rawWholesaleShopSource.subheading || DEFAULT_WHOLESALE_SHOP.subheading,
     products:
       Array.isArray(rawWholesaleShopSource.products) && rawWholesaleShopSource.products.length > 0
-        ? rawWholesaleShopSource.products.map((item, idx) => ({
-            ...item,
-            imageUrl: sanitizeLiveImageUrl(item.imageUrl),
-            inStock: item.inStock !== false,
-            published: item.published !== false,
-            displayOrder: item.displayOrder ?? idx + 1,
-          }))
+        ? rawWholesaleShopSource.products.map((item, idx) => {
+            const cleanImg = sanitizeLiveImageUrl(item.imageUrl);
+            const resolvedImg =
+              shouldMigrateGingerMango && item.id === 'prod-ginger-mango' && !cleanImg
+                ? '/assets/aistudio/Make_it_part_of_12_cc06343c_6bed23ea.jpg'
+                : cleanImg;
+            return {
+              ...item,
+              imageUrl: resolvedImg,
+              inStock: item.inStock !== false,
+              published: item.published !== false,
+              displayOrder: item.displayOrder ?? idx + 1,
+            };
+          })
         : DEFAULT_WHOLESALE_SHOP.products,
     sizeTiers:
       Array.isArray(rawWholesaleShopSource.sizeTiers) && rawWholesaleShopSource.sizeTiers.length > 0
@@ -1616,12 +1713,30 @@ function normalizeSiteContent(raw: SiteContent): SiteContent {
     deliveryOptions:
       Array.isArray(rawWholesaleShopSource.deliveryOptions) &&
       rawWholesaleShopSource.deliveryOptions.length > 0
-        ? rawWholesaleShopSource.deliveryOptions.map((opt) => ({
-            ...opt,
-            enabled: opt.enabled !== false,
-          }))
+        ? rawWholesaleShopSource.deliveryOptions.map((opt) => {
+            if (shouldMigrateRadius1hr && opt.id === 'radius_1hr' && Number(opt.fee) === 50) {
+              return {
+                ...opt,
+                label: 'Wholesale Delivery (Under 1 hr travel radius)',
+                shortLabel: 'Under 1 hr travel radius',
+                fee: 0,
+                description: 'Zero-fee chilled regional delivery under 1 hour from Quakertown, PA',
+                enabled: opt.enabled !== false,
+              };
+            }
+            return {
+              ...opt,
+              enabled: opt.enabled !== false,
+            };
+          })
         : DEFAULT_WHOLESALE_SHOP.deliveryOptions,
   };
+
+  const rawHours = (raw.operatingHours || '').trim();
+  const cleanOperatingHours =
+    !rawHours || /Sun:\s*11:00\s*AM\s*-\s*4:00\s*PM/i.test(rawHours)
+      ? 'Mon - Sat: 9:00 AM - 6:30 PM | Sun: Closed'
+      : rawHours;
 
   const rawInsta = (raw.instagram || '').trim();
   const cleanInstagram =
@@ -1651,6 +1766,7 @@ function normalizeSiteContent(raw: SiteContent): SiteContent {
   return {
     ...raw,
     businessName: cleanName,
+    operatingHours: cleanOperatingHours,
     instagram: cleanInstagram,
     tiktok: cleanTiktok,
     freeDeliveryThreshold: 0,
@@ -1680,7 +1796,11 @@ function normalizeSiteContent(raw: SiteContent): SiteContent {
       packPricing: rawPackPricing,
       eventShowcase: rawEventShowcase,
       wholesaleGallery: rawWholesaleGallery,
+      wholesaleGalleryDiversified: true,
+      wholesaleGalleryPackPhotosV3: true,
       wholesaleShop: normalizedWholesaleShop,
+      wholesaleRadius1hrFreeMigrated: true,
+      wholesaleGingerMangoMigrated: true,
       aboutShowcase: {
         ...mergedShowcase,
         showCeoCard: false,

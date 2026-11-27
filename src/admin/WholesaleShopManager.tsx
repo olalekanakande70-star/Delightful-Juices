@@ -517,7 +517,7 @@ export const WholesaleShopManager: React.FC<WholesaleShopManagerProps> = ({
               Wholesale Delivery Radius &amp; Fees
             </h3>
             <p className="text-xs text-[#1B4D2E]/70">
-              Adjust travel radius delivery rates ($50 within 1 hr, $100 for 2 hrs+, or Free Kitchen Pickup).
+              Adjust travel radius delivery rates ($0 under 1 hr travel radius, $100 for 2 hrs+, or Kitchen Pickup).
             </p>
           </div>
         </div>

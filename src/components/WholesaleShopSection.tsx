@@ -556,7 +556,7 @@ export const WholesaleShopSection: React.FC<WholesaleShopSectionProps> = ({
                   </div>
                   {opt.fee === 0 ? (
                     <span className="font-black text-sm text-emerald-300 uppercase shrink-0 ml-2">
-                      Free
+                      $0 · Free
                     </span>
                   ) : (
                     <span className="font-black text-lg text-[#E1AD01] shrink-0 ml-2">
@@ -565,6 +565,11 @@ export const WholesaleShopSection: React.FC<WholesaleShopSectionProps> = ({
                   )}
                 </div>
               ))}
+            </div>
+
+            <div className="pt-3 border-t border-white/15 text-[11px] text-[#FFF8E7]/85 leading-relaxed">
+              <strong className="text-[#E1AD01]">Cold Shelf-Life:</strong> Maintains peak freshness for{' '}
+              <strong>1–8 weeks</strong> refrigerated between <strong>32°F – 40°F</strong>.
             </div>
           </div>
         </div>
@@ -944,7 +949,7 @@ export const WholesaleShopSection: React.FC<WholesaleShopSectionProps> = ({
                           selected ? 'text-[#E1AD01]' : 'text-[#1B4D2E]'
                         }`}
                       >
-                        {opt.fee === 0 ? 'Free' : `$${opt.fee}`}
+                        {opt.fee === 0 ? '$0 (Free)' : `$${opt.fee}`}
                       </span>
                     </button>
                   );
@@ -967,7 +972,7 @@ export const WholesaleShopSection: React.FC<WholesaleShopSectionProps> = ({
               <div className="flex justify-between text-[#1B4D2E]/80">
                 <span>{selectedDeliveryOption.shortLabel}</span>
                 <span className="font-bold text-[#1B4D2E]">
-                  {deliveryFee === 0 ? 'Free' : `$${deliveryFee.toFixed(2)}`}
+                  {deliveryFee === 0 ? '$0.00 (Free)' : `$${deliveryFee.toFixed(2)}`}
                 </span>
               </div>
               <div className="flex justify-between items-baseline pt-2 border-t border-[#1B4D2E]/15 text-base font-black text-[#1B4D2E]">
@@ -1137,7 +1142,7 @@ export const WholesaleShopSection: React.FC<WholesaleShopSectionProps> = ({
                     <div>
                       <span className="font-bold text-[#1B4D2E]">Delivery: </span>
                       <span>
-                        {deliveryFee === 0 ? 'Free' : `$${deliveryFee.toFixed(2)}`}
+                        {deliveryFee === 0 ? '$0.00 (Free)' : `$${deliveryFee.toFixed(2)}`}
                       </span>
                     </div>
                     <div className="font-black text-sm text-[#1B4D2E]">
@@ -1223,7 +1228,7 @@ export const WholesaleShopSection: React.FC<WholesaleShopSectionProps> = ({
                         >
                           <div className="font-bold">{opt.shortLabel}</div>
                           <div className="text-[11px] font-extrabold tabular-nums">
-                            {opt.fee === 0 ? 'Free' : `$${opt.fee.toFixed(2)}`}
+                            {opt.fee === 0 ? '$0 (Free)' : `$${opt.fee.toFixed(2)}`}
                           </div>
                         </button>
                       ))}

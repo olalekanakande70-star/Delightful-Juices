@@ -44,9 +44,9 @@ export const WholesaleProductGallery: React.FC<WholesaleProductGalleryProps> = (
 
   const categories = [
     { id: 'all', label: 'All Wholesale Products' },
-    { id: 'zobo', label: 'Signature Zobo' },
     { id: 'ginger', label: 'Ginger Elixirs' },
-    { id: 'milks', label: 'Artisanal Milks' },
+    { id: 'milks', label: 'Tigernut Milk' },
+    { id: 'zobo', label: 'Signature Zobo' },
     { id: 'craft', label: 'Kitchen Staging' },
   ];
 
@@ -85,7 +85,7 @@ export const WholesaleProductGallery: React.FC<WholesaleProductGalleryProps> = (
 
   useEffect(() => {
     if (isHovered || isDragging || activeModalItem || total <= 1) return;
-    timerRef.current = setInterval(nextSlide, 5000);
+    timerRef.current = setInterval(nextSlide, 1500);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
@@ -318,7 +318,7 @@ export const WholesaleProductGallery: React.FC<WholesaleProductGalleryProps> = (
                       {isCenter && (
                         <div className="absolute bottom-2.5 right-2.5 bg-black/65 backdrop-blur-xs text-[#FFF8E7] text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center space-x-1">
                           <Eye className="w-3 h-3" />
-                          <span>Inspect Label</span>
+                          <span>Inspect Pack</span>
                         </div>
                       )}
                     </div>
@@ -366,6 +366,12 @@ export const WholesaleProductGallery: React.FC<WholesaleProductGalleryProps> = (
                             </span>
                           </div>
                         )}
+                        <div className="flex items-center justify-between text-[#1B4D2E]">
+                          <span className="font-semibold text-[#1B4D2E]/70">Shelf Life:</span>
+                          <span className="text-[10px] font-bold text-emerald-800">
+                            1–8 Weeks (32°–40°F)
+                          </span>
+                        </div>
                       </div>
 
                       {/* Action Buttons */}
@@ -530,7 +536,7 @@ export const WholesaleProductGallery: React.FC<WholesaleProductGalleryProps> = (
                     )}
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-[#1B4D2E]/70">Cold Shelf-Life:</span>
-                      <span className="font-semibold">7–10 Days Refrigerated (36°F - 40°F)</span>
+                      <span className="font-semibold">1–8 Weeks Refrigerated (32°F – 40°F)</span>
                     </div>
                   </div>
                 </div>
